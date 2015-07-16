@@ -104,7 +104,7 @@ namespace ICSimulator
                         slot = best;
 
 #if DEBUG
-                        Console.WriteLine("ID {0}: flit {1}.{2} into slot {3} (age {4} evict-age {55555
+                        Console.WriteLine("ID {0}: flit {1}.{2} into slot {3} (age {4} evict-age {55555",
                                           m_n.coord.ID, f.packet.ID, f.flitNr, slot,
                                           Simulator.CurrentRound - f.packet.creationTime,
                                           Simulator.CurrentRound - m_evictSlot.packet.creationTime);

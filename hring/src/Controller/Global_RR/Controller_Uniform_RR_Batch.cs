@@ -97,7 +97,7 @@ namespace ICSimulator
                 Array.Clear(last_free_nodes,0,last_free_nodes.Length);
                 foreach (int node in nodes)
                 {
-                    ins_free[node]=Simulator.stats.insns_persrc[node].Count;
+					ins_free[node]=(ulong)Simulator.stats.insns_persrc[node].Count;
                     last_free_nodes[node]=1;
                     Console.Write("\nFree Turn: Node {0} w/ ins {1} ",node,ins_free[node]);
 
@@ -132,10 +132,10 @@ namespace ICSimulator
                 {
                     /* Calculate IPC during the last free-inject and throtttled interval */
                     if(ins_throttled[node]==0)
-                        ins_throttled[node]=Simulator.stats.insns_persrc[node].Count;
+						ins_throttled[node]=(ulong)Simulator.stats.insns_persrc[node].Count;
                     if(last_free_nodes[node]==1)
                     {
-                        ulong ins_retired=Simulator.stats.insns_persrc[node].Count-ins_free[node];
+						ulong ins_retired=(ulong)Simulator.stats.insns_persrc[node].Count-ins_free[node];
                         ipc_free[node]+=(double)ins_retired/Config.interval_length;
                         Console.Write("\nFree calc: Node {0} w/ ins {1}->{3} retired {2}::IPC accum:{4}",
                                 node,ins_free[node],ins_retired,Simulator.stats.insns_persrc[node].Count,
@@ -143,10 +143,10 @@ namespace ICSimulator
                     }
                     else
                     {
-                        ulong ins_retired=Simulator.stats.insns_persrc[node].Count-ins_throttled[node];
+						ulong ins_retired=(ulong)Simulator.stats.insns_persrc[node].Count-ins_throttled[node];
                         ipc_throttled[node]+=(double)ins_retired/Config.interval_length;
                     }
-                    ins_throttled[node]=Simulator.stats.insns_persrc[node].Count;
+					ins_throttled[node]=(ulong)Simulator.stats.insns_persrc[node].Count;
                 }
             }
 

@@ -44,7 +44,7 @@ namespace ICSimulator
             for (int i = 0; i < Config.N; i++)
             {
                 MPKI[i]=0.0;
-                num_ins_last_epoch[i] = Simulator.stats.insns_persrc[i].Count;
+				num_ins_last_epoch[i] = (ulong)Simulator.stats.insns_persrc[i].Count;
                 numInject[i]=0;
 		        L1misses[i]=0;
             }            

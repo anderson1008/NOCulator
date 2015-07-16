@@ -157,7 +157,7 @@ namespace ICSimulator
         public Packet scarab_retransmit;
         public bool scarab_is_nack, scarab_is_teardown;
 
-        public Packet(Request request, ulong block, int nrOfFlits, Coord source, Coord dest)
+		public Packet(Request request, ulong block, int nrOfFlits, Coord source, Coord dest, CmpCache_Txn txn)
         {
             _request = request;
             if (_request != null)
@@ -169,7 +169,13 @@ namespace ICSimulator
                 request.setCarrier(this);
             requesterID = -1;
             initialize(Simulator.CurrentRound, nrOfFlits);
+			this.txn = txn;
         }
+
+		//by Xiyue:
+		public ulong intfCycle = 0;
+		public CmpCache_Txn txn;
+		//end Xiyue
 
         /**
          * Always call this initialization method before using a packet. All flits are also appropriately initialized
@@ -295,8 +301,8 @@ namespace ICSimulator
 		public ulong ejectTrial = 0;
 		public ulong firstEjectTrial = 0;
 
-                public BufRingMultiNetwork_Coord bufrings_coord;
-
+        public BufRingMultiNetwork_Coord bufrings_coord;
+		
         public Coord dest
         {
             get

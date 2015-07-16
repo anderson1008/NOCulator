@@ -141,6 +141,11 @@ namespace ICSimulator
         // associated txn
         public CmpCache_Txn txn;
 
+		// by Xiyue:
+		public int tier;
+		//public ulong minimalCycle;
+		// end Xiyue
+
         public CmpCache_Pkt ()
         {
             send = false;
@@ -156,6 +161,8 @@ namespace ICSimulator
             deps = 0;
 
             txn = null;
+
+			tier = 0; // by Xiyue: for categorize and prioritize network packet
         }
     }
 
@@ -219,6 +226,10 @@ namespace ICSimulator
 
         /* timing completion callback */
         public Simulator.Ready cb;
+
+		// by Xiyue
+		public ulong minimalCycle;
+		public ulong interferenceCycle;
     };
 
     public class CmpCache
@@ -292,7 +303,7 @@ namespace ICSimulator
 
         public void access(int node, ulong addr, bool write, Simulator.Ready cb,
                 out bool L1hit, out bool L1upgr, out bool L1ev, out bool L1wb,
-                out bool L2access, out bool L2hit, out bool L2ev, out bool L2wb, out bool c2c)
+		                   out bool L2access, out bool L2hit, out bool L2ev, out bool L2wb, out bool c2c, out ulong minimalCycle, out CmpCache_Txn txn_out)
         {
             CmpCache_Txn txn = null;
             int sh_slice = map_addr(node, addr);
@@ -358,7 +369,7 @@ namespace ICSimulator
                 txn.node = node;
 
                 // request packet
-                CmpCache_Pkt req_pkt = add_ctl_pkt(txn, node, sh_slice, false);
+                CmpCache_Pkt req_pkt = add_ctl_pkt(txn, node, sh_slice, false, 1);
                 CmpCache_Pkt done_pkt = null;
 
                 // present in others?
@@ -370,7 +381,7 @@ namespace ICSimulator
                 {
                     // not present in others, but we didn't have excl -- send empty grant
                     // (could happen if others have evicted and we are the only one left)
-                    done_pkt = add_ctl_pkt(txn, sh_slice, node, true);
+                    done_pkt = add_ctl_pkt(txn, sh_slice, node, true, 2);
                     done_pkt.delay = m_shdelay;
                     add_dep(req_pkt, done_pkt);
                 }
@@ -381,7 +392,7 @@ namespace ICSimulator
                 state.modified = true;
             }
             else if (!prv_hit && sh_hit) // CASE 2: not in prv cache, but in sh cache
-            {
+            {// by Xiyue: share cache access
                 txn = new CmpCache_Txn();
                 txn.node = node;
 
@@ -390,10 +401,10 @@ namespace ICSimulator
                     m_sh.update(addr, Simulator.CurrentRound);
 
                 // request packet
-                CmpCache_Pkt req_pkt = add_ctl_pkt(txn, node, sh_slice, false);
+                CmpCache_Pkt req_pkt = add_ctl_pkt(txn, node, sh_slice, false, 3);
                 CmpCache_Pkt done_pkt = null;
 
-                if (state.owners.any_set()) // in other caches?
+                if (state.owners.any_set()) // in other caches? - invoke 3 objects operations
                 {
                     if (write) // need to invalidate?
                     {
@@ -401,12 +412,15 @@ namespace ICSimulator
                         {
                             c2c = true; // out-param
 
-                            CmpCache_Pkt xfer_req = add_ctl_pkt(txn, sh_slice, state.excl, false);
-                            CmpCache_Pkt xfer_dat = add_data_pkt(txn, state.excl, node, true);
+                            CmpCache_Pkt xfer_req = add_ctl_pkt(txn, sh_slice, state.excl, false, 4); // by Xiyue: emulate directory control packet (from requester -> directory)
+                            CmpCache_Pkt xfer_dat = add_data_pkt(txn, state.excl, node, true, 5); // by Xiyue: the owner node forwards the up-to-date cache block to the requester
                             done_pkt = xfer_dat;
 
                             xfer_req.delay = m_shdelay;
-                            xfer_dat.delay = m_prvdelay;
+							xfer_dat.delay = m_prvdelay;
+
+							min_cycle (txn, m_shdelay);
+                     		min_cycle (txn, m_prvdelay);
 
                             add_dep(req_pkt, xfer_req);
                             add_dep(xfer_req, xfer_dat);
@@ -433,8 +447,8 @@ namespace ICSimulator
 
                         if (state.excl != -1)
                         {
-                            CmpCache_Pkt xfer_req = add_ctl_pkt(txn, sh_slice, state.excl, false);
-                            CmpCache_Pkt xfer_dat = add_data_pkt(txn, state.excl, node, true);
+                            CmpCache_Pkt xfer_req = add_ctl_pkt(txn, sh_slice, state.excl, false, 6);
+                            CmpCache_Pkt xfer_dat = add_data_pkt(txn, state.excl, node, true, 7);
                             done_pkt = xfer_dat;
 
                             c2c = true; // out-param
@@ -442,13 +456,16 @@ namespace ICSimulator
                             xfer_req.delay = m_shdelay;
                             xfer_dat.delay = m_prvdelay;
 
+							min_cycle (txn, m_shdelay);
+							min_cycle (txn, m_prvdelay);
+
                             add_dep(req_pkt, xfer_req);
                             add_dep(xfer_req, xfer_dat);
 
                             // downgrade must also trigger writeback
                             if (state.modified)
                             {
-                                CmpCache_Pkt wb_dat = add_data_pkt(txn, state.excl, sh_slice, false);
+                                CmpCache_Pkt wb_dat = add_data_pkt(txn, state.excl, sh_slice, false, 8);
                                 add_dep(xfer_req, wb_dat);
                                 state.modified = false;
                                 state.sh_dirty = true;
@@ -459,12 +476,15 @@ namespace ICSimulator
                             int close = closest(node, state.owners);
                             if (close != -1) c2c = true; // out-param
 
-                            CmpCache_Pkt xfer_req = add_ctl_pkt(txn, sh_slice, close, false);
-                            CmpCache_Pkt xfer_dat = add_data_pkt(txn, close, node, true);
+                            CmpCache_Pkt xfer_req = add_ctl_pkt(txn, sh_slice, close, false, 9);
+                            CmpCache_Pkt xfer_dat = add_data_pkt(txn, close, node, true, 10);
                             done_pkt = xfer_dat;
 
                             xfer_req.delay = m_shdelay;
                             xfer_dat.delay = m_prvdelay;
+
+							min_cycle (txn, m_shdelay);
+							min_cycle (txn, m_prvdelay);
 
                             add_dep(req_pkt, xfer_req);
                             add_dep(xfer_req, xfer_dat);
@@ -479,12 +499,14 @@ namespace ICSimulator
                     // not in other prv caches, need to get from shared slice
                     L2access = true;
 
-                    CmpCache_Pkt dat_resp = add_data_pkt(txn, sh_slice, node, true);
+                    CmpCache_Pkt dat_resp = add_data_pkt(txn, sh_slice, node, true, 11);
                     done_pkt = dat_resp;
 
                     add_dep(req_pkt, done_pkt);
 
                     dat_resp.delay = m_shdelay;
+
+					min_cycle (txn, m_shdelay);
 
                     state.owners.reset();
                     state.owners.set(node);
@@ -532,7 +554,7 @@ namespace ICSimulator
                 mem_access.mem = true;
                 mem_access.mem_addr = addr;
                 mem_access.mem_write = false; // cache-line fill
-                mem_access.mem_requestor = node;
+				mem_access.mem_requestor = node;
 
                 // memory response packet
                 CmpCache_Pkt memresp_pkt = add_data_pkt(txn, mem_slice, sh_slice, false);
@@ -654,11 +676,18 @@ namespace ICSimulator
             if (txn != null)
             {
                 txn.cb = cb;
-
+				txn_out = txn;
                 assignVCclasses(txn.pkts);
+
+				// By Xiyue
+				min_cycle (txn, m_prvdelay); // m_prvdelay takes L1 access into account
+				minimalCycle = txn.minimalCycle; 
+
+				// end Xiyue
 
                 // start running the protocol DAG. It may be an empty graph (for a silent upgr), in
                 // which case the deferred start (after cache delay)
+				// By Xiyue: schedule a network packet here.
                 Simulator.Defer(delegate()
                         {
                         start_pkts(txn);
@@ -667,8 +696,12 @@ namespace ICSimulator
             // no transaction -- just the cache access delay. schedule deferred callback.
             else
             {
-                Simulator.Defer(cb, Simulator.CurrentRound + m_prvdelay);
+				minimalCycle = 0;
+				txn_out = null;
+				Simulator.Defer(cb, Simulator.CurrentRound + m_prvdelay); //by Xiyue: Defer() can be considered as a scheduler. cb is the cache access action.
             }
+
+
 
         }
 
@@ -693,9 +726,10 @@ namespace ICSimulator
 
             if(evicted_st.excl == node && evicted_st.modified)
             {
-                CmpCache_Pkt wb_pkt = add_data_pkt(txn, node, sh_slice, false);
+                CmpCache_Pkt wb_pkt = add_data_pkt(txn, node, sh_slice, false, 12); // by Xiyue: eviction triggers a writeback
                 wb_pkt.delay = m_opdelay; // pass-through delay: operation already in progress
                 add_dep(init_dep, wb_pkt);
+				min_cycle (txn, m_opdelay);
 
                 evicted_st.owners.reset();
                 evicted_st.excl = -1;
@@ -704,9 +738,10 @@ namespace ICSimulator
             }
             else
             {
-                CmpCache_Pkt release_pkt = add_ctl_pkt(txn, node, sh_slice, false);
+                CmpCache_Pkt release_pkt = add_ctl_pkt(txn, node, sh_slice, false, 13);
                 release_pkt.delay = m_opdelay;
                 add_dep(init_dep, release_pkt);
+				min_cycle (txn, m_opdelay);
 
                 evicted_st.owners.unset(node);
                 if (evicted_st.excl == node) evicted_st.excl = -1;
@@ -735,14 +770,19 @@ namespace ICSimulator
             for (int i = 0; i < m_N; i++)
                 if (state.owners.is_set(i) && i != node)
                 {
-                    CmpCache_Pkt invl_pkt = add_ctl_pkt(txn, sh_slice, i, false);
+                    CmpCache_Pkt invl_pkt = add_ctl_pkt(txn, sh_slice, i, false, 14);
                     invl_pkt.delay = m_shdelay;
-
+					
+					// By Xiyue: every invalidation requires response?
+					// Answer: No, only the node owning the copy should response.
                     CmpCache_Pkt invl_resp =
                         (c2c == i) ?
-                        add_data_pkt(txn, i, node, false) :
-                        add_ctl_pkt(txn, i, node, false);
+                        add_data_pkt(txn, i, node, false, 15) :
+                        add_ctl_pkt(txn, i, node, false, 16);
                     invl_resp.delay = m_prvdelay;
+
+					min_cycle (txn, m_shdelay);
+					min_cycle (txn, m_prvdelay);
 
                     add_dep(init_dep, invl_pkt);
                     add_dep(invl_pkt, invl_resp);
@@ -764,15 +804,15 @@ namespace ICSimulator
 
             CmpCache_Pkt pkt = new CmpCache_Pkt();
             pkt.wakeup = new List<CmpCache_Pkt>();
-            pkt.id = pkt_id++;
+            pkt.id = pkt_id++; // assign an unique id for each node
             pkt.from = from;
             pkt.to = to;
             pkt.txn = txn;
 
-            pkt.flits = data ? m_datapkt_size : 1;
+            pkt.flits = data ? m_datapkt_size : 1; // get the packet size here.
             pkt.vc_class = 0; // gets filled in once DAG is complete
 
-            pkt.done = done;
+            pkt.done = done;	// by Xiyue: indicate this is the last packet associate with a txn
             pkt.send = send;
 
             pkt.deps = 0;
@@ -788,20 +828,104 @@ namespace ICSimulator
             return pkt;
         }
 
-        CmpCache_Pkt add_ctl_pkt(CmpCache_Txn txn, int from, int to, bool done)
-        {
-            return _add_pkt(txn, from, to, false, true, done);
-        }
+		CmpCache_Pkt add_ctl_pkt(CmpCache_Txn txn, int from, int to, bool done)
+		{
+			return _add_pkt(txn, from, to, false, true, done);
+		}
 
-        CmpCache_Pkt add_data_pkt(CmpCache_Txn txn, int from, int to, bool done)
-        {
-            return _add_pkt(txn, from, to, true, true, done);
-        }
+		CmpCache_Pkt add_data_pkt(CmpCache_Txn txn, int from, int to, bool done)
+		{
+			return _add_pkt(txn, from, to, true, true, done);
+		}
 
-        CmpCache_Pkt add_joinpt(CmpCache_Txn txn, bool done)
-        {
-            return _add_pkt(txn, 0, 0, false, false, done);
-        }
+		CmpCache_Pkt add_joinpt(CmpCache_Txn txn, bool done)
+		{
+			return _add_pkt(txn, 0, 0, false, false, done);
+		}
+
+		// by Xiyue:
+		CmpCache_Pkt _add_pkt(CmpCache_Txn txn, int from, int to, bool data, bool send, bool done, int tier)
+		{
+			Debug.Assert(to >= 0 && to < m_N);
+
+			CmpCache_Pkt pkt = new CmpCache_Pkt();
+			pkt.wakeup = new List<CmpCache_Pkt>();
+			pkt.id = pkt_id++; // assign an unique id for each node
+			pkt.from = from;
+			pkt.to = to;
+			pkt.txn = txn; 
+
+			pkt.flits = data ? m_datapkt_size : 1;
+			pkt.vc_class = 0; // gets filled in once DAG is complete
+
+			pkt.done = done;
+			pkt.send = send;
+			pkt.tier = tier;
+			Simulator.stats.pkt_tier_count[tier].Add();
+
+			pkt.deps = 0;
+			pkt.delay = 0;
+			pkt.mem_addr = 0;
+
+			txn.n_pkts++;
+			txn.n_pkts_remaining++;
+
+			if (txn.pkts == null)
+				txn.pkts = pkt;
+
+			// by Xiyue
+			/* Compute the minimal cycle needed to service this request */
+			min_cycle (txn, from, to); 
+
+			return pkt;
+		}
+
+		CmpCache_Pkt add_ctl_pkt(CmpCache_Txn txn, int from, int to, bool done, int tier)
+		{
+			return _add_pkt(txn, from, to, false, true, done, tier);
+		}
+
+		CmpCache_Pkt add_data_pkt(CmpCache_Txn txn, int from, int to, bool done, int tier)
+		{
+			return _add_pkt(txn, from, to, true, true, done, tier);
+		}
+
+		CmpCache_Pkt add_joinpt(CmpCache_Txn txn, bool done, int tier)
+		{
+			return _add_pkt(txn, 0, 0, false, false, done, tier);
+		}
+
+		void min_cycle(CmpCache_Txn txn, int from, int to)
+		{
+			txn.minimalCycle = txn.minimalCycle + min_cycle (from, to);
+		}
+
+		void min_cycle(CmpCache_Txn txn, ulong access_latency)
+		{
+			txn.minimalCycle = txn.minimalCycle + access_latency;
+		}
+
+		ulong min_cycle(int from, int to)
+		{
+
+			Debug.Assert (!Config.torus);
+			 
+			// only work for mesh for now
+
+			int from_x, from_y, to_x, to_y;
+			Coord.getXYfromID(from, out from_x, out from_y);
+			Coord.getXYfromID (to, out to_x, out to_y);
+			int distance_x, distance_y;
+			distance_x = Math.Abs ((from_x-to_x));
+			distance_y = Math.Abs ((from_y-to_y));
+			int pkt_latency;
+			pkt_latency = (distance_x + distance_y) * (Config.router.linkLatency+2); // TODO: +1 is the router latency. Must by parameterized later.
+			return (ulong)pkt_latency;
+		
+		}
+		// end Xiyue
+
+        
 
         void add_dep(CmpCache_Pkt from, CmpCache_Pkt to)
         {
@@ -834,7 +958,7 @@ namespace ICSimulator
                         delegate()
                         {
                         pkt_callback(txn, pkt);
-                        }, pkt.off_crit, pkt.vc_class);
+						}, pkt.off_crit, pkt.vc_class, txn);
             }
             else if (pkt.mem)
             {
@@ -848,6 +972,11 @@ namespace ICSimulator
                 pkt_callback(txn, pkt);
         }
 
+		// By Xiyue:
+		//   { Node::doStep()->Node::receivePacket()->CPU::receivePacket()->CmpCache::pkt_callback() }
+		//   Upon receiving a network packet, a node will determine
+		//   1) wake up a dependent packet and schedule a transaction
+		//   2) call reqDone() if no dependent packet is found, indicating a completion of LD/ST request.
         void pkt_callback(CmpCache_Txn txn, CmpCache_Pkt pkt)
         {
             txn.n_pkts_remaining--;
@@ -859,19 +988,18 @@ namespace ICSimulator
             foreach (CmpCache_Pkt dep in pkt.wakeup)
             {
                 if (pkt.done || pkt.off_crit) dep.off_crit = true;
-
                 dep.deps--;
                 if (dep.deps == 0)
                     send_pkt(txn, dep);
             }
         }
 
-        void send_noc(int reqNode, int from, int to, int flits, Simulator.Ready cb, bool off_crit, int vc)
+		void send_noc(int reqNode, int from, int to, int flits, Simulator.Ready cb, bool off_crit, int vc, CmpCache_Txn txn)  //by Xiyue: The actual injection entry point into NoC
         {
             int cl = off_crit ? 2 : // packet class (used for split queues): 0 = ctl, 1 = data, 2 = off-crit (writebacks)
                 (flits > 1 ? 1 : 0);
 
-            CachePacket p = new CachePacket(reqNode, from, to, flits, cl, vc, cb);
+			CachePacket p = new CachePacket(reqNode, from, to, flits, cl, vc, cb, txn);
             Simulator.network.nodes[from].queuePacket(p);
         }
 
@@ -902,7 +1030,7 @@ namespace ICSimulator
                 {
                     int old = s.vc_class;
                     s.vc_class = Math.Max(succ, s.vc_class);
-                    if (s.vc_class > old) workQ.Enqueue(s);
+                    if (s.vc_class > old) workQ.Enqueue(s); // By Xiyue ???: Why????
                 }
             }
         }

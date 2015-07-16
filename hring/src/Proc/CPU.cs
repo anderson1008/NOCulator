@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Diagnostics;
+using System.Linq;
 
 namespace ICSimulator
 {
@@ -57,6 +58,11 @@ namespace ICSimulator
 
         ulong alone_t;
 
+		// By Xiyue
+		//	 for quantification of slowdown
+		public ulong max_penalty = 0;
+		// end Xiyue
+
         public CPU(Node n)
         {
             m_n = n;
@@ -108,7 +114,7 @@ namespace ICSimulator
         public bool Livelocked
         { get { return (Simulator.CurrentRound - m_last_retired) > Config.livelock_thresh; } }
 
-        void openTrace()
+		void openTrace()  // By Xiyue: called by public CPU(Node n)
         {
             if (Config.bochs_fe)
             {
@@ -132,7 +138,7 @@ namespace ICSimulator
             else if (tracefile.EndsWith(".bin"))
                 m_trace = new TraceFile_Old_Scalable(tracefile, m_group);
             else
-                m_trace = new TraceFile_New(tracefile, m_group);
+                m_trace = new TraceFile_New(tracefile, m_group); // by Xiyue: executing trace on core[m_group]
 
             if (Config.randomize_trace > 0)
             {
@@ -145,7 +151,13 @@ namespace ICSimulator
             }
         }
 
-        public void receivePacket(CachePacket p)
+
+		// by Xiyue: 
+		//   Called by Node::receivePacket ()
+		//   upon calling p.cb(), CmpCache::pkt_callback() will be invoked to
+		//     1) wake up other depended packet
+		//     2) calling reqDone
+        public void receivePacket(CachePacket p) 
         {
             if (p.cb != null) p.cb();
         }
@@ -183,7 +195,7 @@ namespace ICSimulator
 
             if (Simulator.CurrentRound % (ulong)100000 == 0)// && Simulator.CurrentRound != 0)
             {
-                Console.WriteLine("Processor {0}: {1} ({2} outstanding)",
+				Console.WriteLine("Processor {0}: {1} ({2} outstanding)",
                                   m_ID, m_ins.totalInstructionsRetired,
                                   m_ins.outstandingReqs);
 #if DEBUG
@@ -211,7 +223,7 @@ namespace ICSimulator
 
             // MSHR stall: window not full, next insn is memory, but we have no free MSHRs
             bool stallMem = !windowFull && (nextIsMem && noFreeMSHRs);
-/*
+			/*
             // promise stall: MSHR stall, and there is a pending eviction (waiting for promise) holding
             // an mshr
             bool stallPromise = stallMem && pendingEvict;
@@ -247,7 +259,7 @@ namespace ICSimulator
                     {
                         Simulator.network.endOfTraceBarrier[m_ID] = true;
                         m_idle = true;
-                    }
+					}
                     else
                     {   
                         if(Config.endOfTraceSync == true)
@@ -287,7 +299,7 @@ namespace ICSimulator
             for (int i = 0; i < m_mshrs.Length; i++)
                 if (m_mshrs[i].block == req.blockAddress)
                 {
-                    if (req.write && !m_mshrs[i].write)
+                    if (req.write && !m_mshrs[i].write)   //by Xiyue: Prevent Write After Read hazard???
                         m_mshrs[i].pending_write = true;
 
 //                    if (m_ID == 0) Console.WriteLine("P0 issueReq: found req in MSHR {0}", i);
@@ -317,11 +329,12 @@ namespace ICSimulator
         {
             bool L1hit = false, L1upgr = false, L1ev = false, L1wb = false;
             bool L2access = false, L2hit = false, L2ev = false, L2wb = false, c2c = false;
+			ulong minimalCycle = 0; //by Xiyue: not used for now
+			CmpCache_Txn txn = null;
 
         	Simulator.network.cache.access(m_ID, addr, write,
-                 delegate() { reqDone(addr, mshr, write); },
-                 out L1hit, out L1upgr, out L1ev, out L1wb, out L2access, out L2hit, out L2ev, out L2wb, out c2c);
-
+			                               delegate() { reqDone(addr, mshr, write, minimalCycle, L1hit, txn); },
+			out L1hit, out L1upgr, out L1ev, out L1wb, out L2access, out L2hit, out L2ev, out L2wb, out c2c, out minimalCycle, out txn);
 
             if(!L1hit)
 		         Simulator.controller.L1misses[m_ID]++;
@@ -365,9 +378,12 @@ namespace ICSimulator
             }
         }
 
-        void reqDone(ulong addr, int mshr, bool write)
+		void reqDone(ulong addr, int mshr, bool write, ulong minimalCycle, bool L1hit, CmpCache_Txn txn)   // by Xiyue: called when completing a LD/ST request
         {
             m_ins.setReady(addr, write);
+
+			if (!L1hit)
+				computePenalty (txn); // by Xiyue
 
 //            if (m_ID == 0) Console.WriteLine("P0 finish req block {0:X} write {1} at cyc {2}, hit {3}", addr>>Config.cache_block, write, Simulator.CurrentRound, write, !l1miss);
 
@@ -384,16 +400,63 @@ namespace ICSimulator
                 m_mshrs[mshr].block = 0;
                 m_mshrs[mshr].write = false;
                 m_mshrs[mshr].pending_write = false;
-
                 mshrs_free++;
             }
         }
+
+		// By Xiyue
+		//   Compute the non-overlapped latency
+		void computePenalty (CmpCache_Txn txn)
+		{
+			if (txn.interferenceCycle != 0) {
+				ulong t_no_interference = Simulator.CurrentRound - txn.interferenceCycle;
+
+				if (t_no_interference > m_last_retired) {
+					if (txn.interferenceCycle > max_penalty)
+						max_penalty = txn.interferenceCycle;
+				} else if (t_no_interference < m_last_retired  && Simulator.CurrentRound > m_last_retired ) {
+					if (txn.interferenceCycle > max_penalty)
+						max_penalty = Simulator.CurrentRound - m_last_retired;
+				} else {
+					// the interference cycle is completely overlapped with the previous request
+					// no action is requied.
+				}
+			} 
+		}
+
+		// end Xiyue
 
         public bool doStep()
         {
             if (m_trace == null) {return true;}
 
             int syncID;
+
+			// By Xiyue: track the nonoverlapped penalty
+			double estimated_slowdown, actual_slowdown;
+
+			Simulator.stats.non_overlap_penalty [m_ID].Add (max_penalty);
+			Simulator.stats.non_overlap_penalty_period [m_ID].Add (max_penalty);
+			// TODO: Xiyue dump IPC, slowdown info periodically here.
+			if (Simulator.CurrentRound % Config.slowdown_epoch == 0)
+			{
+				ulong penalty_cycle = (ulong) Simulator.stats.non_overlap_penalty_period [m_ID].Count;
+				estimated_slowdown = (double) Config.slowdown_epoch/(Config.slowdown_epoch-penalty_cycle);
+				Simulator.stats.etimated_slowdown [m_ID].Add (estimated_slowdown);
+				Simulator.stats.insns_persrc_period [m_ID].Finish (Simulator.CurrentRound);
+				double ipc_share = Simulator.stats.insns_persrc_period [m_ID].Rate;
+				actual_slowdown = (double)Config.ref_ipc / ipc_share;
+				double error_slowdown = (estimated_slowdown - actual_slowdown) / actual_slowdown;
+				error_slowdown = (error_slowdown > 0) ? error_slowdown : (-error_slowdown);
+				Simulator.stats.avg_slowdown_error [m_ID].Add (error_slowdown);
+				Simulator.stats.actual_slowdown [m_ID].Add (actual_slowdown);
+				//reset
+				Simulator.stats.etimated_slowdown [m_ID].EndPeriod ();
+				Simulator.stats.actual_slowdown [m_ID].EndPeriod ();
+				Simulator.stats.non_overlap_penalty_period [m_ID].EndPeriod();
+			}
+			max_penalty = 0;
+			// end Xiyue
 
             ulong retired =
                 (ulong)m_ins.retire(Config.proc.instructionsPerCycle);
@@ -414,7 +477,7 @@ namespace ICSimulator
 
             while (!done && nIns > 0 && !m_ins.isFull())
             {
-                if (!m_trace_valid)
+                if (!m_trace_valid) ///By Xiyue: Why advance twice?
                     m_trace_valid = advanceTrace();
                 if (!m_trace_valid)
                     return false;

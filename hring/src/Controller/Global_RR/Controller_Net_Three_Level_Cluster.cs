@@ -179,7 +179,7 @@ namespace ICSimulator
                     Array.Clear(last_free_nodes,0,last_free_nodes.Length);
                     foreach (int node in nodes)
                     {
-                        ins_free[node]=Simulator.stats.insns_persrc[node].Count;
+						ins_free[node]=(ulong)Simulator.stats.insns_persrc[node].Count;
                         last_free_nodes[node]=1;
 
                         setThrottleRate(node,false);
@@ -287,10 +287,10 @@ namespace ICSimulator
             {
                 /* Calculate IPC during the last free-inject and throtttled interval */
                 if(ins_throttled[node]==0)
-                    ins_throttled[node]=Simulator.stats.insns_persrc[node].Count;
+					ins_throttled[node]=(ulong)Simulator.stats.insns_persrc[node].Count;
                 if(last_free_nodes[node]==1)
                 {
-                    ulong ins_retired=Simulator.stats.insns_persrc[node].Count-ins_free[node];
+					ulong ins_retired=(ulong)Simulator.stats.insns_persrc[node].Count-ins_free[node];
                     ipc_free[node]+=(double)ins_retired/Config.interval_length;
 #if DEBUG_CLUSTER
                     Console.Write("Free calc: Node ");
@@ -302,10 +302,10 @@ namespace ICSimulator
                 }
                 else
                 {
-                    ulong ins_retired=Simulator.stats.insns_persrc[node].Count-ins_throttled[node];
+					ulong ins_retired=(ulong)Simulator.stats.insns_persrc[node].Count-ins_throttled[node];
                     ipc_throttled[node]+=(double)ins_retired/Config.interval_length;
                 }
-                ins_throttled[node]=Simulator.stats.insns_persrc[node].Count;
+				ins_throttled[node]=(ulong)Simulator.stats.insns_persrc[node].Count;
             }
         }
 
@@ -420,7 +420,7 @@ namespace ICSimulator
             {
                 //update Instructions Count
                 for(int i=0;i<Config.N;i++)
-                    last_ins_count[i]=Simulator.stats.insns_persrc[i].Count;
+					last_ins_count[i]=(ulong)Simulator.stats.insns_persrc[i].Count;
                 //TODO: change the throttle rate to 100%?
                 if(free_for_all)
                     unthrottleAll();

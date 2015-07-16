@@ -17,8 +17,8 @@ namespace ICSimulator
             //ulong numerator = Config.router.counterNumerator[appID].EndPeriod();
             //ulong denominator = Config.router.counterDenominator[appID].EndPeriod();
 
-            ulong numerator = Simulator.stats.L1_misses_persrc_period[appID].EndPeriod();
-            ulong denominator = Simulator.stats.insns_persrc_period[appID].EndPeriod();
+			ulong numerator = (ulong)Simulator.stats.L1_misses_persrc_period[appID].EndPeriod();
+			ulong denominator = (ulong)Simulator.stats.insns_persrc_period[appID].EndPeriod();
             return (ulong)(10000.0 * numerator / denominator);
         }
         private ulong[] historyWeightedCounters = new ulong[Config.N];

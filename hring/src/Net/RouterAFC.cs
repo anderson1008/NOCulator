@@ -312,6 +312,14 @@ namespace ICSimulator
                             if (requesters[pc] == null ||
                                     top.CompareTo(requesters[pc]) < 0)
                             {
+								// By Xiyue:
+								//    Check Interference at Input Buffers
+								if (requesters[pc]!=null)
+								{
+									if (top.flit.packet.requesterID != requesters [pc].flit.packet.requesterID)
+										requesters [pc].flit.packet.txn.interferenceCycle ++;
+								}
+
                                 requesters[pc] = top;
                                 requester_dir[pc] = outdir;
                             }
@@ -335,6 +343,16 @@ namespace ICSimulator
                             if (top == null ||
                                     requesters[req].CompareTo(top) < 0)
                             {
+								// By Xiyue:
+								//	  Check Interference
+								//    here "top" is the flit being stalled.
+								if (top != null) 
+								{
+									if (requesters [req].flit.packet.requesterID != top.flit.packet.requesterID)	
+										top.flit.packet.txn.interferenceCycle ++;
+								}
+
+								// end Xiyue
 								top = requesters[req];
                                	top_indir = req;
                             }
@@ -387,7 +405,7 @@ namespace ICSimulator
 					}
                 }
             }
-            else
+            else // by Xiyue: for not buffered.
             {
 				for (int i = 0; i < Config.meshEjectTrial; i++)
                 {
@@ -492,7 +510,7 @@ namespace ICSimulator
                                 String.Format("Ran out of outlinks in arbitration at node {0} on input {1} cycle {2} flit {3} c {4} neighbors {5} outcount {6}", coord, i, Simulator.CurrentRound, input[i], c, neighbors, outCount));
                     }
                 }
-            }
+            } //by Xiyue: end not buffered
         }
 
         public override bool canInjectFlit(Flit f)

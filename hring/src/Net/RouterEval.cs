@@ -177,7 +177,7 @@ namespace ICSimulator
                     Flit incomingFlit = null;
                     if (dest >= 0)
                     {
-                        incomingFlit = new Packet(null, 0, 1, new Coord(1, 1), new Coord(nextConfig[j])).flits[0];
+						incomingFlit = new Packet(null, 0, 1, new Coord(1, 1), new Coord(nextConfig[j]), null).flits[0]; // by Xiyue: CmpCache_Txn field does nothing here.
                         incomingFlit.packet.creationTime = (ulong)Simulator.rand.Next(4);
                     }
                     theRouter.linkIn[j].In = incomingFlit;

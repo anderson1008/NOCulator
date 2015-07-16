@@ -9,6 +9,8 @@ namespace ICSimulator
         int m_class;
         int m_VCclass;
 
+		//ulong m_interference_cycle;
+
         public override int getQueue()
         {
             if (!Config.split_queues) return 0;
@@ -20,13 +22,14 @@ namespace ICSimulator
             return m_VCclass;
         }
 
-        public CachePacket(int reqNode, int from, int to, int flits, int _class, int _vcclass, Simulator.Ready _cb)
-            : base(null, 0, flits, new Coord(from), new Coord(to))
+		public CachePacket(int reqNode, int from, int to, int flits, int _class, int _vcclass, Simulator.Ready _cb, CmpCache_Txn txn)
+			: base(null, 0, flits, new Coord(from), new Coord(to), txn)
         {
             cb = _cb;
             m_class = _class;
             m_VCclass = mapClass(_vcclass);
             requesterID = reqNode;
+			//m_interference_cycle = 0;
         }
 
         public override string ToString()
@@ -64,7 +67,7 @@ namespace ICSimulator
         public Packet pkt;
 
         public RetxPacket(Coord src, Coord dest, Packet p)
-            : base(null, 0, 1, src, dest)
+			: base(null, 0, 1, src, dest, null) // by Xiyue: CmpCache_Txn field does nothing here.
         {
             pkt = p;
         }

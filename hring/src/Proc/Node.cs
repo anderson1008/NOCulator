@@ -95,30 +95,30 @@ namespace ICSimulator
             if (m_mem != null)
                 m_mem.doStep();
 
-            if (m_inj_pool.FlitInterface)
+            if (m_inj_pool.FlitInterface) // By Xiyue: ??? why 2 different injection modes?
             {
                 Flit f = m_inj_pool.peekFlit();
                 if (f != null && m_router.canInjectFlit(f))
                 {
-                    m_router.InjectFlit(f);
-                    m_inj_pool.takeFlit();
+                    m_router.InjectFlit(f);  
+                    m_inj_pool.takeFlit();  // By Xiyue: ??? No action ???
                 }
             }
-            else
+			else // By Xiyue: Actual injection into network
             {
-                Packet p = m_inj_pool.next();
+                Packet p = m_inj_pool.next(); 
                 if (p != null)
                 {
                     foreach (Flit f in p.flits)
                         m_injQueue_flit.Enqueue(f);
                 }
 
-                if (m_injQueue_evict.Count > 0 && m_router.canInjectFlit(m_injQueue_evict.Peek()))
+				if (m_injQueue_evict.Count > 0 && m_router.canInjectFlit(m_injQueue_evict.Peek())) // By Xiyue: ??? What is m_injQueue_evict ?
                 {
                     Flit f = m_injQueue_evict.Dequeue();
                     m_router.InjectFlit(f);
                 }
-                else if (m_injQueue_flit.Count > 0 && m_router.canInjectFlit(m_injQueue_flit.Peek()))
+				else if (m_injQueue_flit.Count > 0 && m_router.canInjectFlit(m_injQueue_flit.Peek())) // By Xiyue: ??? Dif from m_injQueue_evict?
                 {
                     Flit f = m_injQueue_flit.Dequeue();
 #if PACKETDUMP
@@ -128,7 +128,7 @@ namespace ICSimulator
                                 f.packet, coord, Simulator.CurrentRound);
 #endif
 
-                    m_router.InjectFlit(f);
+                    m_router.InjectFlit(f);  // by Xiyue: inject into a router
                     // for Ring based Network, inject two flits if possible
                     for (int i = 0 ; i < Config.RingInjectTrial - 1; i++)
 						if (m_injQueue_flit.Count > 0 && m_router.canInjectFlit(m_injQueue_flit.Peek()))
@@ -178,18 +178,18 @@ namespace ICSimulator
             else if (p is CachePacket)
             {
                 CachePacket cp = p as CachePacket;
-                m_cpu.receivePacket(cp);
+                m_cpu.receivePacket(cp); // by Xiyue: Local ejection???
             }
         }
         
-        public void queuePacket(Packet p)
+		public void queuePacket(Packet p) // By Xiyue: called by CmpCache::send_noc() 
         {
 #if PACKETDUMP
             if (m_coord.ID == 0)
             Console.WriteLine("queuePacket {0} at node {1} (cyc {2}) (queue len {3})",
                     p, coord, Simulator.CurrentRound, queueLens);
 #endif
-            if (p.dest.ID == m_coord.ID) // local traffic: do not go to net (will confuse router)
+            if (p.dest.ID == m_coord.ID) // local traffic: do not go to net (will confuse router) // by Xiyue: just hijack the packet if it only access the shared cache at the local node.
             {
                 m_local.Enqueue(p);
                 return;
@@ -199,7 +199,7 @@ namespace ICSimulator
                 Simulator.network.nodes[p.dest.ID].m_local.Enqueue(p);
             else // otherwise: enqueue on injection queue
             {
-                m_inj_pool.addPacket(p);
+                m_inj_pool.addPacket(p); //By Xiyue: Actual Injection. But core execution is still a question.
             }
         }
 

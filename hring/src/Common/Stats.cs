@@ -8,6 +8,16 @@ namespace ICSimulator
 {
     public class Stats
     {
+		// By Xiyue: for coherent packet profiling
+		public SampledStat[] avg_slowdown_error;
+		public PeriodicAccumStat[] etimated_slowdown;
+		public PeriodicAccumStat[] actual_slowdown;
+		public AccumStat[] pkt_tier_count;
+		public AccumStat[] non_overlap_penalty;
+		public PeriodicAccumStat[] non_overlap_penalty_period;
+		// end Xiyue
+
+
         public int N;
         ulong m_finishtime;
 
@@ -121,7 +131,7 @@ namespace ICSimulator
         public AccumStat[] always_throttle_time_bysrc;
         public SampledStat[] flit_inj_latency_byapp, flit_net_latency_byapp, flit_total_latency_byapp;
         public SampledStat flit_inj_latency, flit_net_latency, flit_total_latency;
-        public SampledStat hoq_latency;
+		public SampledStat hoq_latency;  
         public SampledStat[] hoq_latency_bysrc;
 
         public SampledStat golden_pernode; // golden flits per node, per cycle (0, 1, 2, 3, 4)
@@ -299,25 +309,25 @@ namespace ICSimulator
 		public SampledStat avgBufferDepth;
 
 
-                public AccumStat bufrings_nic_enqueue, bufrings_nic_dequeue;
-                public AccumStat bufrings_nic_inject, bufrings_nic_eject;
-                public AccumStat bufrings_nic_starve;
+        public AccumStat bufrings_nic_enqueue, bufrings_nic_dequeue;
+        public AccumStat bufrings_nic_inject, bufrings_nic_eject;
+        public AccumStat bufrings_nic_starve;
 
-                public AccumStat[] bufrings_iri_enqueue_g, bufrings_iri_dequeue_g;
-                public AccumStat[] bufrings_iri_enqueue_l, bufrings_iri_dequeue_l;
-                public AccumStat[] bufrings_iri_enqueue_gl, bufrings_iri_dequeue_gl;
-                public AccumStat[] bufrings_iri_enqueue_lg, bufrings_iri_dequeue_lg;
-                public AccumStat[] bufrings_link_traverse;
+        public AccumStat[] bufrings_iri_enqueue_g, bufrings_iri_dequeue_g;
+        public AccumStat[] bufrings_iri_enqueue_l, bufrings_iri_dequeue_l;
+        public AccumStat[] bufrings_iri_enqueue_gl, bufrings_iri_dequeue_gl;
+        public AccumStat[] bufrings_iri_enqueue_lg, bufrings_iri_dequeue_lg;
+        public AccumStat[] bufrings_link_traverse;
 
-                public SampledStat[] bufrings_iri_occupancy_g;
-                public SampledStat[] bufrings_iri_occupancy_l;
-                public SampledStat[] bufrings_iri_occupancy_gl;
-                public SampledStat[] bufrings_iri_occupancy_lg;
-                public SampledStat bufrings_nic_occupancy;
+        public SampledStat[] bufrings_iri_occupancy_g;
+        public SampledStat[] bufrings_iri_occupancy_l;
+        public SampledStat[] bufrings_iri_occupancy_gl;
+        public SampledStat[] bufrings_iri_occupancy_lg;
+        public SampledStat bufrings_nic_occupancy;
 
-                public SampledStat[] bufrings_ring_util;
+        public SampledStat[] bufrings_ring_util;
 
-                public AccumStat bufrings_nuke;
+        public AccumStat bufrings_nuke;
 
         AccumStat newAccumStat()
         {
@@ -456,12 +466,10 @@ namespace ICSimulator
 
                 Type t = fi.FieldType;
 
-                if (t == typeof(DictSampledStat[]))
-                    fi.SetValue(this, newDictSampledStatArray());
-
-                else if (t == typeof(PeriodicAccumStat[]))
-                    fi.SetValue(this, newPeriodicAccumStatArray());
-
+				if (t == typeof(DictSampledStat[]))
+					fi.SetValue (this, newDictSampledStatArray ());
+				else if (t == typeof(PeriodicAccumStat[]))
+					fi.SetValue (this, newPeriodicAccumStatArray ());
                 else if (t == typeof(AccumStat))
                     fi.SetValue(this, newAccumStat());
                 else if (t == typeof(AccumStat[]))
@@ -589,7 +597,7 @@ namespace ICSimulator
                 tw.WriteLine("{0} = [", name);
                 for (int x = 0; x < dim0; x++)
                 {
-                    for (int y = 0; y < dim1; y++)
+					for (int y = 0; y < dim1; y++)
                     {
                         tw.Write("{0},", ((AccumStat)o[x, y]).Count);
                     }
@@ -689,7 +697,7 @@ namespace ICSimulator
             for (int i = 0; i < N; i++)
             {
                 Coord c = new Coord(i);
-                int x = c.x, y = c.y;
+				int x = c.x, y = c.y;
                 tw.WriteLine("--- Application at ({0},{1}) (config: {2})", x, y,
                              "NOTIMPLEMENTED");
                 //String.Join(" ", Simulator.sources.spec.GetSpec(x, y).ToArray()));
@@ -929,12 +937,13 @@ namespace ICSimulator
         }
     }
 
+
     // an AccumStat is a statistic that counts discrete events (flit
     // deflections, ...) and from which we can extract a rate
     // (events/time).
     public class AccumStat : StatsObject
     {
-        protected ulong m_count;
+        protected double m_count;
         private ulong m_endtime;
 
         public AccumStat()
@@ -949,19 +958,29 @@ namespace ICSimulator
 
         public void Add(ulong addee)
         {
-            m_count += addee;
+			m_count += (ulong) addee;
         }
+
+		public void Add(double addee)
+		{
+			m_count += addee;
+		}
 
         // USE WITH CARE. (e.g., canceling an event that didn't actually happen...)
         public void Sub()
         {
-            m_count--;
+			m_count--;
         }
 
         public void Sub(ulong subtrahend) // I've always wanted to use that word...
         {
-            m_count -= subtrahend;
+			m_count -= (ulong) subtrahend;
         }
+
+		public void Sub(double subtrahend) // I've always wanted to use that word...
+		{
+			m_count -= subtrahend;
+		}
 
         public override void Reset()
         {
@@ -979,7 +998,7 @@ namespace ICSimulator
             tw.Write("{0}", m_count);
         }
 
-        public ulong Count
+        public double Count
         { get { return m_count; } }
 
         public double Rate // events per time unit
@@ -994,7 +1013,7 @@ namespace ICSimulator
     //this metric
     public class PeriodicAccumStat : AccumStat
     {
-        private List<ulong> history = new List<ulong>();
+		private List<double> history = new List<double>();
 
         public override void Reset()
         {
@@ -1002,9 +1021,9 @@ namespace ICSimulator
             history.Clear();
         }
 
-        public ulong EndPeriod()
+		public double EndPeriod()
         {
-            ulong lastPeriodValue = m_count;
+            double lastPeriodValue = m_count;
             history.Add(m_count);
             m_count = 0;
             return lastPeriodValue;
@@ -1012,10 +1031,12 @@ namespace ICSimulator
 
         public override void DumpJSON(TextWriter tw)
         {
-            tw.Write("[");
-            foreach (ulong i in history)
+			tw.Write (Environment.NewLine);
+            tw.Write("{");
+            foreach (double i in history)
                 tw.Write("{0},", i);
-            tw.Write("{0}]", m_count);
+            tw.Write("{0}", m_count);
+			tw.Write("}");
         }
     }
 }

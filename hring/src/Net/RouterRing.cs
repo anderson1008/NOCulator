@@ -204,7 +204,7 @@ namespace ICSimulator
         
        	protected override void _doStep()
         {
-			for (int i = 0; i < 2; i++)
+			for (int i = 0; i < 2; i++) //by Xiyue: run output link first
 			{
 				if (linkIn[i].Out != null && Config.N == 16)
 				{

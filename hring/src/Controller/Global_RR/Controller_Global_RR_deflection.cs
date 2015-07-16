@@ -35,7 +35,7 @@ namespace ICSimulator
 	    for (int i = 0 ; i < Config.N ; i++)
 	    {
 		avg = avg + (beta * (double)(Simulator.stats.deflect_flit_bysrc[i].Count-last_def_flit[i]) );
-	        last_def_flit[i] = (Simulator.stats.deflect_flit_bysrc[i].Count);
+				last_def_flit[i] = (ulong)(Simulator.stats.deflect_flit_bysrc[i].Count);
             }
 	    avg = avg/(Config.N * Config.throttle_sampling_period);
 #if DEBUG_DYN

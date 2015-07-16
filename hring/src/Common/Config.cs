@@ -103,6 +103,12 @@ namespace ICSimulator
         public static MemoryConfig memory = new MemoryConfig();
         public static RouterConfig router = new RouterConfig();
 
+		// ----
+		// By Xiyue
+		public static double slowdown_epoch = 100000;
+		public static double ref_ipc = 1;
+		// end Xiyue
+
         // ----
         // Buffered Rings (Ravindran et al, HPCA 1997)
         public static int bufrings_n = 1; // number of virtual networks
@@ -551,16 +557,19 @@ namespace ICSimulator
                     i++;
                 }
             }
-            traceFilenames = new string[N];
+			// by Xiyue: check the number of trace read in; Must equal to the number of nodes. 
+			//           if there is no workload running on a node, must specify null in the workload list (-workload).
+			traceFilenames = new string[N];
             if (traceArgs.Length - traceArgOffset < N)
                 throw new Exception(
                     String.Format("Not enough trace files given (got {0}, wanted {1})", traceArgs.Length - traceArgOffset, N));
-            for (int a = 0; a < N; a++)
+
+			for (int a = 0; a < N; a++)
             {
-                traceFilenames[a] = traceArgs[traceArgOffset + a];
+				traceFilenames [a] = traceArgs [traceArgOffset + a];
             }
 
-            Simulator.stats = new Stats(Config.N);
+            Simulator.stats = new Stats(Config.N);  // by Xiyue: statics entry
 
             finalize();
             proc.finalize();

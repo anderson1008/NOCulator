@@ -85,7 +85,7 @@ namespace ICSimulator
                         else if (Config.topology == Topology.BufRingNetworkMulti)
                             network = new BufRingMultiNetwork(Config.network_nrX, Config.network_nrY);
 	    	else
-            	network = new Network(Config.network_nrX, Config.network_nrY);
+				network = new Network(Config.network_nrX, Config.network_nrY);
 
 	      	network.setup();
             Warming = true;
@@ -106,10 +106,10 @@ namespace ICSimulator
                 //Simulator.stats.Report(tw);
             }
             if (Config.matlab != "")
-                using (TextWriter tw = new StreamWriter(Config.matlab))
-                {
-                    Simulator.stats.DumpMATLAB(tw);
-                }
+            using (TextWriter tw = new StreamWriter(Config.matlab))
+            {
+                Simulator.stats.DumpMATLAB(tw);
+            }
 
             Simulator.network.close();
         }
@@ -133,11 +133,11 @@ namespace ICSimulator
         public static bool DoStep()
         {
             // handle pending deferred-callbacks first
-            while (!m_deferQueue.Empty && m_deferQueue.MinPrio <= Simulator.CurrentRound)
+            while (!m_deferQueue.Empty && m_deferQueue.MinPrio <= Simulator.CurrentRound)  //by Xiyue: MinPrio here is the time stamp of the scheduled event
             {
                 m_deferQueue.Dequeue() (); // dequeue and call the callback
             }
-            if (CurrentRound == (ulong)Config.warmup_cyc)
+            if (CurrentRound == (ulong)Config.warmup_cyc) // By Xiyue: CurrentRound is the main clock.
             {
                 Console.WriteLine("done warming");
                 //Console.WriteLine("warmup_cyc {0}",Config.warmup_cyc);
@@ -152,6 +152,7 @@ namespace ICSimulator
 
             if (CurrentRound % 100000 == 0)
                 ProgressUpdate();
+
 
             CurrentRound++;
 
@@ -174,7 +175,7 @@ namespace ICSimulator
         {
             if (!Config.progress) return;
 
-            Console.Out.WriteLine("cycle {0}: {1} flits injected, {2} flits arrived, avg total latency {3}",
+			Console.Out.WriteLine(Environment.NewLine + "cycle {0}: {1} flits injected, {2} flits arrived, avg total latency {3}",
                                   CurrentRound,
                                   Simulator.stats.inject_flit.Count,
                                   Simulator.stats.eject_flit.Count,
@@ -205,7 +206,7 @@ namespace ICSimulator
             */
        }
 
-        public static void Defer(Simulator.Ready cb, ulong cyc)
+        public static void Defer(Simulator.Ready cb, ulong cyc) // by Xiyue: can be considered as a scheduler
         {
             m_deferQueue.Enqueue(cb, cyc);
         }

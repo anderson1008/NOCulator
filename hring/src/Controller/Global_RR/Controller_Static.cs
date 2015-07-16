@@ -24,7 +24,7 @@ namespace ICSimulator
         {
             for (int i = 0; i < Config.N; i++)
             {
-                num_ins_last_epoch[i] = Simulator.stats.insns_persrc[i].Count;
+                num_ins_last_epoch[i] = (ulong) Simulator.stats.insns_persrc[i].Count;
                 L1misses[i]=0;
             }            
         }
