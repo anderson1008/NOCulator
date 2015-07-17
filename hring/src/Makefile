@@ -11,7 +11,11 @@ endif
 all: bin/sim.exe 
 
 bin/sim.exe: $(SRC)
-	gmcs -r:Mono.Posix -debug -unsafe $(FLAGS) -out:$@ $^
+	# Ubuntu 14.04LTS + monoDevelop version 5.9.4 uses mcs 
+	mcs -r:Mono.Posix -debug -unsafe $(FLAGS) -out:$@ $^
+
+	# Ubuntu 14.04LTS + earlier version monoDevelop uses gmcs
+	#gmcs -r:Mono.Posix -debug -unsafe $(FLAGS) -out:$@ $^
 
 .PHONY: clean
 clean:
