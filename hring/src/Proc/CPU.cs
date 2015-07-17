@@ -187,7 +187,7 @@ namespace ICSimulator
             alone_t = m_ins.oldestT;
 
             Simulator.stats.insns_persrc[m_ID].Add(retired);
-            Simulator.stats.insns_persrc_period[m_ID].Add(retired);
+        	Simulator.stats.insns_persrc_period[m_ID].Add(retired);
             Simulator.stats.active_cycles[m_ID].Add();
             Simulator.stats.active_cycles_alone[m_ID].Add(alone_cyc);
 
@@ -424,27 +424,21 @@ namespace ICSimulator
 			} 
 		}
 
-		// end Xiyue
-
-        public bool doStep()
-        {
-            if (m_trace == null) {return true;}
-
-            int syncID;
-
-			// By Xiyue: track the nonoverlapped penalty
+		public void computeSlowdown ()
+		{
+			double ipc_share;
+			// track the nonoverlapped penalty
 			double estimated_slowdown, actual_slowdown;
-
 			Simulator.stats.non_overlap_penalty [m_ID].Add (max_penalty);
 			Simulator.stats.non_overlap_penalty_period [m_ID].Add (max_penalty);
-			// TODO: Xiyue dump IPC, slowdown info periodically here.
+			// update slowdown info periodically here.
 			if (Simulator.CurrentRound % Config.slowdown_epoch == 0)
 			{
 				ulong penalty_cycle = (ulong) Simulator.stats.non_overlap_penalty_period [m_ID].Count;
 				estimated_slowdown = (double) Config.slowdown_epoch/(Config.slowdown_epoch-penalty_cycle);
 				Simulator.stats.etimated_slowdown [m_ID].Add (estimated_slowdown);
-				Simulator.stats.insns_persrc_period [m_ID].Finish (Simulator.CurrentRound);
-				double ipc_share = Simulator.stats.insns_persrc_period [m_ID].Rate;
+
+				ipc_share = Simulator.stats.insns_persrc_period [m_ID].Count/(Config.slowdown_epoch);
 				actual_slowdown = (double)Config.ref_ipc / ipc_share;
 				double error_slowdown = (estimated_slowdown - actual_slowdown) / actual_slowdown;
 				error_slowdown = (error_slowdown > 0) ? error_slowdown : (-error_slowdown);
@@ -453,10 +447,19 @@ namespace ICSimulator
 				//reset
 				Simulator.stats.etimated_slowdown [m_ID].EndPeriod ();
 				Simulator.stats.actual_slowdown [m_ID].EndPeriod ();
+				Simulator.stats.insns_persrc_period [m_ID].EndPeriod ();
 				Simulator.stats.non_overlap_penalty_period [m_ID].EndPeriod();
 			}
 			max_penalty = 0;
-			// end Xiyue
+		}
+
+		// end Xiyue
+
+        public bool doStep()
+        {
+            if (m_trace == null) {return true;}
+
+            int syncID;
 
             ulong retired =
                 (ulong)m_ins.retire(Config.proc.instructionsPerCycle);
@@ -468,8 +471,9 @@ namespace ICSimulator
                 m_trace_valid = advanceTrace(); // doStats needs to see the next record
             
             doStats(retired);
+			computeSlowdown ();
 
-            if (m_ins.isFull()) return true;
+			if (m_ins.isFull()) return true;
 
             bool done = false;
             int nIns = Config.proc.instructionsPerCycle;

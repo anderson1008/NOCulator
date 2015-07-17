@@ -944,7 +944,7 @@ namespace ICSimulator
     public class AccumStat : StatsObject
     {
         protected double m_count;
-        private ulong m_endtime;
+		private ulong m_endtime;
 
         public AccumStat()
         {
@@ -999,7 +999,7 @@ namespace ICSimulator
         }
 
         public double Count
-        { get { return m_count; } }
+		{ get { return m_count; } }
 
         public double Rate // events per time unit
         { get { return (double)Count / (double)m_endtime; } }
