@@ -105,7 +105,7 @@ namespace ICSimulator
 
 		// ----
 		// By Xiyue
-		public static double slowdown_epoch = 10000;
+		public static double slowdown_epoch = 100000;
 		public static double ref_ipc = 1;
 		// end Xiyue
 

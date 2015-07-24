@@ -252,26 +252,38 @@ namespace ICSimulator {
             return false;
         }
 
-        public void setReady(ulong address, bool write) {
+		public void setReady(ulong address, bool write, out bool isHead) {
             //Console.WriteLine("pr{0}: ready {1:X} (block {2:X}) write {3}", m_cpu.ID, address,
             //        address >> Config.cache_block, write);
 
             if (isEmpty()) throw new Exception("Instruction Window is empty!");
 
+			isHead = false;
             for (int i = 0; i < Config.proc.instWindowSize; i++) {
                 if ((addresses[i] & m_match_mask) == (address & m_match_mask) && !ready[i]) {
-                    // this completion does not satisfy outstanding req i if and only if
+
+
+
+					// this completion does not satisfy outstanding req i if and only if
                     // 1. the outstanding req is a write, AND
                     // 2. the completion is a read completion.
                     if (writes[i] && !write) continue;
+
+					// by Xiyue: probe if the serviced request is at the head of ROB.
+					if (address == addresses [oldest])
+						isHead = true;
+					
                     requests[i].service();
                     ready[i] = true;
                     addresses[i] = NULL_ADDRESS;
                     outstandingReqs--;
                     //Console.WriteLine("pr{0}: set slot {1} ready, now {2} outstanding", m_cpu.ID, i, outstandingReqs);
+
+
                 }
             }
         }
+
 
         public bool isOldestAddrAndStalled(ulong address, out ulong stallCount)
         {
