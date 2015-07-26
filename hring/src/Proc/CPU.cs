@@ -60,7 +60,7 @@ namespace ICSimulator
 
 		// By Xiyue
 		//	 for quantification of slowdown
-		public ulong max_penalty = 0;
+		public ulong m_rob_last_retire = 0;
 		// end Xiyue
 
         public CPU(Node n)
@@ -237,6 +237,31 @@ namespace ICSimulator
             if (stallPromise)
                 Simulator.stats.promise_wait[m_ID].Add();
                 */
+
+
+			double ipc_share;
+			// track the nonoverlapped penalty
+			double estimated_slowdown, actual_slowdown;
+			// update slowdown info periodically here.
+			if (Simulator.CurrentRound % Config.slowdown_epoch == 0)
+			{
+				ulong penalty_cycle = (ulong) Simulator.stats.non_overlap_penalty_period [m_ID].Count;
+				estimated_slowdown = (double) Config.slowdown_epoch/(Config.slowdown_epoch-penalty_cycle);
+				Simulator.stats.etimated_slowdown [m_ID].Add (estimated_slowdown);
+
+				ipc_share = Simulator.stats.insns_persrc_period [m_ID].Count/(Config.slowdown_epoch);
+				actual_slowdown = (double)Config.ref_ipc / ipc_share;
+				double error_slowdown = (estimated_slowdown - actual_slowdown) / actual_slowdown;
+				error_slowdown = (error_slowdown > 0) ? error_slowdown : (-error_slowdown);
+				Simulator.stats.avg_slowdown_error [m_ID].Add (error_slowdown);
+				Simulator.stats.actual_slowdown [m_ID].Add (actual_slowdown);
+				//reset
+				Simulator.stats.etimated_slowdown [m_ID].EndPeriod ();
+				Simulator.stats.actual_slowdown [m_ID].EndPeriod ();
+				Simulator.stats.insns_persrc_period [m_ID].EndPeriod ();
+				Simulator.stats.non_overlap_penalty_period [m_ID].EndPeriod();
+			}
+
         }
 
         bool advanceTrace()
@@ -338,8 +363,7 @@ namespace ICSimulator
 
             if(!L1hit)
 		         Simulator.controller.L1misses[m_ID]++;
-
-
+			
             if (m_stats_active)
             {
                 Simulator.stats.L1_accesses_persrc[m_ID].Add();
@@ -378,14 +402,13 @@ namespace ICSimulator
             }
         }
 
-		void reqDone(ulong addr, int mshr, bool write, ulong minimalCycle, bool L1hit, CmpCache_Txn txn)   // by Xiyue: called when completing a LD/ST request
+		// by Xiyue: called when completing a LD/ST request
+		void reqDone(ulong addr, int mshr, bool write, ulong minimalCycle, bool L1hit, CmpCache_Txn txn)   
         {
-            m_ins.setReady(addr, write);
+			bool isHead = false;
+			m_ins.setReady(addr, write, out isHead);
 
-			if (!L1hit)
-				computePenalty (txn); // by Xiyue
-
-//            if (m_ID == 0) Console.WriteLine("P0 finish req block {0:X} write {1} at cyc {2}, hit {3}", addr>>Config.cache_block, write, Simulator.CurrentRound, write, !l1miss);
+			computePenalty (txn, isHead, L1hit); // by Xiyue: track non-overlapped latency.
 
             if (!write && m_mshrs[mshr].pending_write)
             {
@@ -405,52 +428,33 @@ namespace ICSimulator
         }
 
 		// By Xiyue
-		//   Compute the non-overlapped latency
-		void computePenalty (CmpCache_Txn txn)
+		//   Compute the non-overlapped latency.
+		//   Latency is accounted for if the associated instruction is at the head of ROB.
+		//   Then, exclude the overlapped portion.
+		//   Potential hardware implementation:
+		//   Use a register storing the address/vitual_address of the instruction at the head of ROB.
+		//   Another register storing the accumulated non-overlapped latency and the time the previous instruction is from ROB.
+		void computePenalty (CmpCache_Txn txn, bool isHead, bool L1hit)
 		{
-			if (txn.interferenceCycle != 0) {
-				ulong t_no_interference = Simulator.CurrentRound - txn.interferenceCycle;
-
-				if (t_no_interference > m_last_retired) {
-					if (txn.interferenceCycle > max_penalty)
-						max_penalty = txn.interferenceCycle;
-				} else if (t_no_interference < m_last_retired  && Simulator.CurrentRound > m_last_retired ) {
-					if (txn.interferenceCycle > max_penalty)
-						max_penalty = Simulator.CurrentRound - m_last_retired;
-				} else {
-					// the interference cycle is completely overlapped with the previous request
-					// no action is requied.
-				}
-			} 
-		}
-
-		public void computeSlowdown ()
-		{
-			double ipc_share;
-			// track the nonoverlapped penalty
-			double estimated_slowdown, actual_slowdown;
-			Simulator.stats.non_overlap_penalty [m_ID].Add (max_penalty);
-			Simulator.stats.non_overlap_penalty_period [m_ID].Add (max_penalty);
-			// update slowdown info periodically here.
-			if (Simulator.CurrentRound % Config.slowdown_epoch == 0)
-			{
-				ulong penalty_cycle = (ulong) Simulator.stats.non_overlap_penalty_period [m_ID].Count;
-				estimated_slowdown = (double) Config.slowdown_epoch/(Config.slowdown_epoch-penalty_cycle);
-				Simulator.stats.etimated_slowdown [m_ID].Add (estimated_slowdown);
-
-				ipc_share = Simulator.stats.insns_persrc_period [m_ID].Count/(Config.slowdown_epoch);
-				actual_slowdown = (double)Config.ref_ipc / ipc_share;
-				double error_slowdown = (estimated_slowdown - actual_slowdown) / actual_slowdown;
-				error_slowdown = (error_slowdown > 0) ? error_slowdown : (-error_slowdown);
-				Simulator.stats.avg_slowdown_error [m_ID].Add (error_slowdown);
-				Simulator.stats.actual_slowdown [m_ID].Add (actual_slowdown);
-				//reset
-				Simulator.stats.etimated_slowdown [m_ID].EndPeriod ();
-				Simulator.stats.actual_slowdown [m_ID].EndPeriod ();
-				Simulator.stats.insns_persrc_period [m_ID].EndPeriod ();
-				Simulator.stats.non_overlap_penalty_period [m_ID].EndPeriod();
+			ulong actual_interference = 0;
+			ulong t_no_interference = 0;
+			if (!L1hit) {
+				if (txn.interferenceCycle != 0 && isHead) {
+					t_no_interference = Simulator.CurrentRound - txn.interferenceCycle;
+					if (t_no_interference > m_rob_last_retire) {
+						actual_interference = txn.interferenceCycle;
+					} else if (t_no_interference < m_rob_last_retire && Simulator.CurrentRound > m_rob_last_retire ) {
+						actual_interference = Simulator.CurrentRound - m_rob_last_retire;
+					} else {
+						// the interference cycle is completely overlapped with the previous request
+						// no action is requied.
+					}
+					// track the nonoverlapped penalty
+					Simulator.stats.non_overlap_penalty [m_ID].Add (actual_interference);
+					Simulator.stats.non_overlap_penalty_period [m_ID].Add (actual_interference);
+					m_rob_last_retire = Simulator.CurrentRound;
+				} 
 			}
-			max_penalty = 0;
 		}
 
 		// end Xiyue
@@ -470,8 +474,7 @@ namespace ICSimulator
             if (!m_trace_valid)
                 m_trace_valid = advanceTrace(); // doStats needs to see the next record
             
-            doStats(retired);
-			computeSlowdown ();
+            doStats(retired); // by Xiyue: periodical slowdown is also logged here.
 
 			if (m_ins.isFull()) return true;
 
