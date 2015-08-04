@@ -105,8 +105,20 @@ namespace ICSimulator
 
 		// ----
 		// By Xiyue
-		public static double slowdown_epoch = 100000;
+		public static double slowdown_epoch = 10000;
 		public static double ref_ipc = 1;
+		public static double[] target_slowdown = new double[16] {1.2, 2.0, 2.0, 2.0, 1.2, 2.0, 2.0, 2.0, 1.2, 2.0, 2.0, 2.0, 1.2, 2.0, 2.0, 2.0};
+		public static double throt_min = 0.0;  // share with Sigcomm paper
+		public static double throt_max = 0.5;	// share with Sigcomm paper
+		public static bool throttle_enable = true;
+		//public static double[] default_throttle = new double[16] {0.0, 0.1, 0.1, 0.2, 0.0, 0.1, 0.1, 0.2, 0.0, 0.1, 0.1, 0.2, 0.0, 0.1, 0.1, 0.2};
+		public static double default_throttle = 0.9;
+
+
+
+		//public static double[] default_throttle = new double[16] {0.0, 0.9, 0.9, 0.9, 0.85, 0.9, 0.9, 0.9, 0.85, 0.9, 0.9, 0.9, 0.85, 0.9, 0.9, 0.9};
+		public static double ewmv_factor = 0.3; // weight of old value
+		public static double thrt_sweep = 0.05;
 		// end Xiyue
 
         // ----
@@ -409,8 +421,8 @@ namespace ICSimulator
         public static double congested_alpha = 0.35;
         public static double congested_omega = 15;
         public static double congested_max = 0.9;
-        public static double throt_min = 0.45;
-        public static double throt_max = 0.75;
+        //public static double throt_min = 0.45;
+        //public static double throt_max = 0.75;
         public static double throt_scale = 10;
         public static double avg_scale = 1;
         public static bool always_obey_tier3 = true;

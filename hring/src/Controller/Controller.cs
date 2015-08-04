@@ -27,6 +27,7 @@ namespace ICSimulator
     {
         CLASSIC,
         THROTTLE,
+		THROTTLE_QOS, // by Xiyue
         STC,
         MIX,
         SIMPLEMAP,
@@ -65,6 +66,10 @@ namespace ICSimulator
             {
                 case ControllerType.CLASSIC:
                     return new Controller_ClassicBLESS();
+				// by Xiyue
+				case ControllerType.THROTTLE_QOS:
+					return new Controller_QoSThrottle ();
+				// end Xiyue
                 case ControllerType.THROTTLE:
                     return new Controller_Throttle();
                 case ControllerType.STC:

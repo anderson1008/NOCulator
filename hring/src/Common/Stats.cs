@@ -15,6 +15,8 @@ namespace ICSimulator
 		public AccumStat[] pkt_tier_count;
 		public AccumStat[] non_overlap_penalty;
 		public PeriodicAccumStat[] non_overlap_penalty_period;
+		public PeriodicAccumStat[] causeIntf;
+		public PeriodicAccumStat[] insns_persrc_ewma;
 		// end Xiyue
 
 
@@ -1010,11 +1012,34 @@ namespace ICSimulator
         public override void Reset() {} //can't be reset
     }
 
+
+
+
+
     //this metric
     public class PeriodicAccumStat : AccumStat
     {
 		private List<double> history = new List<double>();
+		private double emwa_factor = Config.ewmv_factor;
 
+		public double ExpWhtMvAvg ()
+		{
+			double current = m_count;
+			double lastPeriodValue;
+			double new_ewma;
+			int count = history.Count;
+			if (count == 0) {
+				lastPeriodValue = 0;
+				new_ewma = current;
+			} else {
+				lastPeriodValue = history [history.Count - 1];
+				new_ewma = emwa_factor * lastPeriodValue + current * (1 - emwa_factor);
+			}
+			history.Add (new_ewma);
+			m_count = 0;
+			return new_ewma;
+		}
+			
         public override void Reset()
         {
             base.Reset();

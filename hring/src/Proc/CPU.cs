@@ -1,4 +1,4 @@
-//#define DEBUG
+#define DEBUG
 
 using System;
 using System.Collections.Generic;
@@ -8,6 +8,8 @@ using System.Linq;
 
 namespace ICSimulator
 {
+	
+
     public class CPU
     {
         Node m_n;
@@ -22,7 +24,9 @@ namespace ICSimulator
         InstructionWindow m_ins;
         ulong m_last_retired;
 
-        struct MSHR
+
+
+        public struct MSHR
         {
             public bool valid;
             public ulong block;
@@ -44,6 +48,7 @@ namespace ICSimulator
 
         bool m_stats_active;
         ulong m_active_ret;
+		public bool stats_active {get{ return m_stats_active;}}
 
 
         public ulong ICount { get { return m_active_ret; } }
@@ -71,13 +76,9 @@ namespace ICSimulator
             if (m_sync == null)
                 m_sync = new Syncer();
 
-
 			m_group = Simulator.network.workload.getGroup(m_ID);
-            //m_thdID = Simulator.network.workload.getThread(m_ID);i
-
 
 		    group_count = Simulator.network.workload.GroupCount;
-
 
             openTrace();
             m_trace_valid = false;
@@ -164,6 +165,7 @@ namespace ICSimulator
 
         void doStats(ulong retired)
         {
+			
             Simulator.stats.every_insns_persrc[m_ID].Add(retired);
             if(m_idle)
                 Simulator.stats.idle_cycles[m_ID].Add();
@@ -188,6 +190,7 @@ namespace ICSimulator
 
             Simulator.stats.insns_persrc[m_ID].Add(retired);
         	Simulator.stats.insns_persrc_period[m_ID].Add(retired);
+			Simulator.stats.insns_persrc_ewma [m_ID].Add (retired);
             Simulator.stats.active_cycles[m_ID].Add();
             Simulator.stats.active_cycles_alone[m_ID].Add(alone_cyc);
 
@@ -223,44 +226,11 @@ namespace ICSimulator
 
             // MSHR stall: window not full, next insn is memory, but we have no free MSHRs
             bool stallMem = !windowFull && (nextIsMem && noFreeMSHRs);
-			/*
-            // promise stall: MSHR stall, and there is a pending eviction (waiting for promise) holding
-            // an mshr
-            bool stallPromise = stallMem && pendingEvict;
-            */
 
             if (stall)
                 Simulator.stats.cpu_stall[m_ID].Add();
             if (stallMem)
                 Simulator.stats.cpu_stall_mem[m_ID].Add();
-            /*
-            if (stallPromise)
-                Simulator.stats.promise_wait[m_ID].Add();
-                */
-
-
-			double ipc_share;
-			// track the nonoverlapped penalty
-			double estimated_slowdown, actual_slowdown;
-			// update slowdown info periodically here.
-			if (Simulator.CurrentRound % Config.slowdown_epoch == 0)
-			{
-				ulong penalty_cycle = (ulong) Simulator.stats.non_overlap_penalty_period [m_ID].Count;
-				estimated_slowdown = (double) Config.slowdown_epoch/(Config.slowdown_epoch-penalty_cycle);
-				Simulator.stats.etimated_slowdown [m_ID].Add (estimated_slowdown);
-
-				ipc_share = Simulator.stats.insns_persrc_period [m_ID].Count/(Config.slowdown_epoch);
-				actual_slowdown = (double)Config.ref_ipc / ipc_share;
-				double error_slowdown = (estimated_slowdown - actual_slowdown) / actual_slowdown;
-				error_slowdown = (error_slowdown > 0) ? error_slowdown : (-error_slowdown);
-				Simulator.stats.avg_slowdown_error [m_ID].Add (error_slowdown);
-				Simulator.stats.actual_slowdown [m_ID].Add (actual_slowdown);
-				//reset
-				Simulator.stats.etimated_slowdown [m_ID].EndPeriod ();
-				Simulator.stats.actual_slowdown [m_ID].EndPeriod ();
-				Simulator.stats.insns_persrc_period [m_ID].EndPeriod ();
-				Simulator.stats.non_overlap_penalty_period [m_ID].EndPeriod();
-			}
 
         }
 
@@ -319,16 +289,11 @@ namespace ICSimulator
 
         void issueReq(Request req)
         {
-//            if (m_ID == 0) Console.WriteLine("P0 issueReq: block {0:X}, write {1} at cyc {2}", req.blockAddress, req.write, Simulator.CurrentRound);
-
             for (int i = 0; i < m_mshrs.Length; i++)
                 if (m_mshrs[i].block == req.blockAddress)
                 {
                     if (req.write && !m_mshrs[i].write)   //by Xiyue: Prevent Write After Read hazard???
                         m_mshrs[i].pending_write = true;
-
-//                    if (m_ID == 0) Console.WriteLine("P0 issueReq: found req in MSHR {0}", i);
-
                     return;
                 }
 
@@ -348,67 +313,26 @@ namespace ICSimulator
             m_mshrs[mshr].write = req.write;
 
             _issueReq(mshr, req.address, req.write);
-        }
 
+        }
+		// By Xiyue
         void _issueReq(int mshr, ulong addr, bool write)
-        {
-            bool L1hit = false, L1upgr = false, L1ev = false, L1wb = false;
-            bool L2access = false, L2hit = false, L2ev = false, L2wb = false, c2c = false;
-			ulong minimalCycle = 0; //by Xiyue: not used for now
-			CmpCache_Txn txn = null;
+		{
+			qos_stat_delegate QOS_delegate = delegate (CmpCache_Txn txn) { computePenalty(txn, write); };
 
-        	Simulator.network.cache.access(m_ID, addr, write,
-			                               delegate() { reqDone(addr, mshr, write, minimalCycle, L1hit, txn); },
-			out L1hit, out L1upgr, out L1ev, out L1wb, out L2access, out L2hit, out L2ev, out L2wb, out c2c, out minimalCycle, out txn);
-
-            if(!L1hit)
-		         Simulator.controller.L1misses[m_ID]++;
-			
-            if (m_stats_active)
-            {
-                Simulator.stats.L1_accesses_persrc[m_ID].Add();
-
-                if (L1hit)
-                    Simulator.stats.L1_hits_persrc[m_ID].Add();
-                else
-                {
-                    Simulator.stats.L1_misses_persrc[m_ID].Add();
-                    Simulator.stats.L1_misses_persrc_period[m_ID].Add();
-                }
-
-                if (L1upgr)
-                    Simulator.stats.L1_upgr_persrc[m_ID].Add();
-                if (L1ev)
-                    Simulator.stats.L1_evicts_persrc[m_ID].Add();
-                if (L1wb)
-                    Simulator.stats.L1_writebacks_persrc[m_ID].Add();
-                if (c2c)
-                    Simulator.stats.L1_c2c_persrc[m_ID].Add();
-
-                if (L2access)
-                {
-                    Simulator.stats.L2_accesses_persrc[m_ID].Add();
-
-                    if (L2hit)
-                        Simulator.stats.L2_hits_persrc[m_ID].Add();
-                    else
-                        Simulator.stats.L2_misses_persrc[m_ID].Add();
-
-                    if (L2ev)
-                        Simulator.stats.L2_evicts_persrc[m_ID].Add();
-                    if (L2wb)
-                        Simulator.stats.L2_writebacks_persrc[m_ID].Add();
-                }
-            }
+			Simulator.network.cache.access(m_ID, addr, write, m_stats_active, 
+				delegate() { reqDone(addr, mshr, write); }, QOS_delegate);
         }
+		// end Xiyue
 
 		// by Xiyue: called when completing a LD/ST request
-		void reqDone(ulong addr, int mshr, bool write, ulong minimalCycle, bool L1hit, CmpCache_Txn txn)   
+		void reqDone(ulong addr, int mshr, bool write)   
         {
-			bool isHead = false;
-			m_ins.setReady(addr, write, out isHead);
+			m_ins.setReady(addr, write);
 
-			computePenalty (txn, isHead, L1hit); // by Xiyue: track non-overlapped latency.
+			#if DEBUG
+			//Console.WriteLine ("At time {0}, DONE at node {1}, req_addr {2}", Simulator.CurrentRound, m_ID, addr);
+			#endif
 
             if (!write && m_mshrs[mshr].pending_write)
             {
@@ -427,6 +351,7 @@ namespace ICSimulator
             }
         }
 
+
 		// By Xiyue
 		//   Compute the non-overlapped latency.
 		//   Latency is accounted for if the associated instruction is at the head of ROB.
@@ -434,16 +359,25 @@ namespace ICSimulator
 		//   Potential hardware implementation:
 		//   Use a register storing the address/vitual_address of the instruction at the head of ROB.
 		//   Another register storing the accumulated non-overlapped latency and the time the previous instruction is from ROB.
-		void computePenalty (CmpCache_Txn txn, bool isHead, bool L1hit)
-		{
+		//void computePenalty (CmpCache_Txn txn, bool isHead, bool L1hit)
+	
+		ulong rob_last_retire {
+			get { return m_rob_last_retire; }
+			set { m_rob_last_retire = value; }
+			}
+
+		public delegate void qos_stat_delegate (CmpCache_Txn txn);
+		void computePenalty(CmpCache_Txn txn, bool write){
 			ulong actual_interference = 0;
 			ulong t_no_interference = 0;
-			if (!L1hit) {
+			ulong addr = txn.req_addr;
+			bool isHead = m_ins.probe_head_rob(addr, write);
+			if (m_stats_active) {
 				if (txn.interferenceCycle != 0 && isHead) {
-					t_no_interference = Simulator.CurrentRound - txn.interferenceCycle;
+					t_no_interference = Simulator.CurrentRound - txn.interferenceCycle; 
 					if (t_no_interference > m_rob_last_retire) {
 						actual_interference = txn.interferenceCycle;
-					} else if (t_no_interference < m_rob_last_retire && Simulator.CurrentRound > m_rob_last_retire ) {
+					} else if (t_no_interference < m_rob_last_retire && Simulator.CurrentRound > m_rob_last_retire) {
 						actual_interference = Simulator.CurrentRound - m_rob_last_retire;
 					} else {
 						// the interference cycle is completely overlapped with the previous request
@@ -452,11 +386,24 @@ namespace ICSimulator
 					// track the nonoverlapped penalty
 					Simulator.stats.non_overlap_penalty [m_ID].Add (actual_interference);
 					Simulator.stats.non_overlap_penalty_period [m_ID].Add (actual_interference);
-					m_rob_last_retire = Simulator.CurrentRound;
-				} 
+					#if DEBUG
+					//Console.WriteLine ("At time {0}: INTERFERENCE for node {1} req_addr= {2} is {3}", Simulator.CurrentRound, m_ID, addr, actual_interference);
+					Console.WriteLine ("At time {0}: INTERFERENCE Cycle for node {1} is {2}; Inst_Count = {3}", 
+						Simulator.CurrentRound, m_ID, Simulator.stats.non_overlap_penalty [m_ID].Count, Simulator.stats.insns_persrc[m_ID].Count);
+					#endif
+
+					//m_rob_last_retire = Simulator.CurrentRound;
+				} else if (txn.interferenceCycle != 0 && !isHead) { // just curious
+					#if DEBUG
+					//Console.WriteLine ("At time {0}: IGNORE interference for node {1} req_addr= {2} is {3}", Simulator.CurrentRound, m_ID, addr, txn.interferenceCycle);
+					#endif
+				}
+				if (txn.causeIntf != 0) {
+					Simulator.stats.causeIntf [m_ID].Add (txn.causeIntf);
+				}
 			}
 		}
-
+			
 		// end Xiyue
 
         public bool doStep()

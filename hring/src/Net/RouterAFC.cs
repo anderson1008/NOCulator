@@ -1,3 +1,5 @@
+//#define DEBUG
+
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -284,47 +286,70 @@ namespace ICSimulator
                 }
                 
                 // find the highest-priority vnet head for each input PC
-                for (int pc = 0; pc < 5; pc++)
-                    for (int vnet = 0; vnet < Config.afc_vnets; vnet++)
-                        if (m_buf[pc, vnet].Count > 0)
-                        {
-                            AFCBufferSlot top = m_buf[pc, vnet].Peek();
-                            PreferredDirection pd = determineDirection(top.flit, coord);
-                            int outdir = (pd.xDir != Simulator.DIR_NONE) ?
+				for (int pc = 0; pc < 5; pc++) {
+
+					// By Xiyue: throttle
+					/*
+					if (pc == 4 && Simulator.controller.tryInject (ID) == false && Config.throttle_enable == true) {
+						if (requesters [4] != null)
+							requesters [4].flit.packet.txn.interferenceCycle++;
+						continue;
+					}
+					*/
+					for (int vnet = 0; vnet < Config.afc_vnets; vnet++)
+						if (m_buf [pc, vnet].Count > 0) {
+							AFCBufferSlot top = m_buf [pc, vnet].Peek ();
+							/*
+							// throttle only the request of the current core
+							if (pc == 4 && Simulator.controller.tryInject (ID) == false && Config.throttle_enable == true) {								
+								if (ID == top.flit.packet.requesterID) {
+									top.flit.packet.txn.interferenceCycle++;
+									//Simulator.stats.non_overlap_penalty [ID].Add ();
+									//Simulator.stats.non_overlap_penalty_period [ID].Add ();
+									continue;
+								}
+							}
+							*/
+							PreferredDirection pd = determineDirection (top.flit, coord);
+							int outdir = (pd.xDir != Simulator.DIR_NONE) ?
                                 pd.xDir : pd.yDir;
-                            if (outdir == Simulator.DIR_NONE)
-                                outdir = 4; // local ejection
+							if (outdir == Simulator.DIR_NONE)
+								outdir = 4; // local ejection
 
-                            // skip if (i) not local ejection and (ii)
-                            // destination router is buffered and (iii)
-                            // no credits left to destination router
-                            if (outdir != 4)
-                            {
-                                Router_AFC nrouter = (Router_AFC)neigh[outdir];
-                                int ndir = (outdir + 2) % 4;
-                                if (nrouter.m_buf[ndir, vnet].Count >= capacity(vnet) &&
-                                        nrouter.m_buffered)
-                                    continue;
-                            }
 
-                            // otherwise, contend for top requester from this
-                            // physical channel
-                            if (requesters[pc] == null ||
-                                    top.CompareTo(requesters[pc]) < 0)
-                            {
+							// skip if (i) not local ejection and (ii)
+							// destination router is buffered and (iii)
+							// no credits left to destination router
+							if (outdir != 4) {
+								Router_AFC nrouter = (Router_AFC)neigh [outdir];
+								int ndir = (outdir + 2) % 4;
+								if (nrouter.m_buf [ndir, vnet].Count >= capacity (vnet) &&
+								                            nrouter.m_buffered)
+									continue;
+							}
+
+
+							// otherwise, contend for top requester from this
+							// physical channel
+							if (requesters [pc] == null ||
+							                         top.CompareTo (requesters [pc]) < 0) {
 								// By Xiyue:
 								//    Check Interference at Input Buffers
-								if (requesters[pc]!=null)
-								{
-									if (top.flit.packet.requesterID != requesters [pc].flit.packet.requesterID)
-										requesters [pc].flit.packet.txn.interferenceCycle ++;
+								if (requesters [pc] != null) {
+									if (top.flit.packet.requesterID != requesters [pc].flit.packet.requesterID) {
+										requesters [pc].flit.packet.txn.interferenceCycle++;
+										top.flit.packet.txn.causeIntf++;
+										#if DEBUG
+										Console.WriteLine ("At time {0}, BLOCK Req (addr={1}) at Node {2} for #{3} cycles",  Simulator.CurrentRound, requesters [pc].flit.packet.txn.req_addr, ID, requesters [pc].flit.packet.txn.interferenceCycle);
+										#endif
+									}										
 								}
-
-                                requesters[pc] = top;
-                                requester_dir[pc] = outdir;
-                            }
-                        }
-
+									
+								requesters [pc] = top;
+								requester_dir [pc] = outdir;
+							}
+						}
+				}
                 // find the highest-priority requester for each output, and pop
                 // it from its heap
                 for (int outdir = 0; outdir < 5; outdir++)
@@ -339,6 +364,17 @@ namespace ICSimulator
                         if (requesters[req] != null &&
                                 requester_dir[req] == outdir)
                         {
+							/*
+							// By Xiyue: throttle
+							if (req == 4 && Simulator.controller.tryInject (ID) == false && Config.throttle_enable == true) {									
+								//requesters [req].flit.packet.txn.interferenceCycle++;
+								if (ID == requesters[4].flit.packet.requesterID) {
+									Simulator.stats.non_overlap_penalty [ID].Add ();
+									Simulator.stats.non_overlap_penalty_period [ID].Add ();
+									continue;
+								}
+							}
+							*/
 							if (outdir == 4) flitsTryToEject ++;
                             if (top == null ||
                                     requesters[req].CompareTo(top) < 0)
@@ -348,8 +384,15 @@ namespace ICSimulator
 								//    here "top" is the flit being stalled.
 								if (top != null) 
 								{
-									if (requesters [req].flit.packet.requesterID != top.flit.packet.requesterID)	
-										top.flit.packet.txn.interferenceCycle ++;
+									if (requesters [req].flit.packet.requesterID != top.flit.packet.requesterID) 
+									{
+										top.flit.packet.txn.interferenceCycle++;
+										requesters [req].flit.packet.txn.causeIntf++;
+
+										#if DEBUG
+										Console.WriteLine ("At time {0}, BLOCK Req (addr={1}) at Node {2} for #{3} cycles", Simulator.CurrentRound, top.flit.packet.txn.req_addr, ID, top.flit.packet.txn.interferenceCycle);
+										#endif
+									}
 								}
 
 								// end Xiyue
