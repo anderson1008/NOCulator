@@ -473,13 +473,58 @@ namespace ICSimulator
                 Debug.Assert(false);      
         }
 
+		/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *                                
+		 *                               Shared Cache Access                                     *
+		 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+		Packet in Step 1 & 2 are on the critical path. When invalidating shared copies, only the cloest node access is on the critical path. 
+
+		Step 1: Send Reqeust
+			PKT1: req_pkt (node -> sh_slice)
+
+		Step 2: L2 coherence operation
+			PKT6: done_pkt (virtual packet indicating L2 coherent operation completes)
+			
+			Case 2.1: request is write, has only an exclusive node (no shared copy)
+				need to invalidate the exclusive node and forward the up-to-date copy to requester
+				Invoke sequence: PKT1 -> PKT2 -> PKT3 -> PKT6
+				PKT2: xfer_req (sh_slice -> exclusive node)
+				PKT3: xfer_dat (exclusive -> node)
+
+
+			Case 2.2: request is write, has sharers.
+				need to invalidate all shared copies. The closest sharer need to forward the data to requester to make sure it is the latest copy.
+				Invoke sequence: PKT1 -> PKT4 -> PKT5 -> PKT 6
+				PKT4: invl_pkt (sh_slice -> sharer/owner)
+				PKT5: invl_resp (sharer/owner -> node) this is data if sharer is the closest node to the requester, otherwise it is a control packet.
+
+			Case 2.3: request is read, has only an exclusive node (no shared copy)
+				need to downgrade the exclusive node to share/own. Also, writeback data to L2 and forward data to requester.
+				Invoke sequence: PKT1 -> PKT2 -> PKT3 & PKT7 -> PKT6
+				PKT7: wb_dat (exclusive node -> sh_slice)
+
+			Case 2.4: request is read, has sharers.
+				just get the copy and become a sharer.
+				Invoke sequence: PKT1 -> PKT8 -> PKT9 -> PKT6
+				PKT8: xfer_req (sh_slice -> closest sharer)
+				PKT9: xfer_dat (closest sharer -> node)
+
+			Case 2.5: Not in L1 (= no sharer or exclusive node)
+				just get it from L2
+				Invoke sequence: PKT1 -> PKT10 -> PKT6
+				PKT10: dat_resp (sh_slice -> node)
+				
+		Step 3: insert data into L1, may trigger replacement
+			Invoke Sequence: L6 -> PKT11 / PKT12
+			PKT11: wb_pkt (node -> sh_slice) if state is Modified.
+			PKT12: releast_pkt (node -> sh_slice) if state is not Modified.
+		*/
 
 		void L2_access (int node, ulong addr, int sh_slice, bool write,  CmpCache_State state, Simulator.Ready cb, CPU.qos_stat_delegate qos_cb,
 			bool stats_active, bool L1hit, bool L1upgr, bool L1ev, bool L1wb,
 			bool L2access, bool L2hit, bool L2ev, bool L2wb, bool c2c, ulong throttleCycle)
 		{
-			
-			if (Simulator.controller.tryInject (node) == false && Config.throttle_enable == true) {
+			// do not throttle L2 local access
+			if (Simulator.controller.tryInject (node) == false && Config.throttle_enable == true && (node != sh_slice)) {
 				#if DEBUG
 				Console.WriteLine ("THROTTLED Req_addr = {1}, Node = {2} thrtCyc = {3} time = {0}", Simulator.CurrentRound, addr, node, throttleCycle + 1);
 				#endif
@@ -631,6 +676,63 @@ namespace ICSimulator
 			}
 		}
 
+		/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *                                
+		 *                               Memory Access                                           *
+		 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+		 Step 1: regular memory access
+			Invoke sequence: PKT1 -> PKT2 -> PKT3 -> PKT4 -> PKT5
+			PKT1: req_pkt (node -> sh_slice)
+		 	PKT2: memreq_pkt (sh_slice -> mem_slice)
+		 	PKT3: mem_access (mem_slice (node 0) -> virtual_node (node 0))
+		 	PKT4: memresp_pkt (mem_slice (node 0) -> sh_slice) [Step 2]
+		 	PKT5: resp_pkt (sh_slice -> node) [ Step 5 ]
+			Here, node is the requester. PKT1-5 are on the critical path. 
+
+		 Step 2: Insert fetched data into L2 (may trigger step 3, step 4, step 5)
+
+		 Step 3: L2-eviction caused L1 eviction 
+
+			case 2.1: L1_state = E or M
+			has only one copy in exclusive state
+			Invoke sequence: PKT4 -> PKT6 -> PKT7 -> PKT8
+			PKT6: prv_invl (sh_slice -> exclusive_node)
+			PKT7: prv_wb (exclusive_node -> sh_slice) can be data or ack depending on if state is Modified (data) or E (ack).
+			PKT8: prv_evict_join (0 -> 0) a virtual pkt indicates private L1 eviction completes.
+
+			case 2.2: L1_state = O (has owners in L1)
+			has one or more sharers. multiple round-trip pkts are involved.
+			Invoke sequece: PKT4 -> PKT6 -> PKT8
+			PKT6: prv_invl (sh_slice -> owner)
+			PKT7: prv_ack (owner -> sh_slice)
+
+			case 2.3: L1_state = 0 (but has no owner. it is only in L2)
+			Invoke sequece: PKT4 -> PKT8
+
+		  Step 4: L2 eviction
+		    Invoke sequence: PKT8 -> PKT9 -> PKT10
+		    PKT9: mem_wb (sh_slice -> mem_slice (node 0))
+		    PKT10: mem_wb_op (mem_slice (node 0) -> sh_slice)
+
+		  Step 5: insert fetched data into L1 (may trigger step 6)
+
+		  Step 6: L1 eviction caused by replacement
+			Invoke sequence:  PKT5 -> PKT11; PKT5 -> PKT12
+			PKT11: wb_pkt (node -> sh_slice) if L1_state = Modified
+			PKT12: release_pkt (node -> sh_slice) if L1_state = other
+
+		   ----------------------------------------------------------------
+		   --------------       Possible Operations        ----------------
+		   ----------------------------------------------------------------
+		   PKT1 -> PKT2 -> PKT3 -> PKT4 -> PKT5  (regular memory access without any repercussion)
+		   PKT1 -> PKT2 -> PKT3 -> PKT4 -> PKT5 -> PKT11 (memory access triggers L1 replacement and writeback)
+		   PKT1 -> PKT2 -> PKT3 -> PKT4 -> PKT5 -> PKT12 (memory access triggers L1 replacement)
+		   PKT1 -> PKT2 -> PKT3 -> PKT4 -> PKT6 -> PKT7 -> PKT8 -> PKT9 -> PKT10 (memory access triggers evctions in both L2 and L1, and L1 state is E or M) 
+		   PKT1 -> PKT2 -> PKT3 -> PKT4 -> PKT6 -> PKT8 -> PKT9 -> PKT10 (memory access triggers evctions in both L2 and L1, and L1 state is O. Multiple round-trip packets may be involved.)
+		   PKT1 -> PKT2 -> PKT3 -> PKT4 -> PKT8 -> PKT9 -> PKT10 (memory access triggers evctions in only L2, because data exists only in L2)
+		   
+		*/
+
+
 
 		void Mem_access (int node, ulong addr, int sh_slice, bool write, CmpCache_State state, Simulator.Ready cb,  CPU.qos_stat_delegate qos_cb,
 			bool stats_active, bool L1hit, bool L1upgr, bool L1ev, bool L1wb, bool L2access, bool L2hit, bool L2ev, bool L2wb, bool c2c, ulong throttleCycle)
@@ -737,7 +839,7 @@ namespace ICSimulator
 						}
 
 						add_dep(prv_invl, prv_wb);
-						add_dep(prv_wb, prv_evict_join);
+						add_dep(prv_wb, prv_evict_join); // By Xiyue: how to wake up a remote packet in node 0?
 
 						bool prv_evicted_dat;
 						m_prv[sh_evicted_state.excl].inval(sh_evicted_addr, out prv_evicted_dat);

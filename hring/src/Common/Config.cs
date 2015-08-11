@@ -107,18 +107,18 @@ namespace ICSimulator
 		// By Xiyue
 		public static double slowdown_epoch = 10000;
 		public static double ref_ipc = 1;
-		public static double[] target_slowdown = new double[16] {1.2, 2.0, 2.0, 2.0, 1.2, 2.0, 2.0, 2.0, 1.2, 2.0, 2.0, 2.0, 1.2, 2.0, 2.0, 2.0};
-		public static double throt_min = 0.0;  // share with Sigcomm paper
-		public static double throt_max = 0.5;	// share with Sigcomm paper
+		public static double[] target_slowdown = new double[16] {1.2, 1.5, 1.5, 1.5, 1.2, 1.5, 1.5, 1.5, 1.2, 1.5, 1.5, 1.5, 1.2, 1.5, 1.5, 1.5};
+		public static double throt_min = 0.5;  // share with Sigcomm paper
+		public static double throt_max = 0.9;	// share with Sigcomm paper
 		public static bool throttle_enable = false;
-		//public static double[] default_throttle = new double[16] {0.0, 0.1, 0.1, 0.2, 0.0, 0.1, 0.1, 0.2, 0.0, 0.1, 0.1, 0.2, 0.0, 0.1, 0.1, 0.2};
-		public static double default_throttle = 0.9;
+		public static double[] default_throttle = new double[16] {0.0, 0.1, 0.1, 0.2, 0.0, 0.1, 0.1, 0.2, 0.0, 0.1, 0.1, 0.2, 0.0, 0.1, 0.1, 0.2};
+		//public static double default_throttle = 0.9;
 
 
 
 		//public static double[] default_throttle = new double[16] {0.0, 0.9, 0.9, 0.9, 0.85, 0.9, 0.9, 0.9, 0.85, 0.9, 0.9, 0.9, 0.85, 0.9, 0.9, 0.9};
 		public static double ewmv_factor = 0.3; // weight of old value
-		public static double thrt_sweep = 0.05;
+		public static double thrt_sweep = 0.1;
 		// end Xiyue
 
         // ----

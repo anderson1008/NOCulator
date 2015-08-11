@@ -1,4 +1,5 @@
-//#define DEBUG
+#define DEBUG
+
 using System;
 using System.Collections.Generic;
 
@@ -115,9 +116,6 @@ namespace ICSimulator
 				double estimated_slowdown;
 				ulong penalty_cycle = (ulong)Simulator.stats.non_overlap_penalty_period [i].Count;
 				estimated_slowdown = (double)Config.slowdown_epoch / (Config.slowdown_epoch - penalty_cycle);
-				#if DEBUG
-				Console.WriteLine ("At time {0}: Core {1} Slowdown rate is {2} ", Simulator.CurrentRound, i, estimated_slowdown);
-				#endif
 				//Simulator.stats.etimated_slowdown [i].Add (estimated_slowdown);
 				need_slowdown_qos = need_slowdown_qos | (estimated_slowdown >= Config.target_slowdown [i]);
 			}
@@ -133,26 +131,23 @@ namespace ICSimulator
 			double insns_ewma, insns_current;
 			bool need_slowdown_qos = true;
 			// update slowdown info periodically here.
-			//if (Simulator.CurrentRound > 0 && Simulator.CurrentRound % Config.slowdown_epoch == 0)
 
-			//need_slowdown_qos = globalSlowdown ();
 			for (int i = 0; i < Config.N; i++) 
 			{
-
 				insns_current = Simulator.stats.insns_persrc_period[i].Count;
 				if (insns_current > 0 && insns_current >= Config.slowdown_epoch )
 				{
-					
+					need_slowdown_qos = globalSlowdown ();
 					ulong penalty_cycle = (ulong)Simulator.stats.non_overlap_penalty_period [i].Count;
 					//estimated_slowdown = (double)Config.slowdown_epoch / (Config.slowdown_epoch - penalty_cycle);
 					estimated_slowdown = (double)(Simulator.CurrentRound-m_lastCheckPoint [i])/(Simulator.CurrentRound-m_lastCheckPoint [i]-penalty_cycle);
 					#if DEBUG
 					Console.WriteLine ("at time {0}: Core {1} Slowdown rate is {2} ", Simulator.CurrentRound, i, estimated_slowdown);
 					#endif
-					//Simulator.stats.etimated_slowdown [i].Add (estimated_slowdown);
+					Simulator.stats.etimated_slowdown [i].Add (estimated_slowdown);
 					m_lastCheckPoint [i] = Simulator.CurrentRound;
 
-					//estimated_slowdown = Simulator.stats.etimated_slowdown [i].Count;
+					estimated_slowdown = Simulator.stats.etimated_slowdown [i].Count;
 					insns_ewma = Simulator.stats.insns_persrc_ewma [i].ExpWhtMvAvg (); // predict performance in next epoch
 
 
@@ -160,7 +155,7 @@ namespace ICSimulator
 					// TODO: Sth is missing here: sometime the node does not have to be throttled.
 					if (Config.throttle_enable == true) 
 					{
-						/*
+						
 						if (need_slowdown_qos == false) {
 							throttle_rate = 0.0;
 						}
@@ -180,10 +175,11 @@ namespace ICSimulator
 							throttle_rate = Config.default_throttle[i];
 
 						}
-						*/
+
+						/*
 						if (i%4!=0)
 							throttle_rate = Config.default_throttle;
-						
+						*/
 						setThrottleRate (i, throttle_rate);
 					}
 
@@ -194,7 +190,7 @@ namespace ICSimulator
 					//Simulator.stats.avg_slowdown_error [i].Add (error_slowdown);
 					//Simulator.stats.actual_slowdown [i].Add (actual_slowdown);
 					//reset
-					//Simulator.stats.etimated_slowdown [i].EndPeriod ();
+					Simulator.stats.etimated_slowdown [i].EndPeriod ();
 					//Simulator.stats.actual_slowdown [i].EndPeriod ();
 					Simulator.stats.insns_persrc_period [i].EndPeriod ();
 					Simulator.stats.non_overlap_penalty_period [i].EndPeriod ();

@@ -343,7 +343,9 @@ namespace ICSimulator {
 				{
 					if (writes [i] && !write) 
 						continue;
-					ulong interference_cycle = interferenceCycle + throttleCycle + (ulong)queueIntfCycle;
+					//ulong interference_cycle = interferenceCycle + throttleCycle + (ulong)queueIntfCycle;
+					// Do NOT have to consider throttleCycle, since queueIntfCycle already includes the amount of throttled cycles
+					ulong interference_cycle = interferenceCycle + (ulong)queueIntfCycle;
 					if (interference_cycle != 0 ) {
 						requests [i].interferenceCycle = interference_cycle;
 						Simulator.stats.serialization_latency [m_cpu.ID].Add (serializationLatency);
@@ -352,6 +354,8 @@ namespace ICSimulator {
 						Console.WriteLine ("RECEIVE node = {0}, addr = {1}, intf = {2}, time = {3}", m_cpu.ID, addresses [i], requests [i].interferenceCycle, Simulator.CurrentRound);
 						#endif
 					}
+
+					Simulator.stats.causeIntf [m_cpu.ID].Add (txn.causeIntf);
 				}
 		}
 
