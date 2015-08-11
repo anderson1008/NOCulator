@@ -1,4 +1,4 @@
-#define DEBUG
+//#define DEBUG
 using System;
 using System.Collections.Generic;
 
@@ -118,7 +118,7 @@ namespace ICSimulator
 				#if DEBUG
 				Console.WriteLine ("At time {0}: Core {1} Slowdown rate is {2} ", Simulator.CurrentRound, i, estimated_slowdown);
 				#endif
-				Simulator.stats.etimated_slowdown [i].Add (estimated_slowdown);
+				//Simulator.stats.etimated_slowdown [i].Add (estimated_slowdown);
 				need_slowdown_qos = need_slowdown_qos | (estimated_slowdown >= Config.target_slowdown [i]);
 			}
 			return need_slowdown_qos;
@@ -149,7 +149,7 @@ namespace ICSimulator
 					#if DEBUG
 					Console.WriteLine ("at time {0}: Core {1} Slowdown rate is {2} ", Simulator.CurrentRound, i, estimated_slowdown);
 					#endif
-					Simulator.stats.etimated_slowdown [i].Add (estimated_slowdown);
+					//Simulator.stats.etimated_slowdown [i].Add (estimated_slowdown);
 					m_lastCheckPoint [i] = Simulator.CurrentRound;
 
 					//estimated_slowdown = Simulator.stats.etimated_slowdown [i].Count;
@@ -191,11 +191,11 @@ namespace ICSimulator
 					actual_slowdown = (double)Config.ref_ipc / ipc_share;
 					double error_slowdown = (estimated_slowdown - actual_slowdown) / actual_slowdown;
 					error_slowdown = (error_slowdown > 0) ? error_slowdown : (-error_slowdown);
-					Simulator.stats.avg_slowdown_error [i].Add (error_slowdown);
-					Simulator.stats.actual_slowdown [i].Add (actual_slowdown);
+					//Simulator.stats.avg_slowdown_error [i].Add (error_slowdown);
+					//Simulator.stats.actual_slowdown [i].Add (actual_slowdown);
 					//reset
-					Simulator.stats.etimated_slowdown [i].EndPeriod ();
-					Simulator.stats.actual_slowdown [i].EndPeriod ();
+					//Simulator.stats.etimated_slowdown [i].EndPeriod ();
+					//Simulator.stats.actual_slowdown [i].EndPeriod ();
 					Simulator.stats.insns_persrc_period [i].EndPeriod ();
 					Simulator.stats.non_overlap_penalty_period [i].EndPeriod ();
 					Simulator.stats.causeIntf [i].EndPeriod ();

@@ -92,8 +92,10 @@ namespace ICSimulator
         protected void acceptFlit(Flit f)
         {
             statsEjectFlit(f);
-            if (f.packet.nrOfArrivedFlits + 1 == f.packet.nrOfFlits)
-                statsEjectPacket(f.packet);
+			if (f.packet.nrOfArrivedFlits + 1 == f.packet.nrOfFlits) {
+				statsEjectPacket (f.packet);
+				//f.packet.txn.serialization_latency = f.packet.txn.serialization_latency + (ulong)f.packet.nrOfFlits;
+			}
 
             m_n.receiveFlit(f);
         }
@@ -328,25 +330,25 @@ namespace ICSimulator
 									continue;
 							}
 
-
 							// otherwise, contend for top requester from this
 							// physical channel
 							if (requesters [pc] == null ||
 							                         top.CompareTo (requesters [pc]) < 0) {
 								// By Xiyue:
 								//    Check Interference at Input Buffers
-								if (requesters [pc] != null) {
+								if (requesters [pc] != null && pc != 4) {
 									if (top.flit.packet.requesterID != requesters [pc].flit.packet.requesterID) {
 										requesters [pc].flit.packet.txn.interferenceCycle++;
 										top.flit.packet.txn.causeIntf++;
 										#if DEBUG
-										Console.WriteLine ("At time {0}, BLOCK Req (addr={1}) at Node {2} for #{3} cycles",  Simulator.CurrentRound, requesters [pc].flit.packet.txn.req_addr, ID, requesters [pc].flit.packet.txn.interferenceCycle);
+										Console.WriteLine ("BLOCK Req_addr = {1}, Node {2}, intfCycle = {3}, time = {0}",  Simulator.CurrentRound, requesters [pc].flit.packet.txn.req_addr, ID, requesters [pc].flit.packet.txn.interferenceCycle);
 										#endif
 									}										
 								}
 									
 								requesters [pc] = top;
 								requester_dir [pc] = outdir;
+
 							}
 						}
 				}
@@ -386,11 +388,12 @@ namespace ICSimulator
 								{
 									if (requesters [req].flit.packet.requesterID != top.flit.packet.requesterID) 
 									{
+										
 										top.flit.packet.txn.interferenceCycle++;
 										requesters [req].flit.packet.txn.causeIntf++;
 
 										#if DEBUG
-										Console.WriteLine ("At time {0}, BLOCK Req (addr={1}) at Node {2} for #{3} cycles", Simulator.CurrentRound, top.flit.packet.txn.req_addr, ID, top.flit.packet.txn.interferenceCycle);
+										Console.WriteLine ("BLOCK Req_addr = {1}, Node {2}, intfCycle = {3}, time = {0}", Simulator.CurrentRound, top.flit.packet.txn.req_addr, ID, top.flit.packet.txn.interferenceCycle);
 										#endif
 									}
 								}
@@ -429,7 +432,7 @@ namespace ICSimulator
 				
                         if (top_indir == 4)
                             statsInjectFlit(top.flit);
-
+			
                         // propagate to next router (or eject)
                         if (outdir == 4)
                             acceptFlit(top.flit);
@@ -574,8 +577,19 @@ namespace ICSimulator
             {
                 AFCBufferSlot slot = getFreeBufferSlot(f);
 				f.enterBuffer = Simulator.CurrentRound;
-                m_buf[4, f.packet.getClass()].Enqueue(slot);
 
+				int temp_queueCycle;
+				if (slot.flit.isTailFlit == true) {
+					temp_queueCycle = (int)(Simulator.CurrentRound - slot.flit.packet.creationTime); 
+					if (temp_queueCycle >= 0 && slot.flit.dest.ID != ID)
+					{
+						slot.flit.packet.txn.serialization_latency = slot.flit.packet.txn.serialization_latency + (ulong)slot.flit.packet.nrOfFlits;
+						slot.flit.packet.txn.queue_latency = slot.flit.packet.txn.queue_latency + (ulong)temp_queueCycle;
+					}else if (temp_queueCycle < 0)
+						throw new Exception("queue latency is less than 0!");
+				}
+
+				m_buf[4, f.packet.getClass()].Enqueue(slot);
                 m_buf_occupancy++;
 
                 Simulator.stats.afc_buf_write.Add();

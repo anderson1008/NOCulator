@@ -178,7 +178,7 @@ namespace ICSimulator
             else if (p is CachePacket)
             {
                 CachePacket cp = p as CachePacket;
-                m_cpu.receivePacket(cp); // by Xiyue: Local ejection???
+                m_cpu.receivePacket(cp); // by Xiyue: Local ejection
             }
         }
         
@@ -191,7 +191,7 @@ namespace ICSimulator
 #endif
             if (p.dest.ID == m_coord.ID) // local traffic: do not go to net (will confuse router) // by Xiyue: just hijack the packet if it only access the shared cache at the local node.
             {
-                m_local.Enqueue(p);
+                m_local.Enqueue(p);  // this is filter out
                 return;
             }
 

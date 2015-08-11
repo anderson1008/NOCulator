@@ -1,4 +1,4 @@
-#define DEBUG
+//#define DEBUG
 
 using System;
 using System.Collections.Generic;
@@ -287,6 +287,32 @@ namespace ICSimulator
             return mshrs_free > 0;
         }
 
+		// called when completing a LD/ST request
+		void reqDone(ulong addr, int mshr, bool write)   
+		{
+			m_ins.setReady(addr, write);
+
+			#if DEBUG
+			Console.WriteLine ("DONE at node = {1}, req_addr = {2}, time = {0}", Simulator.CurrentRound, m_ID, addr);
+			#endif
+
+			if (!write && m_mshrs[mshr].pending_write)
+			{
+				m_mshrs[mshr].pending_write = false;
+				m_mshrs[mshr].write = true;
+
+				_issueReq(mshr, m_mshrs[mshr].block << Config.cache_block, true);
+			}
+			else
+			{
+				m_mshrs[mshr].valid = false;
+				m_mshrs[mshr].block = 0;
+				m_mshrs[mshr].write = false;
+				m_mshrs[mshr].pending_write = false;
+				mshrs_free++;
+			}
+		}
+
         void issueReq(Request req)
         {
             for (int i = 0; i < m_mshrs.Length; i++)
@@ -315,6 +341,7 @@ namespace ICSimulator
             _issueReq(mshr, req.address, req.write);
 
         }
+
 		// By Xiyue
         void _issueReq(int mshr, ulong addr, bool write)
 		{
@@ -323,44 +350,176 @@ namespace ICSimulator
 			Simulator.network.cache.access(m_ID, addr, write, m_stats_active, 
 				delegate() { reqDone(addr, mshr, write); }, QOS_delegate);
         }
+
+
+		public delegate void qos_stat_delegate (CmpCache_Txn txn);
+		void computePenalty(CmpCache_Txn txn, bool write){
+			if (m_stats_active) 
+				m_ins.setIntfCycle (write, txn);
+		}
+
 		// end Xiyue
 
-		// by Xiyue: called when completing a LD/ST request
-		void reqDone(ulong addr, int mshr, bool write)   
-        {
-			m_ins.setReady(addr, write);
+		public bool doStep()
+		{
+			if (m_trace == null) {return true;}
 
-			#if DEBUG
-			//Console.WriteLine ("At time {0}, DONE at node {1}, req_addr {2}", Simulator.CurrentRound, m_ID, addr);
-			#endif
+			int syncID;
 
-            if (!write && m_mshrs[mshr].pending_write)
-            {
-                m_mshrs[mshr].pending_write = false;
-                m_mshrs[mshr].write = true;
+			ulong retired =
+				(ulong)m_ins.retire(m_ID, Config.proc.instructionsPerCycle, m_last_retired);
 
-                _issueReq(mshr, m_mshrs[mshr].block << Config.cache_block, true);
-            }
-            else
-            {
-                m_mshrs[mshr].valid = false;
-                m_mshrs[mshr].block = 0;
-                m_mshrs[mshr].write = false;
-                m_mshrs[mshr].pending_write = false;
-                mshrs_free++;
-            }
-        }
+			if (retired > 0)
+				m_last_retired = Simulator.CurrentRound;
+
+			if (!m_trace_valid)
+				m_trace_valid = advanceTrace(); // doStats needs to see the next record
+
+			doStats(retired); // by Xiyue: periodical slowdown is also logged here.
+
+			if (m_ins.isFull()) return true;
+
+			bool done = false;
+			int nIns = Config.proc.instructionsPerCycle;
+			int nMem = 1;
+
+			while (!done && nIns > 0 && !m_ins.isFull())
+			{
+				if (!m_trace_valid) ///By Xiyue: Why advance twice?
+					m_trace_valid = advanceTrace();
+				if (!m_trace_valid)
+					return false;
+
+				if (m_trace.type == Trace.Type.Pause) // when execution-driven, source has nothing to give
+				{
+					m_trace_valid = false;
+					return true;
+				}
+
+				if (m_trace.type == Trace.Type.Sync)
+				{
+					// `from' field: translate referrent from thd ID to physical CPU id
+					syncID = Simulator.network.workload.mapThd(m_group, m_trace.from);
+				}
+				else
+					syncID = m_trace.from;
+
+				switch (m_trace.type)
+				{
+				case Trace.Type.Rd:
+				case Trace.Type.Wr:
+					if (nMem == 0 || !canIssueMSHR(m_trace.address))
+					{
+						done = true;
+						break;
+					}
+					nMem--;
+					nIns--;
+
+					ulong addr = m_trace.address;
+					bool isWrite = m_trace.type == Trace.Type.Wr;
+					bool inWindow = m_ins.contains(addr, isWrite);
+
+					Request req = inWindow ? null : new Request(m_ID, addr, isWrite);
+					m_ins.fetch(req, addr, isWrite, inWindow);
+
+					if (!inWindow)
+						issueReq(req);
+
+					m_trace_valid = false;
+					break;
+
+				case Trace.Type.NonMem:
+					if (m_trace.address > 0)
+					{
+						m_ins.fetch(null, InstructionWindow.NULL_ADDRESS, false, true);
+						m_trace.address--;
+						nIns--;
+					}
+					else
+						m_trace_valid = false;
+
+					break;
+
+				case Trace.Type.Label:
+					if(m_sync.Label(m_ID, syncID, m_trace.address))
+						m_trace_valid = false; // allowed to continue
+					else
+					{ // shouldn't ever block...
+						if (m_stats_active)
+							Simulator.stats.cpu_sync_memdep[m_ID].Add();
+						done = true; // blocking: done with this cycle
+					}
+
+					break;
+
+				case Trace.Type.Sync:
+					if (m_sync.Sync(m_ID, syncID, m_trace.address))
+						m_trace_valid = false;
+					else
+					{
+						if (m_stats_active)
+							Simulator.stats.cpu_sync_memdep[m_ID].Add();
+						done = true;
+					}
+
+					break;
+
+				case Trace.Type.Lock:
+					//Console.WriteLine("Lock" + ' ' + m_ID.ToString() + ' ' + syncID.ToString() + ' ' + m_trace.address.ToString());
+					if (m_sync.Lock(m_ID, syncID, m_trace.address))
+						m_trace_valid = false;
+					else
+					{
+						if (m_stats_active)
+							Simulator.stats.cpu_sync_lock[m_ID].Add();
+						done = true;
+					}
+
+					break;
+
+				case Trace.Type.Unlock:
+					//Console.WriteLine("Unlock" + ' ' + m_ID.ToString() + ' ' + syncID.ToString() + ' ' + m_trace.address.ToString());
+					if (m_sync.Unlock(m_ID, syncID, m_trace.address))
+						m_trace_valid = false;
+					else
+					{ // shouldn't ever block...
+						if (m_stats_active)
+							Simulator.stats.cpu_sync_lock[m_ID].Add();
+						done = true;
+					}
+
+					break;
+
+				case Trace.Type.Barrier:
+					//Console.WriteLine("Barrier" + ' ' + m_ID.ToString() + ' ' + syncID.ToString() + ' ' + m_trace.address.ToString());
+					if (m_sync.Barrier(m_ID, syncID, m_trace.address))
+						m_trace_valid = false;
+					else
+					{
+						if (m_stats_active)
+							Simulator.stats.cpu_sync_barrier[m_ID].Add();
+						done = true;
+					}
+
+					break;
+				}
+			}
+
+			return true;
+		}
+
+		public ulong get_stalledSharedDelta() { throw new NotImplementedException(); }
 
 
-		// By Xiyue
+
 		//   Compute the non-overlapped latency.
 		//   Latency is accounted for if the associated instruction is at the head of ROB.
 		//   Then, exclude the overlapped portion.
 		//   Potential hardware implementation:
 		//   Use a register storing the address/vitual_address of the instruction at the head of ROB.
 		//   Another register storing the accumulated non-overlapped latency and the time the previous instruction is from ROB.
-		//void computePenalty (CmpCache_Txn txn, bool isHead, bool L1hit)
-	
+		/*
 		ulong rob_last_retire {
 			get { return m_rob_last_retire; }
 			set { m_rob_last_retire = value; }
@@ -403,158 +562,8 @@ namespace ICSimulator
 				}
 			}
 		}
-			
+		*/
 		// end Xiyue
 
-        public bool doStep()
-        {
-            if (m_trace == null) {return true;}
-
-            int syncID;
-
-            ulong retired =
-                (ulong)m_ins.retire(Config.proc.instructionsPerCycle);
-
-            if (retired > 0)
-                m_last_retired = Simulator.CurrentRound;
-
-            if (!m_trace_valid)
-                m_trace_valid = advanceTrace(); // doStats needs to see the next record
-            
-            doStats(retired); // by Xiyue: periodical slowdown is also logged here.
-
-			if (m_ins.isFull()) return true;
-
-            bool done = false;
-            int nIns = Config.proc.instructionsPerCycle;
-            int nMem = 1;
-
-            while (!done && nIns > 0 && !m_ins.isFull())
-            {
-                if (!m_trace_valid) ///By Xiyue: Why advance twice?
-                    m_trace_valid = advanceTrace();
-                if (!m_trace_valid)
-                    return false;
-
-                if (m_trace.type == Trace.Type.Pause) // when execution-driven, source has nothing to give
-                {
-                    m_trace_valid = false;
-                    return true;
-                }
-
-                if (m_trace.type == Trace.Type.Sync)
-                {
-                    // `from' field: translate referrent from thd ID to physical CPU id
-                    syncID = Simulator.network.workload.mapThd(m_group, m_trace.from);
-                }
-                else
-                    syncID = m_trace.from;
-
-                switch (m_trace.type)
-                {
-                case Trace.Type.Rd:
-                case Trace.Type.Wr:
-                    if (nMem == 0 || !canIssueMSHR(m_trace.address))
-                    {
-                        done = true;
-                        break;
-                    }
-                    nMem--;
-                    nIns--;
-
-                    ulong addr = m_trace.address;
-                    bool isWrite = m_trace.type == Trace.Type.Wr;
-                    bool inWindow = m_ins.contains(addr, isWrite);
-
-                    Request req = inWindow ? null : new Request(m_ID, addr, isWrite);
-                    m_ins.fetch(req, addr, isWrite, inWindow);
-
-                    if (!inWindow)
-                        issueReq(req);
-
-                    m_trace_valid = false;
-                    break;
-
-                case Trace.Type.NonMem:
-                    if (m_trace.address > 0)
-                    {
-                        m_ins.fetch(null, InstructionWindow.NULL_ADDRESS, false, true);
-                        m_trace.address--;
-                        nIns--;
-                    }
-                    else
-                        m_trace_valid = false;
-
-                    break;
-
-                case Trace.Type.Label:
-                    if(m_sync.Label(m_ID, syncID, m_trace.address))
-                        m_trace_valid = false; // allowed to continue
-                    else
-                    { // shouldn't ever block...
-                        if (m_stats_active)
-                            Simulator.stats.cpu_sync_memdep[m_ID].Add();
-                        done = true; // blocking: done with this cycle
-                    }
-
-                    break;
-
-                case Trace.Type.Sync:
-                    if (m_sync.Sync(m_ID, syncID, m_trace.address))
-                        m_trace_valid = false;
-                    else
-                    {
-                        if (m_stats_active)
-                            Simulator.stats.cpu_sync_memdep[m_ID].Add();
-                        done = true;
-                    }
-
-                    break;
-
-                case Trace.Type.Lock:
-                    //Console.WriteLine("Lock" + ' ' + m_ID.ToString() + ' ' + syncID.ToString() + ' ' + m_trace.address.ToString());
-                    if (m_sync.Lock(m_ID, syncID, m_trace.address))
-                        m_trace_valid = false;
-                    else
-                    {
-                        if (m_stats_active)
-                            Simulator.stats.cpu_sync_lock[m_ID].Add();
-                        done = true;
-                    }
-
-                    break;
-
-                case Trace.Type.Unlock:
-                    //Console.WriteLine("Unlock" + ' ' + m_ID.ToString() + ' ' + syncID.ToString() + ' ' + m_trace.address.ToString());
-                    if (m_sync.Unlock(m_ID, syncID, m_trace.address))
-                        m_trace_valid = false;
-                    else
-                    { // shouldn't ever block...
-                        if (m_stats_active)
-                            Simulator.stats.cpu_sync_lock[m_ID].Add();
-                        done = true;
-                    }
-
-                    break;
-
-                case Trace.Type.Barrier:
-                    //Console.WriteLine("Barrier" + ' ' + m_ID.ToString() + ' ' + syncID.ToString() + ' ' + m_trace.address.ToString());
-                    if (m_sync.Barrier(m_ID, syncID, m_trace.address))
-                        m_trace_valid = false;
-                    else
-                    {
-                        if (m_stats_active)
-                            Simulator.stats.cpu_sync_barrier[m_ID].Add();
-                        done = true;
-                    }
-
-                    break;
-                }
-            }
-
-            return true;
-        }
-
-        public ulong get_stalledSharedDelta() { throw new NotImplementedException(); }
     }
 }

@@ -9,7 +9,6 @@ namespace ICSimulator
         int m_class;
         int m_VCclass;
 
-		//ulong m_interference_cycle;
 
         public override int getQueue()
         {
@@ -29,7 +28,6 @@ namespace ICSimulator
             m_class = _class;
             m_VCclass = mapClass(_vcclass);
             requesterID = reqNode;
-			//m_interference_cycle = 0;
         }
 
         public override string ToString()

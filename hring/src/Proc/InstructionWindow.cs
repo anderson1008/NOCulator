@@ -1,4 +1,5 @@
 //#define LOG
+//#define DEBUG
 
 using System;
 using System.Collections.Generic;
@@ -16,8 +17,6 @@ namespace ICSimulator {
 #if LOG
         StreamWriter sw;
 #endif
-
-
 
         public static readonly ulong NULL_ADDRESS = ulong.MaxValue;
 
@@ -50,9 +49,9 @@ namespace ICSimulator {
                                    // the virtual retire time stream going
 
         ulong m_match_mask;
-
+		private CPU m_cpu;
         public InstructionWindow(CPU cpu) {
-            //m_cpu = cpu;
+            m_cpu = cpu;
             next = oldest = 0;
             addresses = new ulong[Config.proc.instWindowSize];
             writes = new bool[Config.proc.instWindowSize];
@@ -155,8 +154,6 @@ namespace ICSimulator {
 
         public void fetch(Request r, ulong address, bool isWrite, bool isReady) {
 
-            //Console.WriteLine("pr{0}: fetch addr {1:X}, write {2}, isReady {3}, next {4}",
-            //        m_cpu.ID, address, isWrite, isReady, next);
 
             if (load < Config.proc.instWindowSize) {
                 load++;
@@ -177,13 +174,37 @@ namespace ICSimulator {
 
         }
 
-        public int retire(int n) {
+
+		public int retire(int node, int n, ulong last_retired) {
             int i = 0;
+			ulong max_intf = 0;
+			ulong max_intf_temp;
 
             while (i < n && load > 0 && ready[oldest])
             {
-                if (requests[oldest] != null)
-					requests[oldest].retire();
+				if (requests [oldest] != null) {
+
+					// using >0 to exclude the local packets, which tend to be accessed at the same cycle as the request is generated.
+					if (requests [oldest].interferenceCycle > 0) {
+						#if DEBUG
+						Console.WriteLine ("COMMIT node = {0}, addr = {1}, intf = {3}, time = {2}", node, requests [oldest].address, Simulator.CurrentRound, requests [oldest].interferenceCycle);
+						#endif
+						max_intf_temp = requests [oldest].computePenalty (last_retired, max_intf);
+						max_intf = max_intf_temp;
+
+						//Simulator.stats.non_overlap_penalty [node].Add (max_intf);
+						//Simulator.stats.non_overlap_penalty_period [node].Add (max_intf);
+					} else
+						#if DEBUG
+						Console.WriteLine ("COMMIT node = {0}, local addr = {1}, time = {2}, intf = {3}, ", node, requests [oldest].address, Simulator.CurrentRound, requests [oldest].interferenceCycle);
+					#endif
+					requests [oldest].retire ();
+				} else {
+
+					#if DEBUG
+					Console.WriteLine ("COMMIT node = {0}, non-memory instruction, time = {1}", node, Simulator.CurrentRound);
+					#endif
+				}
 
                 ulong deadline = headT[oldest] - issueT[oldest];
                 Simulator.stats.deadline.Add(deadline);
@@ -210,8 +231,23 @@ namespace ICSimulator {
                         advanceReadLog();
                 }
             }
-            if (load > 0 && i < n)
-                requests[oldest].backStallsCaused += (1.0 * n - i) / n;
+			if (load > 0 && i < n) {
+				requests [oldest].backStallsCaused += (1.0 * n - i) / n; // by Xiyue:  calculate the wasted/ideal proc cycle in percentage.
+				#if DEBUG
+				Console.WriteLine ("WASTE {0} instructions cycle at node = {1}, time = {2}", n - i, node, Simulator.CurrentRound);
+				#endif
+			}
+
+			if (max_intf > 0) {
+				Simulator.stats.non_overlap_penalty [node].Add (max_intf);
+				Simulator.stats.non_overlap_penalty_period [node].Add (max_intf);
+
+				#if DEBUG
+				Console.WriteLine ("ADD intfcyle = {0} to node = {1}, time = {2}", max_intf, node, Simulator.CurrentRound);
+				Console.WriteLine ("REPORT intfcyle = {0} to node = {1}, time = {2}", Simulator.stats.non_overlap_penalty [node].Count, node, Simulator.CurrentRound);
+				#endif
+			}
+
             return i;
         }
 
@@ -252,6 +288,9 @@ namespace ICSimulator {
             return false;
         }
 
+
+
+
 		public void setReady(ulong address, bool write) {
    
             if (isEmpty()) throw new Exception("Instruction Window is empty!");
@@ -287,6 +326,35 @@ namespace ICSimulator {
 			}
 			return isHead;
 		}
+
+		public void setIntfCycle (bool write, CmpCache_Txn txn){
+			if (isEmpty()) throw new Exception("Instruction Window is empty!");
+			ulong address = txn.req_addr;
+			ulong interferenceCycle = txn.interferenceCycle;
+			ulong throttleCycle = txn.throttleCycle;
+			ulong queueCycle = txn.queue_latency;
+			ulong serializationLatency = txn.serialization_latency;
+			int queueIntfCycle = (int)(queueCycle - serializationLatency);
+			if (queueIntfCycle < 0)
+				throw new Exception("queue cycle less than serialization latency!");
+
+			for (int i = 0; i < Config.proc.instWindowSize; i++) 
+				if ((addresses [i] & m_match_mask) == (address & m_match_mask) && !ready [i]) 
+				{
+					if (writes [i] && !write) 
+						continue;
+					ulong interference_cycle = interferenceCycle + throttleCycle + (ulong)queueIntfCycle;
+					if (interference_cycle != 0 ) {
+						requests [i].interferenceCycle = interference_cycle;
+						Simulator.stats.serialization_latency [m_cpu.ID].Add (serializationLatency);
+						Simulator.stats.queue_delay [m_cpu.ID].Add (queueCycle);
+						#if DEBUG
+						Console.WriteLine ("RECEIVE node = {0}, addr = {1}, intf = {2}, time = {3}", m_cpu.ID, addresses [i], requests [i].interferenceCycle, Simulator.CurrentRound);
+						#endif
+					}
+				}
+		}
+
 		// end Xiyue
 
         public bool isOldestAddrAndStalled(ulong address, out ulong stallCount)

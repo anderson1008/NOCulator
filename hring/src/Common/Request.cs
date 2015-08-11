@@ -1,3 +1,5 @@
+//#define DEBUG
+
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -168,6 +170,12 @@ namespace ICSimulator
         public bool write { get { return _write; } }
         private bool _write;
 
+		ulong _interferenceCycle;
+		public ulong interferenceCycle {
+			get { return _interferenceCycle; } 
+			set { _interferenceCycle = value; }
+		}
+
         public ulong blockAddress { get { return _address >> Config.cache_block; } }
         public ulong address { get { return _address; } }
         private ulong _address;
@@ -202,6 +210,7 @@ namespace ICSimulator
             this._address = address;
             this._write = write;
             this._creationTime = Simulator.CurrentRound;
+			this._interferenceCycle = 0;
         }
 
         public override string ToString()
@@ -220,6 +229,41 @@ namespace ICSimulator
 
         public bool beenToNetwork = false;
         public bool beenToMemory = false;
+
+
+		public ulong computePenalty(ulong last_retire, ulong max_intf_cycle){ 
+
+			long slack = (long) (Simulator.CurrentRound - _serviceCycle - 1);
+
+			ulong intf_cycle = 0;
+			if (slack < 0)
+				//intf_cycle = 0; // local L2 access has 0 interference cycle. It will be serviced intermediately upon issuing the request.
+				throw new Exception("Impossible: service after commit!");
+			else if (slack > 0) // instruction is serviced earlier than it should, even with interference. So intf is hidden completely.
+				intf_cycle = max_intf_cycle;
+			else{
+
+				#if DEBUG
+				Console.WriteLine ("PENALTY: at node {0}, addr = {1}, _intf = {2}, time = {3} ", _requesterID, _address, _interferenceCycle, Simulator.CurrentRound);
+				#endif
+
+				ulong est_serviceCycle_no_intf = _serviceCycle - _interferenceCycle;
+				ulong actual_intf_cycle;
+
+				if (est_serviceCycle_no_intf < last_retire) {
+					actual_intf_cycle = _serviceCycle - last_retire;
+					intf_cycle = Math.Max (max_intf_cycle, actual_intf_cycle);
+				}
+				else
+					intf_cycle = Math.Max (max_intf_cycle, _interferenceCycle);
+				
+				#if DEBUG
+					Console.WriteLine ("PENALTY: at node {0}, _intf = {1}, time = {2} ", _requesterID, intf_cycle, Simulator.CurrentRound);
+				#endif
+			}
+			return intf_cycle;
+		}
+
 
         public void retire()
         {
@@ -250,7 +294,6 @@ namespace ICSimulator
             {
                 Simulator.stats.req_rtt.Add(_serviceCycle - _creationTime);
             }
-
         }
     }
 

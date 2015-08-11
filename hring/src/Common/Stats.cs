@@ -9,11 +9,14 @@ namespace ICSimulator
     public class Stats
     {
 		// By Xiyue: for coherent packet profiling
-		public SampledStat[] avg_slowdown_error;
-		public PeriodicAccumStat[] etimated_slowdown;
-		public PeriodicAccumStat[] actual_slowdown;
-		public AccumStat[] pkt_tier_count;
+		//public SampledStat[] avg_slowdown_error;
+		//public PeriodicAccumStat[] etimated_slowdown;
+		//public PeriodicAccumStat[] actual_slowdown;
+		public AccumStat[] active_cycles;
 		public AccumStat[] non_overlap_penalty;
+		public SampledStat[] queue_delay;
+		public SampledStat[] serialization_latency;
+		public AccumStat[] pkt_tier_count;
 		public PeriodicAccumStat[] non_overlap_penalty_period;
 		public PeriodicAccumStat[] causeIntf;
 		public PeriodicAccumStat[] insns_persrc_ewma;
@@ -34,7 +37,7 @@ namespace ICSimulator
         public AccumStat bridge6Count;
         public AccumStat bridge7Count;
         //processor stats
-        public AccumStat[] active_cycles;
+        //public AccumStat[] active_cycles;
         public AccumStat[] idle_cycles;
         public AccumStat[] active_cycles_alone;
         public ConstAccumStat[] skipped_insns_persrc;

@@ -238,6 +238,8 @@ namespace ICSimulator
 		public ulong throttleCycle;
 		public ulong causeIntf;
 		public ulong req_addr;
+		public ulong queue_latency;
+		public ulong serialization_latency;
     };
 
     public class CmpCache
@@ -353,7 +355,7 @@ namespace ICSimulator
 				}
 			}
 		}
-		// End Xiyue
+
 
 		public void access(int node, ulong addr, bool write, bool stats_active, 
 			Simulator.Ready cb, CPU.qos_stat_delegate qos_cb)
@@ -471,30 +473,6 @@ namespace ICSimulator
                 Debug.Assert(false);      
         }
 
-		void txn_schedule (CmpCache_Txn txn, Simulator.Ready cb)
-		{
-			// now start the transaction, if one was needed
-			if (txn != null)
-			{
-				
-				assignVCclasses(txn.pkts);
-
-				min_cycle (txn, m_prvdelay); // By Xiyue: not used currently. m_prvdelay takes L1 access into account
-
-				// start running the protocol DAG. It may be an empty graph (for a silent upgr), in
-				// which case the deferred start (after cache delay)
-				// By Xiyue: schedule a network packet here.
-				Simulator.Defer(delegate()
-					{
-						start_pkts(txn);
-					}, Simulator.CurrentRound + m_prvdelay);
-			}
-			// no transaction -- just the cache access delay. schedule deferred callback.
-			else
-			{
-				Simulator.Defer(cb, Simulator.CurrentRound + m_prvdelay); //by Xiyue: Defer() can be considered as a scheduler. cb is the cache access action.
-			}
-		}
 
 		void L2_access (int node, ulong addr, int sh_slice, bool write,  CmpCache_State state, Simulator.Ready cb, CPU.qos_stat_delegate qos_cb,
 			bool stats_active, bool L1hit, bool L1upgr, bool L1ev, bool L1wb,
@@ -503,11 +481,11 @@ namespace ICSimulator
 			
 			if (Simulator.controller.tryInject (node) == false && Config.throttle_enable == true) {
 				#if DEBUG
-				Console.WriteLine ("At time {0}, THROTTLED Req (addr={1}) at Node {2} for #{3} cycles", Simulator.CurrentRound, addr, node, throttleCycle + 1);
+				Console.WriteLine ("THROTTLED Req_addr = {1}, Node = {2} thrtCyc = {3} time = {0}", Simulator.CurrentRound, addr, node, throttleCycle + 1);
 				#endif
 				Simulator.Defer (delegate() {
 					#if DEBUG
-					Console.WriteLine ("At time {0}, RETRY to issue Req (addr={1}) at Node {2}", Simulator.CurrentRound, addr, node);
+					Console.WriteLine ("RETRY to issue Req_addr = {1}, Node = {2} time = {0}", Simulator.CurrentRound, addr, node);
 					#endif
 					L2_access (node, addr, sh_slice, write,  state, cb, qos_cb,
 						stats_active, L1hit, L1upgr, L1ev, L1wb,
@@ -517,8 +495,8 @@ namespace ICSimulator
 			else 
 			{
 				#if DEBUG
-				if (throttleCycle != 0)
-					Console.WriteLine ("At time {0}, ISSUE req (addr={1}) at Node {2}", Simulator.CurrentRound, addr, node);
+				//if (throttleCycle != 0)
+				Console.WriteLine ("ISSUE Req_addr = {1}, Node = {2} time = {0}", Simulator.CurrentRound, addr, node);
 				#endif
 	
 				CmpCache_Txn txn = null;
@@ -652,54 +630,6 @@ namespace ICSimulator
 				txn_schedule (txn, cb);
 			}
 		}
-
-        // evict a block from given node, and construct either writeback or release packet.
-        // updates functional state accordingly.
-        void do_evict(CmpCache_Txn txn, CmpCache_Pkt init_dep, int node, ulong evict_addr, out bool wb)
-        {
-            ulong blk = evict_addr >> m_blkshift;
-            int sh_slice = map_addr(node, evict_addr);
-
-            CmpCache_State evicted_st;
-            if (m_sh_perfect)
-            {
-                Debug.Assert(m_perf_sh.ContainsKey(blk));
-                evicted_st = m_perf_sh[blk];
-            }
-            else
-            {
-                bool hit = m_sh.probe(evict_addr, out evicted_st);
-                Debug.Assert(hit); // inclusive sh cache -- MUST be present in sh cache
-            }
-
-            if(evicted_st.excl == node && evicted_st.modified)
-            {
-                CmpCache_Pkt wb_pkt = add_data_pkt(txn, node, sh_slice, false, 12); // by Xiyue: eviction triggers a writeback
-                wb_pkt.delay = m_opdelay; // pass-through delay: operation already in progress
-                add_dep(init_dep, wb_pkt);
-				min_cycle (txn, m_opdelay);
-
-                evicted_st.owners.reset();
-                evicted_st.excl = -1;
-                evicted_st.sh_dirty = true;
-                wb = true;
-            }
-            else
-            {
-                CmpCache_Pkt release_pkt = add_ctl_pkt(txn, node, sh_slice, false, 13);
-                release_pkt.delay = m_opdelay;
-                add_dep(init_dep, release_pkt);
-				min_cycle (txn, m_opdelay);
-
-                evicted_st.owners.unset(node);
-                if (evicted_st.excl == node) evicted_st.excl = -1;
-                wb = false;
-            }
-
-            if (m_sh_perfect && !evicted_st.owners.any_set())
-                m_perf_sh.Remove(blk);
-        }
-
 
 
 		void Mem_access (int node, ulong addr, int sh_slice, bool write, CmpCache_State state, Simulator.Ready cb,  CPU.qos_stat_delegate qos_cb,
@@ -872,6 +802,56 @@ namespace ICSimulator
 		}
 
 
+		// End Xiyue
+
+		// evict a block from given node, and construct either writeback or release packet.
+		// updates functional state accordingly.
+		void do_evict(CmpCache_Txn txn, CmpCache_Pkt init_dep, int node, ulong evict_addr, out bool wb)
+		{
+			ulong blk = evict_addr >> m_blkshift;
+			int sh_slice = map_addr(node, evict_addr);
+
+			CmpCache_State evicted_st;
+			if (m_sh_perfect)
+			{
+				Debug.Assert(m_perf_sh.ContainsKey(blk));
+				evicted_st = m_perf_sh[blk];
+			}
+			else
+			{
+				bool hit = m_sh.probe(evict_addr, out evicted_st);
+				Debug.Assert(hit); // inclusive sh cache -- MUST be present in sh cache
+			}
+
+			if(evicted_st.excl == node && evicted_st.modified)
+			{
+				CmpCache_Pkt wb_pkt = add_data_pkt(txn, node, sh_slice, false, 12); // by Xiyue: eviction triggers a writeback
+				wb_pkt.delay = m_opdelay; // pass-through delay: operation already in progress
+				add_dep(init_dep, wb_pkt);
+				min_cycle (txn, m_opdelay);
+
+				evicted_st.owners.reset();
+				evicted_st.excl = -1;
+				evicted_st.sh_dirty = true;
+				wb = true;
+			}
+			else
+			{
+				CmpCache_Pkt release_pkt = add_ctl_pkt(txn, node, sh_slice, false, 13);
+				release_pkt.delay = m_opdelay;
+				add_dep(init_dep, release_pkt);
+				min_cycle (txn, m_opdelay);
+
+				evicted_st.owners.unset(node);
+				if (evicted_st.excl == node) evicted_st.excl = -1;
+				wb = false;
+			}
+
+			if (m_sh_perfect && !evicted_st.owners.any_set())
+				m_perf_sh.Remove(blk);
+		}
+
+
 
         // construct a set of invalidation packets, all depending on init_dep, and
         // joining at a join-point that we return. Also invalidate the given addr
@@ -940,11 +920,12 @@ namespace ICSimulator
             pkt.delay = 0;
             pkt.mem_addr = 0;
 
+
             txn.n_pkts++;
             txn.n_pkts_remaining++;
 
             if (txn.pkts == null)
-                txn.pkts = pkt;
+				txn.pkts = pkt;
 
             return pkt;
         }
@@ -979,9 +960,9 @@ namespace ICSimulator
 			pkt.flits = data ? m_datapkt_size : 1;
 			pkt.vc_class = 0; // gets filled in once DAG is complete
 
-			pkt.done = done;
-			pkt.send = send;
-			pkt.tier = tier;
+			pkt.done = done; // indicate this is the last packet associate with a txn
+			pkt.send = send; 
+			pkt.tier = tier; 
 			Simulator.stats.pkt_tier_count[tier].Add();
 
 			pkt.deps = 0;
@@ -1054,6 +1035,33 @@ namespace ICSimulator
             to.deps++;
         }
 
+
+
+		void txn_schedule (CmpCache_Txn txn, Simulator.Ready cb)
+		{
+			// now start the transaction, if one was needed
+			if (txn != null)
+			{
+
+				assignVCclasses(txn.pkts);
+
+				min_cycle (txn, m_prvdelay); // By Xiyue: not used currently. m_prvdelay takes L1 access into account
+
+				// start running the protocol DAG. It may be an empty graph (for a silent upgr), in
+				// which case the deferred start (after cache delay)
+				// By Xiyue: schedule a network packet here.
+				Simulator.Defer(delegate()
+					{
+						start_pkts(txn);
+					}, Simulator.CurrentRound + m_prvdelay);
+			}
+			// no transaction -- just the cache access delay. schedule deferred callback.
+			else
+			{
+				Simulator.Defer(cb, Simulator.CurrentRound + m_prvdelay); //by Xiyue: Defer() can be considered as a scheduler. cb is the cache access action.
+			}
+		}
+
         void start_pkts(CmpCache_Txn txn)
         {
             if (txn.n_pkts_remaining > 0)
@@ -1079,7 +1087,7 @@ namespace ICSimulator
                         delegate()
                         {
                         pkt_callback(txn, pkt);
-						}, pkt.off_crit, pkt.vc_class, txn);
+					}, pkt.off_crit, pkt.vc_class, txn);
             }
             else if (pkt.mem)
             {
