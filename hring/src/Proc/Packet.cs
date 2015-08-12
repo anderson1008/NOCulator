@@ -21,8 +21,8 @@ namespace ICSimulator
             return m_VCclass;
         }
 
-		public CachePacket(int reqNode, int from, int to, int flits, int _class, int _vcclass, Simulator.Ready _cb, CmpCache_Txn txn)
-			: base(null, 0, flits, new Coord(from), new Coord(to), txn)
+		public CachePacket(int reqNode, int from, int to, int flits, int _class, int _vcclass, Simulator.Ready _cb, CmpCache_Txn txn, bool critical)
+			: base(null, 0, flits, new Coord(from), new Coord(to), txn, critical)
         {
             cb = _cb;
             m_class = _class;
@@ -65,7 +65,7 @@ namespace ICSimulator
         public Packet pkt;
 
         public RetxPacket(Coord src, Coord dest, Packet p)
-			: base(null, 0, 1, src, dest, null) // by Xiyue: CmpCache_Txn field does nothing here.
+			: base(null, 0, 1, src, dest)
         {
             pkt = p;
         }

@@ -121,6 +121,9 @@ namespace ICSimulator
 
         public int requesterID;
 
+		//by Xiyue:
+		public bool critical;
+
         public ulong seq;
 		public int pktParity;   // 0:clockwise  1:counter clockwise  -1:dont care
 
@@ -157,7 +160,7 @@ namespace ICSimulator
         public Packet scarab_retransmit;
         public bool scarab_is_nack, scarab_is_teardown;
 
-		public Packet(Request request, ulong block, int nrOfFlits, Coord source, Coord dest, CmpCache_Txn txn)
+		public Packet(Request request, ulong block, int nrOfFlits, Coord source, Coord dest)
         {
             _request = request;
             if (_request != null)
@@ -169,10 +172,25 @@ namespace ICSimulator
                 request.setCarrier(this);
             requesterID = -1;
             initialize(Simulator.CurrentRound, nrOfFlits);
-			this.txn = txn;
         }
 
 		//by Xiyue:
+
+		public Packet(Request request, ulong block, int nrOfFlits, Coord source, Coord dest, CmpCache_Txn txn, bool critical)
+		{
+			_request = request;
+			if (_request != null)
+				_request.beenToNetwork = true;
+			_block = block; // may not come from request (see above)
+			_src = source;
+			_dest = dest;
+			if (request != null)
+				request.setCarrier(this);
+			requesterID = -1;
+			initialize(Simulator.CurrentRound, nrOfFlits);
+			this.txn = txn;
+			this.critical = critical;
+		}
 		public ulong intfCycle = 0;
 		public CmpCache_Txn txn;
 		//end Xiyue

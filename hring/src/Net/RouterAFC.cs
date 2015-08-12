@@ -301,17 +301,7 @@ namespace ICSimulator
 					for (int vnet = 0; vnet < Config.afc_vnets; vnet++)
 						if (m_buf [pc, vnet].Count > 0) {
 							AFCBufferSlot top = m_buf [pc, vnet].Peek ();
-							/*
-							// throttle only the request of the current core
-							if (pc == 4 && Simulator.controller.tryInject (ID) == false && Config.throttle_enable == true) {								
-								if (ID == top.flit.packet.requesterID) {
-									top.flit.packet.txn.interferenceCycle++;
-									//Simulator.stats.non_overlap_penalty [ID].Add ();
-									//Simulator.stats.non_overlap_penalty_period [ID].Add ();
-									continue;
-								}
-							}
-							*/
+			
 							PreferredDirection pd = determineDirection (top.flit, coord);
 							int outdir = (pd.xDir != Simulator.DIR_NONE) ?
                                 pd.xDir : pd.yDir;
@@ -338,7 +328,8 @@ namespace ICSimulator
 								//    Check Interference at Input Buffers
 								if (requesters [pc] != null && pc != 4) {
 									if (top.flit.packet.requesterID != requesters [pc].flit.packet.requesterID) {
-										requesters [pc].flit.packet.txn.interferenceCycle++;
+										if (requesters [pc].flit.packet.critical) // only log interferenceCycle for critical packet, but still log causeIntf.
+											requesters [pc].flit.packet.txn.interferenceCycle++;
 										top.flit.packet.txn.causeIntf++;
 										#if DEBUG
 										Console.WriteLine ("BLOCK Req_addr = {1}, Node {2}, intfCycle = {3}, time = {0}",  Simulator.CurrentRound, requesters [pc].flit.packet.txn.req_addr, ID, requesters [pc].flit.packet.txn.interferenceCycle);
@@ -366,17 +357,6 @@ namespace ICSimulator
                         if (requesters[req] != null &&
                                 requester_dir[req] == outdir)
                         {
-							/*
-							// By Xiyue: throttle
-							if (req == 4 && Simulator.controller.tryInject (ID) == false && Config.throttle_enable == true) {									
-								//requesters [req].flit.packet.txn.interferenceCycle++;
-								if (ID == requesters[4].flit.packet.requesterID) {
-									Simulator.stats.non_overlap_penalty [ID].Add ();
-									Simulator.stats.non_overlap_penalty_period [ID].Add ();
-									continue;
-								}
-							}
-							*/
 							if (outdir == 4) flitsTryToEject ++;
                             if (top == null ||
                                     requesters[req].CompareTo(top) < 0)
@@ -388,8 +368,8 @@ namespace ICSimulator
 								{
 									if (requesters [req].flit.packet.requesterID != top.flit.packet.requesterID) 
 									{
-										
-										top.flit.packet.txn.interferenceCycle++;
+										if (top.flit.packet.critical)
+											top.flit.packet.txn.interferenceCycle++;
 										requesters [req].flit.packet.txn.causeIntf++;
 
 										#if DEBUG
@@ -579,12 +559,21 @@ namespace ICSimulator
 				f.enterBuffer = Simulator.CurrentRound;
 
 				int temp_queueCycle;
-				if (slot.flit.isTailFlit == true) {
+				if (slot.flit.isTailFlit && slot.flit.packet.critical) {
 					temp_queueCycle = (int)(Simulator.CurrentRound - slot.flit.packet.creationTime); 
 					if (temp_queueCycle >= 0 && slot.flit.dest.ID != ID)
 					{
 						slot.flit.packet.txn.serialization_latency = slot.flit.packet.txn.serialization_latency + (ulong)slot.flit.packet.nrOfFlits;
-						slot.flit.packet.txn.queue_latency = slot.flit.packet.txn.queue_latency + (ulong)temp_queueCycle;
+						slot.flit.packet.txn.queue_latency = slot.flit.packet.txn.queue_latency + (ulong)Math.Max(temp_queueCycle,slot.flit.packet.nrOfFlits);
+						#if DEBUG
+						if (slot.flit.packet.txn.req_addr == 0)
+							Console.WriteLine ("pkt = {4}, txn req_arr = 0, serilatency = {0}, queue_latency = {1}, at time = {2} node {3}",
+								slot.flit.packet.txn.serialization_latency, slot.flit.packet.txn.queue_latency, Simulator.CurrentRound, ID, slot.flit.packet.ID);
+						#endif
+
+						if (slot.flit.packet.txn.queue_latency < slot.flit.packet.txn.serialization_latency)
+							throw new Exception("queue cycle less than serialization latency!");
+
 					}else if (temp_queueCycle < 0)
 						throw new Exception("queue latency is less than 0!");
 				}

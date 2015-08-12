@@ -155,7 +155,7 @@ namespace ICSimulator
 					// TODO: Sth is missing here: sometime the node does not have to be throttled.
 					if (Config.throttle_enable == true) 
 					{
-						
+						/*
 						if (need_slowdown_qos == false) {
 							throttle_rate = 0.0;
 						}
@@ -175,7 +175,7 @@ namespace ICSimulator
 							throttle_rate = Config.default_throttle[i];
 
 						}
-
+						*/
 						/*
 						if (i%4!=0)
 							throttle_rate = Config.default_throttle;
@@ -196,6 +196,40 @@ namespace ICSimulator
 					Simulator.stats.non_overlap_penalty_period [i].EndPeriod ();
 					Simulator.stats.causeIntf [i].EndPeriod ();
 				}
+			}
+
+
+
+
+			//record mpki vals every 20k cycles
+			if (Simulator.CurrentRound > (ulong)Config.warmup_cyc &&
+				(Simulator.CurrentRound % (ulong)20000) == 0)
+			{
+				for (int i = 0; i < Config.N; i++)
+				{
+					prev_MPKI[i]=MPKI[i];
+					if(num_ins_last_epoch[i]==0)
+						MPKI[i]=((double)(L1misses[i]*1000))/(Simulator.stats.insns_persrc[i].Count);
+					else
+					{
+						if(Simulator.stats.insns_persrc[i].Count-num_ins_last_epoch[i]>0)
+							MPKI[i]=((double)(L1misses[i]*1000))/(Simulator.stats.insns_persrc[i].Count-num_ins_last_epoch[i]);
+						else if(Simulator.stats.insns_persrc[i].Count-num_ins_last_epoch[i]==0)
+							MPKI[i]=0;
+						else
+							throw new Exception("MPKI error!");
+					}
+				}
+
+				double mpki_sum=0;
+				double mpki=0;
+				for(int i=0;i<Config.N;i++)
+				{
+					mpki=MPKI[i];
+					mpki_sum+=mpki;
+					Simulator.stats.mpki_bysrc[i].Add(mpki);
+				}
+				Simulator.stats.total_sum_mpki.Add(mpki_sum);
 			}
 		}			
 				

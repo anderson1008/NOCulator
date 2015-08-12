@@ -542,7 +542,7 @@ namespace ICSimulator
             int nNr = nackNr(f.inDir, f.nackWire);
 //            Console.WriteLine("\tProc {4}:sendNack for ID {0}: inDir = {1}, nackWire = {2}, nNr = {3}",
 //                              f.packet.ID, f.inDir, f.nackWire, nNr, ID);
-			Packet p = new Packet(f.packet.request, 0, 1, coord, f.packet.src, null); // by Xiyue: CmpCache_Txn field does nothing here.
+			Packet p = new Packet(f.packet.request, 0, 1, coord, f.packet.src);
             p.scarab_retransmit = f.packet;
             f.packet.scarab_retransmit_count++;
 
@@ -556,7 +556,7 @@ namespace ICSimulator
 //            Console.WriteLine("\tProc {3}:Teardown for ID {0}: inDir = {1}, nackWire = {2} (packet src {4}, dest {5})",
 //                              f.packet.ID, f.inDir, f.nackWire, ID, f.packet.source.ID, f.packet.dest.ID);
             int nNr = nackNr(f.inDir, f.nackWire);
-			Packet p = new Packet(f.packet.request, 0, 1, coord, f.packet.src, null); // by Xiyue: CmpCache_Txn field does nothing here.
+			Packet p = new Packet(f.packet.request, 0, 1, coord, f.packet.src);
             p.scarab_retransmit = f.packet; // don't actually retransmit, but keep this for debugging
 
             p.scarab_is_teardown = true;

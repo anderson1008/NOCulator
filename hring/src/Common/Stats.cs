@@ -16,10 +16,64 @@ namespace ICSimulator
 		public AccumStat[] non_overlap_penalty;
 		public SampledStat[] queue_delay;
 		public SampledStat[] serialization_latency;
-		public AccumStat[] pkt_tier_count;
+		public CacheProfileStat[] pkt_tier_count;
 		public PeriodicAccumStat[] non_overlap_penalty_period;
 		public PeriodicAccumStat[] causeIntf;
 		public PeriodicAccumStat[] insns_persrc_ewma;
+		public PeriodicAccumStat[] insns_persrc_period;
+
+		// an AccumStat is a statistic that counts discrete events (flit
+		// deflections, ...) and from which we can extract a rate
+		// (events/time).
+		public class CacheProfileStat : StatsObject
+		{
+			protected double m_count;
+
+			public CacheProfileStat ()
+			{
+				Reset();
+			}
+
+			public void Add()
+			{
+				m_count++;
+			}
+
+			public void Add(ulong addee)
+			{
+				m_count += (ulong) addee;
+			}
+
+			public void Add(double addee)
+			{
+				m_count += addee;
+			}
+				
+			public override void Reset()
+			{
+				m_count = 0;
+			}
+
+
+			public override void DumpJSON(TextWriter tw)
+			{
+				tw.Write("{0}", m_count);
+			}
+
+			public double Count
+			{ get { return m_count; } }
+
+		}
+
+
+		CacheProfileStat[] newCacheProfileStatArray()
+		{
+			CacheProfileStat[] ret = new CacheProfileStat[30];
+			for (int i = 0; i < 30; i++)
+				ret[i] = new CacheProfileStat(); // initialize private variable
+			return ret;
+		}
+
 		// end Xiyue
 
 
@@ -116,7 +170,7 @@ namespace ICSimulator
         public AccumStat[] unprod_flit_bysrc, unprod_flit_byloc;
 
         public AccumStat starve_flit;
-        public AccumStat[] starve_flit_bysrc;
+		public AccumStat[] starve_flit_bysrc;          
         public SampledStat[] starve_interval_bysrc;
 
         public SampledStat net_decisionLevel;
@@ -215,7 +269,7 @@ namespace ICSimulator
 
         //Router prioritization counters
         public PeriodicAccumStat[] L1_misses_persrc_period;
-        public PeriodicAccumStat[] insns_persrc_period;
+		public PeriodicAccumStat[] inAccumStatsns_persrc_period;
         public PeriodicAccumStat[] outstandingReq_persrc_period;
         public PeriodicAccumStat[] weightedOutstandingReq_persrc_period;
         public PeriodicAccumStat[] cycles_persrc_period;
@@ -491,6 +545,9 @@ namespace ICSimulator
                     fi.SetValue(this, newSampledStatArray());
                 else if (t == typeof(SampledStat[,]))
                     fi.SetValue(this, newSampledStatArray2D());
+				else if (t == typeof(CacheProfileStat[]))
+					fi.SetValue(this, newCacheProfileStatArray());
+				
             }
         }
 
@@ -771,7 +828,7 @@ namespace ICSimulator
             base.Add(val);
             if (d.ContainsKey(val))
                 d[val]++;
-            else
+			else
                 d[val] = 1;
         }
 
