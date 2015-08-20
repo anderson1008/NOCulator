@@ -10,13 +10,13 @@ import fnmatch
 
 workload_dir = "/home/xiyue/Desktop/NOCulator/hring/src/bin/workload_list/"
 ipc_ref_file_name = workload_dir + "hetero_ipc_ref"
-raw_out_dir = "/home/xiyue/Desktop/results/"
+raw_out_dir = "/home/xiyue/Desktop/results/perfCache/aug10_no_throttle/"
 
 ref_ipc_file = open (ipc_ref_file_name)
 ref_ipc = ref_ipc_file.readlines()
 
 insns_count = 100000
-num_file = 1
+num_file = 49
 slowdown_error_accum = 0
 ipc_alone_error_accum = 0
 
@@ -49,7 +49,7 @@ for sim_index in range (1, num_file + 1, 1):
 				est_slowdown = ipc_alone / ipc_share
 				actual_slowdown = float(ipc_ref[i]) / ipc_share
 				slowdown_error = (est_slowdown - actual_slowdown) / actual_slowdown
-				#print slowdown_error
+				print slowdown_error
 				slowdown_error_accum = slowdown_error_accum + abs(slowdown_error)
 
 avg_slowdown_error = slowdown_error_accum / num_file / 16

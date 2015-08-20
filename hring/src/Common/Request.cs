@@ -236,10 +236,13 @@ namespace ICSimulator
 			long slack = (long) (Simulator.CurrentRound - _serviceCycle - 1);
 
 			ulong intf_cycle = 0;
+			/*
 			if (slack < 0)
 				//intf_cycle = 0; // local L2 access has 0 interference cycle. It will be serviced intermediately upon issuing the request.
 				throw new Exception("Impossible: service after commit!");
 			else if (slack > 0) // instruction is serviced earlier than it should, even with interference. So intf is hidden completely.
+			*/
+			if (slack != 0)
 				intf_cycle = max_intf_cycle;
 			else{
 

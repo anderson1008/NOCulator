@@ -542,7 +542,7 @@ namespace ICSimulator
 			{
 				#if DEBUG
 				//if (throttleCycle != 0)
-				Console.WriteLine ("ISSUE Req_addr = {1}, Node = {2} time = {0}", Simulator.CurrentRound, addr, node);
+				Console.WriteLine ("ISSUE L2 Req_addr = {1}, Node = {2} time = {0}", Simulator.CurrentRound, addr, node);
 				#endif
 	
 				CmpCache_Txn txn = null;
@@ -752,12 +752,20 @@ namespace ICSimulator
 				}, Simulator.CurrentRound + 1);
 
 			} else {
+
+				#if DEBUG
+				//if (throttleCycle != 0)
+				Console.WriteLine ("ISSUE MEM Req_addr = {1}, Node = {2} time = {0}", Simulator.CurrentRound, addr, node);
+				#endif
+
 				CmpCache_Txn txn = null;
 				txn = new CmpCache_Txn();
 				txn.node = node;
 				txn.throttleCycle = throttleCycle;
 				txn.cb = cb;
 				txn.qos_cb = qos_cb;
+				txn.req_addr = addr;
+
 
 				/*
 				L2access = true;

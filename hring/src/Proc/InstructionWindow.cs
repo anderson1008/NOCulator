@@ -191,14 +191,13 @@ namespace ICSimulator {
 						#endif
 						max_intf_temp = requests [oldest].computePenalty (last_retired, max_intf);
 						max_intf = max_intf_temp;
-
-						//Simulator.stats.non_overlap_penalty [node].Add (max_intf);
-						//Simulator.stats.non_overlap_penalty_period [node].Add (max_intf);
-					} else
+					
+					} else {
 						#if DEBUG
 						Console.WriteLine ("COMMIT node = {0}, local addr = {1}, time = {2}, intf = {3}, ", node, requests [oldest].address, Simulator.CurrentRound, requests [oldest].interferenceCycle);
-					#endif
-					requests [oldest].retire ();
+						#endif
+						requests [oldest].retire ();
+					}
 				} else {
 
 					#if DEBUG
@@ -233,9 +232,11 @@ namespace ICSimulator {
             }
 			if (load > 0 && i < n) {
 				requests [oldest].backStallsCaused += (1.0 * n - i) / n; // by Xiyue:  calculate the wasted/ideal proc cycle in percentage.
+				/*
 				#if DEBUG
 				Console.WriteLine ("WASTE {0} instructions cycle at node = {1}, time = {2}", n - i, node, Simulator.CurrentRound);
 				#endif
+				*/
 			}
 
 			if (max_intf > 0) {
@@ -343,7 +344,6 @@ namespace ICSimulator {
 				{
 					if (writes [i] && !write) 
 						continue;
-					//ulong interference_cycle = interferenceCycle + throttleCycle + (ulong)queueIntfCycle;
 					// Do NOT have to consider throttleCycle, since queueIntfCycle already includes the amount of throttled cycles
 					ulong interference_cycle = interferenceCycle + (ulong)queueIntfCycle;
 					if (interference_cycle != 0 ) {

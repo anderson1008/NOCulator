@@ -19,8 +19,12 @@ namespace ICSimulator
 
         public int CompareTo(object o)
         {
-            if (o is AFCBufferSlot)
-                return Router_Flit_OldestFirst._rank(m_f, (o as AFCBufferSlot).m_f);
+			if (o is AFCBufferSlot) {
+				if (Config.slowdown_aware == false)
+					return Router_Flit_OldestFirst._rank (m_f, (o as AFCBufferSlot).m_f);
+				else
+					return Router_Flit_SlowDown._rank (m_f, (o as AFCBufferSlot).m_f);
+			}
             else
                 throw new ArgumentException("bad comparison");
         }
@@ -316,31 +320,39 @@ namespace ICSimulator
 								Router_AFC nrouter = (Router_AFC)neigh [outdir];
 								int ndir = (outdir + 2) % 4;
 								if (nrouter.m_buf [ndir, vnet].Count >= capacity (vnet) &&
-								                            nrouter.m_buffered)
+								    nrouter.m_buffered)
 									continue;
 							}
 
 							// otherwise, contend for top requester from this
 							// physical channel
 							if (requesters [pc] == null ||
-							                         top.CompareTo (requesters [pc]) < 0) {
+							    top.CompareTo (requesters [pc]) < 0) {
 								// By Xiyue:
 								//    Check Interference at Input Buffers
-								if (requesters [pc] != null && pc != 4) {
+								if (requesters [pc] != null) {
 									if (top.flit.packet.requesterID != requesters [pc].flit.packet.requesterID) {
 										if (requesters [pc].flit.packet.critical) // only log interferenceCycle for critical packet, but still log causeIntf.
 											requesters [pc].flit.packet.txn.interferenceCycle++;
 										top.flit.packet.txn.causeIntf++;
 										#if DEBUG
-										Console.WriteLine ("BLOCK Req_addr = {1}, Node {2}, intfCycle = {3}, time = {0}",  Simulator.CurrentRound, requesters [pc].flit.packet.txn.req_addr, ID, requesters [pc].flit.packet.txn.interferenceCycle);
+										Console.WriteLine ("BLOCK Req_addr = {1}, Node {2}, intfCycle = {3}, time = {0}", Simulator.CurrentRound, requesters [pc].flit.packet.txn.req_addr, ID, requesters [pc].flit.packet.txn.interferenceCycle);
 										#endif
 									}										
 								}
 									
 								requesters [pc] = top;
 								requester_dir [pc] = outdir;
+							} 
+							/*
+							else if (requesters [pc] != null && top.CompareTo (requesters [pc]) > 0) {
+								if (top.flit.packet.requesterID != requesters [pc].flit.packet.requesterID) {
+									if (top.flit.packet.critical) // only log interferenceCycle for critical packet, but still log causeIntf.
+										top.flit.packet.txn.interferenceCycle++;
 
+								}
 							}
+							*/
 						}
 				}
                 // find the highest-priority requester for each output, and pop
@@ -358,16 +370,13 @@ namespace ICSimulator
                                 requester_dir[req] == outdir)
                         {
 							if (outdir == 4) flitsTryToEject ++;
-                            if (top == null ||
-                                    requesters[req].CompareTo(top) < 0)
-                            {
+							if (top == null ||
+							                        requesters [req].CompareTo (top) < 0) {
 								// By Xiyue:
 								//	  Check Interference
 								//    here "top" is the flit being stalled.
-								if (top != null) 
-								{
-									if (requesters [req].flit.packet.requesterID != top.flit.packet.requesterID) 
-									{
+								if (top != null) {
+									if (requesters [req].flit.packet.requesterID != top.flit.packet.requesterID) {
 										if (top.flit.packet.critical)
 											top.flit.packet.txn.interferenceCycle++;
 										requesters [req].flit.packet.txn.causeIntf++;
@@ -379,9 +388,18 @@ namespace ICSimulator
 								}
 
 								// end Xiyue
-								top = requesters[req];
-                               	top_indir = req;
-                            }
+								top = requesters [req];
+								top_indir = req;
+							}
+							/*
+							else if (top != null && requesters [req].CompareTo (top) > 0) {
+								if (requesters [req].flit.packet.requesterID != top.flit.packet.requesterID) {
+									if (requesters [req].flit.packet.critical)
+										requesters [req].flit.packet.txn.interferenceCycle++;
+								}
+							}
+							*/
+
                         }
 					if (outdir == 4)
 						Simulator.stats.flitsTryToEject[flitsTryToEject].Add();
@@ -566,9 +584,8 @@ namespace ICSimulator
 						slot.flit.packet.txn.serialization_latency = slot.flit.packet.txn.serialization_latency + (ulong)slot.flit.packet.nrOfFlits;
 						slot.flit.packet.txn.queue_latency = slot.flit.packet.txn.queue_latency + (ulong)Math.Max(temp_queueCycle,slot.flit.packet.nrOfFlits);
 						#if DEBUG
-						if (slot.flit.packet.txn.req_addr == 0)
-							Console.WriteLine ("pkt = {4}, txn req_arr = 0, serilatency = {0}, queue_latency = {1}, at time = {2} node {3}",
-								slot.flit.packet.txn.serialization_latency, slot.flit.packet.txn.queue_latency, Simulator.CurrentRound, ID, slot.flit.packet.ID);
+						Console.WriteLine ("BLOCK pkt = {4}, txn req_addr = {5}, serilatency = {0}, queue_latency = {1}, at time = {2} node {3}",
+							slot.flit.packet.txn.serialization_latency, slot.flit.packet.txn.queue_latency, Simulator.CurrentRound, ID, slot.flit.packet.ID, slot.flit.packet.txn.req_addr);
 						#endif
 
 						if (slot.flit.packet.txn.queue_latency < slot.flit.packet.txn.serialization_latency)

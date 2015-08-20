@@ -21,6 +21,11 @@ namespace ICSimulator
 		public PeriodicAccumStat[] causeIntf;
 		public PeriodicAccumStat[] insns_persrc_ewma;
 		public PeriodicAccumStat[] insns_persrc_period;
+		public SampledStat net_latency, total_latency;
+		public SampledStat[] net_latency_bysrc, total_latency_bysrc;
+		public SampledStat[] net_latency_bydest, total_latency_bydest;
+		public SampledStat[] flit_inj_latency_byapp, flit_net_latency_byapp, flit_total_latency_byapp;
+		public SampledStat flit_inj_latency, flit_net_latency, flit_total_latency;
 
 		// an AccumStat is a statistic that counts discrete events (flit
 		// deflections, ...) and from which we can extract a rate
@@ -179,17 +184,14 @@ namespace ICSimulator
         //public SampledStat send_buf, rcv_buf;
         //public SampledStat [] send_buf_bysrc, rcv_buf_bydest;
 
-        public SampledStat net_latency, total_latency;
-        public SampledStat[] net_latency_bysrc, total_latency_bysrc;
-        public SampledStat[] net_latency_bydest, total_latency_bydest;
+
         //public SampledStat[,] net_latency_srcdest, total_latency_srcdest;
 
         //In HighOther state
         public AccumStat[] throttle_time_bysrc;
         //In AlwaysThrottled state
         public AccumStat[] always_throttle_time_bysrc;
-        public SampledStat[] flit_inj_latency_byapp, flit_net_latency_byapp, flit_total_latency_byapp;
-        public SampledStat flit_inj_latency, flit_net_latency, flit_total_latency;
+
 		public SampledStat hoq_latency;  
         public SampledStat[] hoq_latency_bysrc;
 
@@ -1082,12 +1084,24 @@ namespace ICSimulator
 		private List<double> history = new List<double>();
 		private double emwa_factor = Config.ewmv_factor;
 
+
+		public double LastPeriodValue
+		{
+			get{
+				if (history.Count > 1)
+					return history [history.Count - 1];
+				else
+					return 1;
+			}
+		}
+
 		public double ExpWhtMvAvg ()
 		{
 			double current = m_count;
-			double lastPeriodValue;
+
 			double new_ewma;
 			int count = history.Count;
+			double lastPeriodValue;
 			if (count == 0) {
 				lastPeriodValue = 0;
 				new_ewma = current;

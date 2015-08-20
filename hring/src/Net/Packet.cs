@@ -121,8 +121,7 @@ namespace ICSimulator
 
         public int requesterID;
 
-		//by Xiyue:
-		public bool critical;
+
 
         public ulong seq;
 		public int pktParity;   // 0:clockwise  1:counter clockwise  -1:dont care
@@ -190,7 +189,11 @@ namespace ICSimulator
 			initialize(Simulator.CurrentRound, nrOfFlits);
 			this.txn = txn;
 			this.critical = critical;
+			this.slowdown = Simulator.stats.etimated_slowdown [txn.node].LastPeriodValue;
 		}
+
+		public bool critical;
+		public double slowdown; // slowdown of the associated application
 		public ulong intfCycle = 0;
 		public CmpCache_Txn txn;
 		//end Xiyue

@@ -375,6 +375,73 @@ namespace ICSimulator
         protected virtual bool needFlush(Flit f) { return false; }
     }
 
+
+
+	// by Xiyue: yanked and modified from Router_Flit_OldestFirst
+
+	public class Router_Flit_SlowDown : Router_Flit
+	{
+		public Router_Flit_SlowDown(Coord myCoord)
+			: base(myCoord)
+		{
+		}
+			
+		public static int _rank(Flit f1, Flit f2)
+		{
+			// return -1: f1 win
+			// return 1: f2 win
+
+			if (f1 == null && f2 == null) return 0;
+			if (f1 == null) return 1;
+			if (f2 == null) return -1;
+
+			bool same_app = false;
+
+
+			int c0 = 0, c1 = 0, c2 = 0, c4 = 0;
+			if (f1.packet != null && f2.packet != null)
+			{
+				if (f1.packet.requesterID == f2.packet.requesterID)
+					same_app = true;
+				c4 = f1.packet.batchID.CompareTo (f2.packet.batchID);
+				c0 = -f1.packet.slowdown.CompareTo(f2.packet.slowdown); // if f1.slowdown < f2.slowdown, flit2 win, c0 = 1 (CompareTo return -1, need to negate)
+				c1 = -age(f1).CompareTo(age(f2));
+				c2 = f1.packet.ID.CompareTo(f2.packet.ID);
+			}
+
+			int c3 = f1.flitNr.CompareTo(f2.flitNr);
+
+			int diff_app_winner = 
+				(c4 != 0) ? c4 :
+				(c0 != 0) ? c0 :
+				(c1 != 0) ? c1 :
+				(c2 != 0) ? c2 :
+				c3;
+
+			int same_app_winner = 
+				(c1 != 0) ? c1 :
+				(c2 != 0) ? c2 :
+				c3;
+
+			return same_app ? same_app_winner : diff_app_winner;
+		}
+
+		public static ulong age(Flit f)
+		{
+			if (Config.net_age_arbitration)
+				return Simulator.CurrentRound - f.packet.injectionTime;
+			else
+				return (Simulator.CurrentRound - f.packet.creationTime) /
+					(ulong)Config.cheap_of;
+		}
+	}
+
+	// end Xiyue
+
+
+
+
+
     public class Router_Flit_OldestFirst : Router_Flit
     {
         public Router_Flit_OldestFirst(Coord myCoord)
