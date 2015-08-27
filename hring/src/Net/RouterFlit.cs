@@ -397,12 +397,17 @@ namespace ICSimulator
 
 			bool same_app = false;
 
-
-			int c0 = 0, c1 = 0, c2 = 0, c4 = 0;
+			ulong f1_batch_dist, f2_batch_dist;
+			ulong current_batch = (Simulator.CurrentRound / Config.STC_batchPeriod) % Config.STC_batchCount;
+			int c0 = 0, c1 = 0, c2 = 0, c4 = 0, c5 = 0;
 			if (f1.packet != null && f2.packet != null)
 			{
 				if (f1.packet.requesterID == f2.packet.requesterID)
 					same_app = true;
+
+				f1_batch_dist = (ulong) (current_batch - f1.packet.batchID) % Config.STC_batchCount;
+				f2_batch_dist = (ulong) (current_batch - f2.packet.batchID) % Config.STC_batchCount;
+				c5 = -f1_batch_dist.CompareTo (f2_batch_dist);
 				c4 = f1.packet.batchID.CompareTo (f2.packet.batchID);
 				c0 = -f1.packet.slowdown.CompareTo(f2.packet.slowdown); // if f1.slowdown < f2.slowdown, flit2 win, c0 = 1 (CompareTo return -1, need to negate)
 				c1 = -age(f1).CompareTo(age(f2));
@@ -412,7 +417,7 @@ namespace ICSimulator
 			int c3 = f1.flitNr.CompareTo(f2.flitNr);
 
 			int diff_app_winner = 
-				(c4 != 0) ? c4 :
+				(c5 != 0) ? c5 :
 				(c0 != 0) ? c0 :
 				(c1 != 0) ? c1 :
 				(c2 != 0) ? c2 :

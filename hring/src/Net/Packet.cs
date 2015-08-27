@@ -189,7 +189,7 @@ namespace ICSimulator
 			initialize(Simulator.CurrentRound, nrOfFlits);
 			this.txn = txn;
 			this.critical = critical;
-			this.slowdown = Simulator.stats.etimated_slowdown [txn.node].LastPeriodValue;
+			this.slowdown = Simulator.stats.etimated_slowdown [txn.node].LastPeriodValue; // TODO: by Xiyue: this is equivalent to have N ranking levels.
 		}
 
 		public bool critical;

@@ -105,7 +105,7 @@ namespace ICSimulator
 
 		// ----
 		// By Xiyue
-		public static double slowdown_epoch = 10000;
+		public static double slowdown_epoch = 100000;
 		public static double ref_ipc = 1;
 		public static double[] target_slowdown = new double[16] {1.2, 1.5, 1.5, 1.5, 1.2, 1.5, 1.5, 1.5, 1.2, 1.5, 1.5, 1.5, 1.2, 1.5, 1.5, 1.5};
 		public static double throt_min = 0.5;  // share with Sigcomm paper
@@ -113,8 +113,8 @@ namespace ICSimulator
 		public static bool throttle_enable = false;
 		public static double[] default_throttle = new double[16] {0.0, 0.1, 0.1, 0.2, 0.0, 0.1, 0.1, 0.2, 0.0, 0.1, 0.1, 0.2, 0.0, 0.1, 0.1, 0.2};
 		public static bool slowdown_aware = false;
-		public static ulong STC_batchPeriod = 50;
-		public static ulong STC_batchCount = 1024;
+		public static ulong STC_batchPeriod = 16000;
+		public static ulong STC_batchCount = 8;
 		//public static double default_throttle = 0.9;
 	
 
