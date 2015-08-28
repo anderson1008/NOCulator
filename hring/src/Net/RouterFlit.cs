@@ -405,11 +405,16 @@ namespace ICSimulator
 				if (f1.packet.requesterID == f2.packet.requesterID)
 					same_app = true;
 
-				f1_batch_dist = (ulong) (current_batch - f1.packet.batchID) % Config.STC_batchCount;
-				f2_batch_dist = (ulong) (current_batch - f2.packet.batchID) % Config.STC_batchCount;
+				f1_batch_dist =  (ulong)Math.Abs((int)current_batch - (int)f1.packet.batchID) % Config.STC_batchCount;
+				f2_batch_dist =  (ulong)Math.Abs((int)current_batch - (int)f2.packet.batchID) % Config.STC_batchCount;
 				c5 = -f1_batch_dist.CompareTo (f2_batch_dist);
 				c4 = f1.packet.batchID.CompareTo (f2.packet.batchID);
-				c0 = -f1.packet.slowdown.CompareTo(f2.packet.slowdown); // if f1.slowdown < f2.slowdown, flit2 win, c0 = 1 (CompareTo return -1, need to negate)
+				c0 = f1.packet.rank.CompareTo(f2.packet.rank); // if f1.slowdown < f2.slowdown, flit2 win, c0 = 1 (CompareTo return -1, need to negate)
+				/*
+				if (c0 != 0)
+					Console.WriteLine ("PKT Rank: {0} vs {1}", f1.packet.rank, f2.packet.rank);
+				*/
+
 				c1 = -age(f1).CompareTo(age(f2));
 				c2 = f1.packet.ID.CompareTo(f2.packet.ID);
 			}
@@ -428,7 +433,19 @@ namespace ICSimulator
 				(c2 != 0) ? c2 :
 				c3;
 
-			return same_app ? same_app_winner : diff_app_winner;
+			int winner = same_app ? same_app_winner : diff_app_winner;
+			/*
+			if (c0 != 0)
+			{
+				if (winner == -1)
+					Console.WriteLine ("Flit 1 win");
+				else if (winner == 1)
+					Console.WriteLine ("Flit 2 win");
+				else
+					throw new Exception("Impossible! no one win!");
+			}
+			*/
+			return winner;
 		}
 
 		public static ulong age(Flit f)

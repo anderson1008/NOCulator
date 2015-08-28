@@ -189,14 +189,22 @@ namespace ICSimulator
 			initialize(Simulator.CurrentRound, nrOfFlits);
 			this.txn = txn;
 			this.critical = critical;
+			this.rank = Controller_QoSThrottle.app_rank[txn.node];
 			this.slowdown = Simulator.stats.etimated_slowdown [txn.node].LastPeriodValue; // TODO: by Xiyue: this is equivalent to have N ranking levels.
 		}
 
 		public bool critical;
 		public double slowdown; // slowdown of the associated application
 		public ulong intfCycle = 0;
+		public ulong rank;
 		public CmpCache_Txn txn;
+
 		//end Xiyue
+
+
+
+
+
 
         /**
          * Always call this initialization method before using a packet. All flits are also appropriately initialized

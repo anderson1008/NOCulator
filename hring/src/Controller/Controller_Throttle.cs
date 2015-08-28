@@ -51,6 +51,35 @@ namespace ICSimulator
 	public class Controller_QoSThrottle : Controller
 	{
 
+		public static ulong [] app_rank = new ulong[Config.N];
+
+
+		public void ranking_app (int node)
+		{
+			double slowdown = Simulator.stats.etimated_slowdown [node].Count;
+
+			if (slowdown <= 1.2)
+				app_rank [node] = 8;
+			else if (slowdown <= 1.3)
+				app_rank [node] = 7;
+			else if (slowdown <= 1.4)
+				app_rank [node] = 6;
+			else if (slowdown <= 1.5)
+				app_rank [node] = 5;
+			else if (slowdown <= 1.6)
+				app_rank [node] = 4;
+			else if (slowdown <= 1.7)
+				app_rank [node] = 3;
+			else if (slowdown <= 1.8)
+				app_rank [node] = 2;
+			else
+				app_rank [node] = 1;
+
+			Console.WriteLine ("Core {0} Rank is {1}.", node, app_rank[node]);
+		}
+
+
+
 		double[] m_throttleRates = new double[Config.N];
 		IPrioPktPool[] m_injPools = new IPrioPktPool[Config.N];
 		double[] m_lastCheckPoint = new double[Config.N];
@@ -76,7 +105,7 @@ namespace ICSimulator
 					setThrottleRate(i, TH_OFF);
 
 				m_lastCheckPoint[i] = 0;
-
+				app_rank [i] = 8;
 			}
 		}
 
@@ -116,18 +145,19 @@ namespace ICSimulator
 				double estimated_slowdown;
 				ulong penalty_cycle = (ulong)Simulator.stats.non_overlap_penalty_period [i].Count;
 				estimated_slowdown = (double)Config.slowdown_epoch / (Config.slowdown_epoch - penalty_cycle);
-				//Simulator.stats.etimated_slowdown [i].Add (estimated_slowdown);
 				need_slowdown_qos = need_slowdown_qos | (estimated_slowdown >= Config.target_slowdown [i]);
 			}
 			return need_slowdown_qos;
 		}
+
+
 
 		public override void doStep()
 		{
 			
 			double ipc_share;
 			// track the nonoverlapped penalty
-			double estimated_slowdown, actual_slowdown;
+			double estimated_slowdown_period, actual_slowdown, estimated_slowdown;
 			double insns_ewma, insns_current;
 			bool need_slowdown_qos = true;
 			// update slowdown info periodically here.
@@ -139,15 +169,16 @@ namespace ICSimulator
 				{
 					need_slowdown_qos = globalSlowdown ();
 					ulong penalty_cycle = (ulong)Simulator.stats.non_overlap_penalty_period [i].Count;
-					//estimated_slowdown = (double)Config.slowdown_epoch / (Config.slowdown_epoch - penalty_cycle);
-					estimated_slowdown = (double)(Simulator.CurrentRound-m_lastCheckPoint [i])/(Simulator.CurrentRound-m_lastCheckPoint [i]-penalty_cycle);
-					#if DEBUG
-					Console.WriteLine ("at time {0}: Core {1} Slowdown rate is {2} ", Simulator.CurrentRound, i, estimated_slowdown);
+					estimated_slowdown_period = (double)(Simulator.CurrentRound-m_lastCheckPoint [i])/(Simulator.CurrentRound-m_lastCheckPoint [i]-penalty_cycle);
+					estimated_slowdown =  (double)Simulator.CurrentRound/(Simulator.CurrentRound-Simulator.stats.non_overlap_penalty [i].Count);
+#if DEBUG
+					Console.WriteLine ("at time {0}: Core {1} Slowdown rate is {2} ", Simulator.CurrentRound, i, estimated_slowdown_period);
 					#endif
+					Simulator.stats.etimated_slowdown_period [i].Add (estimated_slowdown_period);
 					Simulator.stats.etimated_slowdown [i].Add (estimated_slowdown);
-					m_lastCheckPoint [i] = Simulator.CurrentRound;
 
-					estimated_slowdown = Simulator.stats.etimated_slowdown [i].Count;
+					m_lastCheckPoint [i] = Simulator.CurrentRound;
+					ranking_app (i);
 					insns_ewma = Simulator.stats.insns_persrc_ewma [i].ExpWhtMvAvg (); // predict performance in next epoch
 
 
@@ -185,13 +216,12 @@ namespace ICSimulator
 
 					ipc_share = Simulator.stats.insns_persrc_period [i].Count / (Config.slowdown_epoch);
 					actual_slowdown = (double)Config.ref_ipc / ipc_share;
-					double error_slowdown = (estimated_slowdown - actual_slowdown) / actual_slowdown;
+					double error_slowdown = (estimated_slowdown_period - actual_slowdown) / actual_slowdown;
 					error_slowdown = (error_slowdown > 0) ? error_slowdown : (-error_slowdown);
-					//Simulator.stats.avg_slowdown_error [i].Add (error_slowdown);
-					//Simulator.stats.actual_slowdown [i].Add (actual_slowdown);
+
 					//reset
+					Simulator.stats.etimated_slowdown_period [i].EndPeriod ();
 					Simulator.stats.etimated_slowdown [i].EndPeriod ();
-					//Simulator.stats.actual_slowdown [i].EndPeriod ();
 					Simulator.stats.insns_persrc_period [i].EndPeriod ();
 					Simulator.stats.non_overlap_penalty_period [i].EndPeriod ();
 					Simulator.stats.causeIntf [i].EndPeriod ();
