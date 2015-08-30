@@ -9,8 +9,8 @@ import string
 
 # evaluate test.out 
 
-work_dir = "/Users/xiyuexiang/GoogleDrive/NOCulator/hring/src/bin/"
-input_file = input('please input the file name: ')
+work_dir = "/home/anderson/Desktop/NOCulator/hring/src/results/"
+input_file = input('please input the file name: ' )
 test_file_name = work_dir + input_file
 print input_file
 

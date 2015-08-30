@@ -395,11 +395,12 @@ namespace ICSimulator
 			if (f1 == null) return 1;
 			if (f2 == null) return -1;
 
-			bool same_app = false;
-
 			ulong f1_batch_dist, f2_batch_dist;
 			ulong current_batch = (Simulator.CurrentRound / Config.STC_batchPeriod) % Config.STC_batchCount;
-			int c0 = 0, c1 = 0, c2 = 0, c4 = 0, c5 = 0, c6 = 0;
+			bool same_app = false;
+
+			int c0 = 0, c1 = 0, c2 = 0, c3 = 0, c4 = 0, c5 = 0, c6 = 0;
+
 			if (f1.packet != null && f2.packet != null)
 			{
 				if (f1.packet.requesterID == f2.packet.requesterID)
@@ -407,49 +408,33 @@ namespace ICSimulator
 
 				int f1_critical = (f1.packet.critical) ? 1 : -1;
 				int f2_critical = (f2.packet.critical) ? 1 : -1;
-				c6 = -f1_critical.CompareTo (f2_critical);
 
 				f1_batch_dist =  (ulong)Math.Abs((int)current_batch - (int)f1.packet.batchID) % Config.STC_batchCount;
 				f2_batch_dist =  (ulong)Math.Abs((int)current_batch - (int)f2.packet.batchID) % Config.STC_batchCount;
-				c5 = -f1_batch_dist.CompareTo (f2_batch_dist);
-				c4 = f1.packet.batchID.CompareTo (f2.packet.batchID);
-				c0 = f1.packet.rank.CompareTo(f2.packet.rank); // if f1.slowdown < f2.slowdown, flit2 win, c0 = 1 (CompareTo return -1, need to negate)
-				/*
-				if (c0 != 0)
-					Console.WriteLine ("PKT Rank: {0} vs {1}", f1.packet.rank, f2.packet.rank);
-				*/
 
-				c1 = -age(f1).CompareTo(age(f2));
-				c2 = f1.packet.ID.CompareTo(f2.packet.ID);
+				c0 = -f1_critical.CompareTo (f2_critical);
+				c1 = -f1_batch_dist.CompareTo (f2_batch_dist);
+				c2 = f1.packet.rank.CompareTo(f2.packet.rank); 
+				c3= -age(f1).CompareTo(age(f2));
+				c4 = f1.packet.ID.CompareTo(f2.packet.ID);
+				c5 = f1.flitNr.CompareTo(f2.flitNr);
 			}
 
-			int c3 = f1.flitNr.CompareTo(f2.flitNr);
-
-			int diff_app_winner = 
-				(c6 != 0) ? c6 :
-				(c5 != 0) ? c5 :
+			int diff_app_winner =  
 				(c0 != 0) ? c0 :
 				(c1 != 0) ? c1 :
 				(c2 != 0) ? c2 :
-				c3;
+				(c3 != 0) ? c3 :
+				(c4 != 0) ? c4 :
+				c5;
 
 			int same_app_winner = 
-				(c1 != 0) ? c1 :
-				(c2 != 0) ? c2 :
-				c3;
+				(c3 != 0) ? c3 :
+				(c4 != 0) ? c4 :
+				c5;
 
 			int winner = same_app ? same_app_winner : diff_app_winner;
-			/*
-			if (c0 != 0)
-			{
-				if (winner == -1)
-					Console.WriteLine ("Flit 1 win");
-				else if (winner == 1)
-					Console.WriteLine ("Flit 2 win");
-				else
-					throw new Exception("Impossible! no one win!");
-			}
-			*/
+
 			return winner;
 		}
 
@@ -523,11 +508,11 @@ namespace ICSimulator
             }
 
             int c3 = f1.flitNr.CompareTo(f2.flitNr);
-
+			/*
 			int f1_critical = (f1.packet.critical) ? 1 : -1;
 			int f2_critical = (f2.packet.critical) ? 1 : -1;
 			int c6 = -f1_critical.CompareTo (f2_critical);
-
+			*/
 
             int zerosSeen = 0;
             foreach (int i in new int[] { c0, c1, c2, c3 })
@@ -539,7 +524,7 @@ namespace ICSimulator
             }
             Simulator.stats.net_decisionLevel.Add(zerosSeen);
             return
-				(c6 != 0) ? c6 :
+				//(c6 != 0) ? c6 :
                 (c0 != 0) ? c0 :
                 (c1 != 0) ? c1 :
                 (c2 != 0) ? c2 :
