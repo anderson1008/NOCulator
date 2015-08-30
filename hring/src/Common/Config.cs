@@ -112,7 +112,7 @@ namespace ICSimulator
 		public static double throt_max = 0.9;	// share with Sigcomm paper
 		public static bool throttle_enable = false;
 		public static double[] default_throttle = new double[16] {0.0, 0.1, 0.1, 0.2, 0.0, 0.1, 0.1, 0.2, 0.0, 0.1, 0.1, 0.2, 0.0, 0.1, 0.1, 0.2};
-		public static bool slowdown_aware = true;
+		public static bool slowdown_aware = false;
 		public static ulong STC_batchPeriod = 1000;
 		public static ulong STC_batchCount = 8;
 		//public static double default_throttle = 0.9;

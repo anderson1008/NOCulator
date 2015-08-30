@@ -171,7 +171,7 @@ namespace ICSimulator
 					ulong penalty_cycle = (ulong)Simulator.stats.non_overlap_penalty_period [i].Count;
 					estimated_slowdown_period = (double)(Simulator.CurrentRound-m_lastCheckPoint [i])/(Simulator.CurrentRound-m_lastCheckPoint [i]-penalty_cycle);
 					estimated_slowdown =  (double)Simulator.CurrentRound/(Simulator.CurrentRound-Simulator.stats.non_overlap_penalty [i].Count);
-#if DEBUG
+					#if DEBUG
 					Console.WriteLine ("at time {0}: Core {1} Slowdown rate is {2} ", Simulator.CurrentRound, i, estimated_slowdown_period);
 					#endif
 					Simulator.stats.etimated_slowdown_period [i].Add (estimated_slowdown_period);

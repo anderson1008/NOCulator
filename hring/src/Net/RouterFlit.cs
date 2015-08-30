@@ -399,11 +399,15 @@ namespace ICSimulator
 
 			ulong f1_batch_dist, f2_batch_dist;
 			ulong current_batch = (Simulator.CurrentRound / Config.STC_batchPeriod) % Config.STC_batchCount;
-			int c0 = 0, c1 = 0, c2 = 0, c4 = 0, c5 = 0;
+			int c0 = 0, c1 = 0, c2 = 0, c4 = 0, c5 = 0, c6 = 0;
 			if (f1.packet != null && f2.packet != null)
 			{
 				if (f1.packet.requesterID == f2.packet.requesterID)
 					same_app = true;
+
+				int f1_critical = (f1.packet.critical) ? 1 : -1;
+				int f2_critical = (f2.packet.critical) ? 1 : -1;
+				c6 = -f1_critical.CompareTo (f2_critical);
 
 				f1_batch_dist =  (ulong)Math.Abs((int)current_batch - (int)f1.packet.batchID) % Config.STC_batchCount;
 				f2_batch_dist =  (ulong)Math.Abs((int)current_batch - (int)f2.packet.batchID) % Config.STC_batchCount;
@@ -422,6 +426,7 @@ namespace ICSimulator
 			int c3 = f1.flitNr.CompareTo(f2.flitNr);
 
 			int diff_app_winner = 
+				(c6 != 0) ? c6 :
 				(c5 != 0) ? c5 :
 				(c0 != 0) ? c0 :
 				(c1 != 0) ? c1 :
@@ -519,6 +524,11 @@ namespace ICSimulator
 
             int c3 = f1.flitNr.CompareTo(f2.flitNr);
 
+			int f1_critical = (f1.packet.critical) ? 1 : -1;
+			int f2_critical = (f2.packet.critical) ? 1 : -1;
+			int c6 = -f1_critical.CompareTo (f2_critical);
+
+
             int zerosSeen = 0;
             foreach (int i in new int[] { c0, c1, c2, c3 })
             {
@@ -529,6 +539,7 @@ namespace ICSimulator
             }
             Simulator.stats.net_decisionLevel.Add(zerosSeen);
             return
+				(c6 != 0) ? c6 :
                 (c0 != 0) ? c0 :
                 (c1 != 0) ? c1 :
                 (c2 != 0) ? c2 :
