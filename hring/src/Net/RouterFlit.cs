@@ -397,15 +397,12 @@ namespace ICSimulator
 
 			ulong f1_batch_dist, f2_batch_dist;
 			ulong current_batch = (Simulator.CurrentRound / Config.STC_batchPeriod) % Config.STC_batchCount;
-			bool same_app = false;
 
-			int c0 = 0, c1 = 0, c2 = 0, c3 = 0, c4 = 0, c5 = 0, c6 = 0;
+			int c0 = 0, c1 = 0, c2 = 0, c3 = 0, c4 = 0;
 
 			if (f1.packet != null && f2.packet != null)
 			{
-				if (f1.packet.requesterID == f2.packet.requesterID)
-					same_app = true;
-
+				
 				int f1_critical = (f1.packet.critical) ? 1 : -1;
 				int f2_critical = (f2.packet.critical) ? 1 : -1;
 
@@ -414,27 +411,18 @@ namespace ICSimulator
 
 				c0 = -f1_critical.CompareTo (f2_critical);
 				c1 = -f1_batch_dist.CompareTo (f2_batch_dist);
-				c2 = f1.packet.rank.CompareTo(f2.packet.rank); 
-				c3= -age(f1).CompareTo(age(f2));
-				c4 = f1.packet.ID.CompareTo(f2.packet.ID);
-				c5 = f1.flitNr.CompareTo(f2.flitNr);
+				c2 = -f1.packet.rank.CompareTo(f2.packet.rank); 
+				c3 = f1.packet.ID.CompareTo(f2.packet.ID);
+				c4 = f1.flitNr.CompareTo(f2.flitNr);
 			}
 
-			int diff_app_winner =  
+			int winner =  
 				(c0 != 0) ? c0 :
 				(c1 != 0) ? c1 :
 				(c2 != 0) ? c2 :
 				(c3 != 0) ? c3 :
-				(c4 != 0) ? c4 :
-				c5;
-
-			int same_app_winner = 
-				(c3 != 0) ? c3 :
-				(c4 != 0) ? c4 :
-				c5;
-
-			int winner = same_app ? same_app_winner : diff_app_winner;
-
+				c4;
+			
 			return winner;
 		}
 

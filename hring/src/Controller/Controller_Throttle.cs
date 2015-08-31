@@ -59,23 +59,31 @@ namespace ICSimulator
 			double slowdown = Simulator.stats.etimated_slowdown [node].Count;
 
 			if (slowdown <= 1.2)
-				app_rank [node] = 8;
-			else if (slowdown <= 1.3)
-				app_rank [node] = 7;
-			else if (slowdown <= 1.4)
-				app_rank [node] = 6;
-			else if (slowdown <= 1.5)
-				app_rank [node] = 5;
-			else if (slowdown <= 1.6)
-				app_rank [node] = 4;
-			else if (slowdown <= 1.7)
-				app_rank [node] = 3;
-			else if (slowdown <= 1.8)
-				app_rank [node] = 2;
-			else
 				app_rank [node] = 1;
+			else if (slowdown <= 1.3)
+				app_rank [node] = 2;
+			else if (slowdown <= 1.4)
+				app_rank [node] = 3;
+			else if (slowdown <= 1.5)
+				app_rank [node] = 4;
+			else if (slowdown <= 1.6)
+				app_rank [node] = 5;
+			else if (slowdown <= 1.7)
+				app_rank [node] = 6;
+			else if (slowdown <= 1.8)
+				app_rank [node] = 7;
+			else if (slowdown <= 1.9)
+				app_rank [node] = 8;
+			else if (slowdown <= 2.0)
+				app_rank [node] = 9;
+			else if (slowdown <= 2.1)
+				app_rank [node] = 10;
+			else if (slowdown <= 2.2)
+				app_rank [node] = 11;
+			else
+				app_rank [node] = 12;
 
-			Console.WriteLine ("Core {0} Rank is {1}.", node, app_rank[node]);
+			//Console.WriteLine ("Core {0} Rank is {1}.", node, app_rank[node]);
 		}
 
 
