@@ -82,6 +82,7 @@ namespace ICSimulator
 	
     public enum Topology
     {
+			Mesh_Multi,
             HR_4drop,
             HR_8drop,
             HR_16drop,
@@ -123,6 +124,13 @@ namespace ICSimulator
 		//public static double[] default_throttle = new double[16] {0.0, 0.9, 0.9, 0.9, 0.85, 0.9, 0.9, 0.9, 0.85, 0.9, 0.9, 0.9, 0.85, 0.9, 0.9, 0.9};
 		public static double ewmv_factor = 0.3; // weight of old value
 		public static double thrt_sweep = 0.1;
+
+
+		// For MBNoC
+		public static int sub_net = 2;
+
+
+
 		// end Xiyue
 
         // ----

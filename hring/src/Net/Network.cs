@@ -127,6 +127,15 @@ namespace ICSimulator
                 // inter-router links
                 for (int dir = 0; dir < 4; dir++)
                 {
+
+					// Clockwise 0->3 map to N->E->S->W
+					/* Coordinate Mapping (e.g. 16 nodes)
+					 * (0,3) (1,3) .....     |||||    3  7 ...
+					 * ...					 |||||	  2  6 ...
+					 * ...					 |||||    1  5 ...
+					 * (0,0) (1,0) ......	 |||||    0  4 ...
+					 * */
+
                     int oppDir = (dir + 2) % 4; // direction from neighbor's perspective
 
                     // determine neighbor's coordinates
@@ -385,71 +394,6 @@ namespace ICSimulator
             // now, step each link
             foreach (Link l in links)
                 l.doStep();
-/*
-            for (int n = 0; n < Config.N; n++)
-	        {  	
-	        	int ID1 = (nodeRouters[n].linkIn[CW].Out == null)? -1 : (int)nodeRouters[n].linkIn[CW].Out.packet.ID;
-	        	int ID2 = (nodeRouters[n].linkIn[CCW].Out == null)? -1 : (int)nodeRouters[n].linkIn[CCW].Out.packet.ID;
-	        	int flitNr1 = (nodeRouters[n].linkIn[CW].Out == null)? -1 : nodeRouters[n].linkIn[CW].Out.flitNr;
-	        	int flitNr2 = (nodeRouters[n].linkIn[CCW].Out == null)? -1 : nodeRouters[n].linkIn[CCW].Out.flitNr;
-	        	int src1 = (nodeRouters[n].linkIn[CW].Out == null)? -1 : nodeRouters[n].linkIn[CW].Out.packet.src.ID;
-	        	int src2 = (nodeRouters[n].linkIn[CCW].Out == null)? -1 : nodeRouters[n].linkIn[CCW].Out.packet.src.ID;
-	        	int target1 = (nodeRouters[n].linkIn[CW].Out == null)? -1 : nodeRouters[n].linkIn[CW].Out.packet.dest.ID;
-	        	int target2 = (nodeRouters[n].linkIn[CCW].Out == null)? -1 : nodeRouters[n].linkIn[CCW].Out.packet.dest.ID;	
-            	Console.WriteLine("NodeRouter {0}  CWin:({1},{2})  CCWin:({3},{4})", n, src1, target1, src2, target2);
-            }
-            for (int n = 0; n < 4; n++)
-            {
-            	int[] ID = new int[4];
-            	int[] flitNr = new int[4];
-            	int[] dest = new int[4];
-            	int[] src = new int[4];
-            	for (int i = 0; i < 4; i++)
-            	{			
-            		ID[i] = (connectRouters[n].linkIn[i].Out == null)? -1 : (int)connectRouters[n].linkIn[i].Out.packet.ID;
-            		flitNr[i] = (connectRouters[n].linkIn[i].Out == null)? -1 : connectRouters[n].linkIn[i].Out.flitNr;
-            		src[i] = (connectRouters[n].linkIn[i].Out == null)? -1 : connectRouters[n].linkIn[i].Out.packet.src.ID;
-            		dest[i] = (connectRouters[n].linkIn[i].Out == null)? -1 : connectRouters[n].linkIn[i].Out.packet.dest.ID;
-            	}            	
-            	Console.WriteLine("ConnectRouter {0}  L0in:({1},{2}) L1in:({3},{4}) L2in:({5},{6}) L3in:({7},{8})", n, 
-            		src[0],dest[0], src[1],dest[1],src[2],dest[2], src[3],dest[3]);
-            }
-            Console.WriteLine("");
-            Console.ReadKey(true);*/
-           /* int[] srcCW = new int[16];
-            int[] srcCCW = new int[16];            
-            int[] dstCW = new int[16];
-            int[] dstCCW = new int[16];
-            for (int n = 0; n < Config.N; n++)
-	        {  	
-	        	srcCW[n] = (nodeRouters[n].linkIn[CW].Out == null)? -1 : nodeRouters[n].linkIn[CW].Out.packet.src.ID;
-	        	srcCCW[n] = (nodeRouters[n].linkIn[CCW].Out == null)? -1 : nodeRouters[n].linkIn[CCW].Out.packet.src.ID;
-	        	dstCW[n] = (nodeRouters[n].linkIn[CW].Out == null)? -1 : nodeRouters[n].linkIn[CW].Out.packet.dest.ID;
-	        	dstCCW[n] = (nodeRouters[n].linkIn[CCW].Out == null)? -1 : nodeRouters[n].linkIn[CCW].Out.packet.dest.ID;	
-            	//Console.WriteLine("NodeRouter {0}  CWin:({1},{2})  CCWin:({3},{4})", n, src1, target1, src2, target2);
-            }
-            int[,] dst = new int[4,4];
-            int[,] src = new int[4,4];
-            for (int n = 0; n < 4; n++)
-            {
-//            	int[][] dst = new int[4][4];
-//           	int[][] src = new int[4][4];
-            	for (int i = 0; i < 4; i++)
-            	{			
-            		src[n,i] = (connectRouters[n].linkIn[i].Out == null)? -1 : connectRouters[n].linkIn[i].Out.packet.src.ID;
-            		dst[n,i] = (connectRouters[n].linkIn[i].Out == null)? -1 : connectRouters[n].linkIn[i].Out.packet.dest.ID;
-            	}
-            }            	
-            
-            Console.WriteLine("({0},{1})\t\t\t\t({2},{3})\t\t\t\t\t({4},{5})\t\t\t\t({6},{7})", srcCW[5],dstCW[5],srcCW[6],dstCW[6],srcCW[9],dstCW[9],srcCW[10],dstCW[10]);
-            Console.WriteLine("\t\t\t\t\t\t({0},{1})({2},{3})", src[1,0], dst[1,0], src[1,2], dst[1,2]);
-            Console.WriteLine("({0},{1})\t\t\t\t({2},{3})\t\t\t\t\t({4},{5})\t\t\t\t({6},{7})", srcCW[4],dstCW[4],srcCW[7],dstCW[7],srcCW[8],dstCW[8],srcCW[11],dstCW[11]);
-            Console.WriteLine("\t\t({0},{1})\t\t\t\t\t\t\t\t\t({2},{3})", src[0,2], dst[0,2], src[2,0], dst[2,0]);
-            Console.WriteLine("\t\t({0},{1})\t\t\t\t\t\t\t\t\t({2},{3})", src[0,0], dst[0,0], src[2,2], dst[2,2]);
-            Console.WriteLine("({0},{1})\t\t\t\t({2},{3})\t\t\t\t\t({4},{5})\t\t\t\t({6},{7})", srcCW[1],dstCW[1],srcCW[2],dstCW[2],srcCW[13],dstCW[13],srcCW[14],dstCW[14]);
-            Console.WriteLine("\t\t\t\t\t\t({0},{1})({2},{3})", src[3,2], dst[3,2], src[3,0], dst[3,0]);
-            Console.WriteLine("({0},{1})\t\t\t\t({2},{3})\t\t\t\t\t({4},{5})\t\t\t\t({6},{7})\n\n\n\n", srcCW[0],dstCW[0],srcCW[3],dstCW[3],srcCW[12],dstCW[12],srcCW[15],dstCW[15]);
-            Console.ReadKey(true);*/
         }
 
         public void doStats()

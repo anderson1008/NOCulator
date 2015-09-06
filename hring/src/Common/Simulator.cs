@@ -58,8 +58,10 @@ namespace ICSimulator
             CurrentRound = 0;
 
             controller = Controller.construct();
-	   		if (Config.ScalableRingClustered)
-				network = new RC_Network(Config.network_nrX, Config.network_nrY);
+			if (Config.ScalableRingClustered)
+				network = new RC_Network (Config.network_nrX, Config.network_nrY);
+			else if (Config.topology == Topology.Mesh_Multi)
+				network = new MultiMesh (Config.network_nrX, Config.network_nrY);
 			else if (Config.topology == Topology.HR_16drop)
 				network = new HR_16drop_Network(Config.network_nrX, Config.network_nrY);				
 			else if (Config.topology == Topology.HR_4drop)

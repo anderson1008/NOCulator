@@ -160,7 +160,7 @@ namespace ICSimulator
                 if (linkIn[dir] != null && linkIn[dir].Out != null)
                 {
                     input[c++] = linkIn[dir].Out;
-                    linkIn[dir].Out.inDir = dir;
+                    linkIn[dir].Out.inDir = dir;  // By Xiyue: what's the point?
                     linkIn[dir].Out = null;
                 }
 
@@ -439,9 +439,6 @@ namespace ICSimulator
 	// end Xiyue
 
 
-
-
-
     public class Router_Flit_OldestFirst : Router_Flit
     {
         public Router_Flit_OldestFirst(Coord myCoord)
@@ -576,7 +573,6 @@ namespace ICSimulator
             int c1 = 0, c2 = 0;
             if (f1.packet != null && f2.packet != null)
             {
-                //TODO: need to change here to take into account of the priority
                 c1 = -age(f1).CompareTo(age(f2));
                 c2 = f1.packet.ID.CompareTo(f2.packet.ID);
             }
