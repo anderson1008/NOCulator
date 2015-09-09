@@ -221,6 +221,12 @@ namespace ICSimulator
                 }
             }
 
+			for ( int i=0; i<16; i++) {
+				Console.WriteLine ("Router {0} has {1} neighbors", i, routers[i].neighbors);
+			}
+
+
+
             if (Config.torus)
                 for (int i = 0; i < Config.N; i++)
                     if (routers[i].neighbors < 4)
@@ -510,49 +516,6 @@ namespace ICSimulator
 				Simulator.stats.g2_net_util.Add((double)used_g2 / 64);
 			}
 
-			/*
-
-			if (Config.ScalableRingClustered && Config.N == 16)
-			{
-				for (int n = 0; n < Config.N; n++)
-           	 	{
-           	 		if (nodeRouters[n].linkIn[0].Out != null)
-           	 			if (n < 8)
-           	 				leftCWOccupied ++;
-           	 			else 
-           	 				rightCWOccupied ++;
-           	 		if (nodeRouters[n].linkIn[1].Out != null)
-           	 			if (n < 8)
-           	 				leftCCWOccupied ++;
-           	 			else 
-           	 				rightCCWOccupied ++;           	 		
-           	 	}
-           	 	for (int n = 0; n < Config.N / 2; n++)
-           	 	{
-//					if (n != 4 && n!= 3 && n != 5 && n != 7) continue;
-           	 		for (int i = 0; i < 4; i++)
-           	 		{
-           	 			if (connectRouters[n].enable && connectRouters[n].linkIn[i].Out != null)
-           	 			{
-           	 				if (n == 4 && (i == 0 || i == 2) || n == 0 && (i == 0 || i == 2) || n == 3 && i == 1 || n == 7 && i == 1 || n == 2 && i == 3 || n == 6 && i == 3)
-           	 					leftCWOccupied ++;
-           	 				else if (n == 4 && (i == 1 || i == 3) || n == 0 && (i == 1 || i == 3) || n == 3 && i == 0 || n == 7 && i == 0 || n == 2 && i == 2 || n == 6 && i == 2)
-           	 					leftCCWOccupied ++;
-           	 				else if (n == 5 && (i == 0 || i == 2) || n == 1 && (i == 0 || i == 2) || n == 3 && i == 3 || n == 7 && i == 3 || n == 2 && i == 1 || n == 6 && i == 1)
-           	 					rightCWOccupied ++;
-           	 				else if (n == 5 && (i == 1 || i == 3) || n == 1 && (i == 1 || i == 3) || n == 3 && i == 2 || n == 7 && i == 2 || n == 2 && i == 0 || n == 6 && i == 0)
-           	 					rightCCWOccupied ++;
-           	 				else 
-           	 					throw new Exception("Unknown Connection!!");
-           	 			}
-           	 		}
-           	 	}
-//				Console.WriteLine("{0}", leftCWOccupied);
-			}
-           	Simulator.stats.leftCWOccupied.Add(leftCWOccupied);
-            Simulator.stats.leftCCWOccupied.Add(leftCCWOccupied);
-            Simulator.stats.rightCWOccupied.Add(rightCWOccupied);
-            Simulator.stats.rightCCWOccupied.Add(rightCCWOccupied);*/
         }
 
         public bool isFinished()

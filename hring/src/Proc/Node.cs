@@ -129,6 +129,7 @@ namespace ICSimulator
 #endif
 
                     m_router.InjectFlit(f);  // by Xiyue: inject into a router
+
                     // for Ring based Network, inject two flits if possible
                     for (int i = 0 ; i < Config.RingInjectTrial - 1; i++)
 						if (m_injQueue_flit.Count > 0 && m_router.canInjectFlit(m_injQueue_flit.Peek()))

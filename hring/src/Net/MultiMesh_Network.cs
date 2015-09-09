@@ -11,18 +11,51 @@ namespace ICSimulator
 
 		protected override void _doStep ()
 		{
-
+			for (int i = 0; i < Config.sub_net; i++) 
+				subrouter [i].doStep ();
+			
 		}
 
+		// only determine if can or cannot inject
 		public override bool canInjectFlit (Flit f)
 		{
-			return false;
+			bool can = false;
+			for (int i = 0; i < Config.sub_net; i++) 
+			{
+				can = can | subrouter [i].canInjectFlit (f);
+			}
+			return can;
 		}
 
+		// if more than one subrouter can inject, select one randomly
+		// or inject to the available one.
+		// Otherwise throttle the injection.
 		public override void InjectFlit (Flit f)
 		{
+			
+			Router [] availSubrouter = new Router [Config.sub_net];
+			int count = 0;
 
+			for (int i = 0; i < Config.sub_net; i++) 
+			{
+				if (subrouter [i].canInjectFlit (f)) 
+				{
+					availSubrouter [count] = subrouter [i];
+					count++;
+				}
+			}
+
+			if (count <= 0)
+				throw new Exception ("no subrouter is available for injection.");
+			else 
+			{
+				int selected = Simulator.rand.Next(count-1);
+				availSubrouter [selected].InjectFlit (f);
+			}
+			
 		}
+
+
 
 		public MultiMeshRouter (Coord c)
 		{
@@ -188,18 +221,14 @@ namespace ICSimulator
 						links.Add(dirA);
 						links.Add(dirB);
 
-						// link 'em up
-						routers[ID].linkOut[dir] = dirA;
-						routers[ID_neighbor].linkIn[oppDir] = dirA;
-
-						routers[ID].linkIn[dir] = dirB;
-						routers[ID_neighbor].linkOut[oppDir] = dirB;
-
-						routers[ID].neighbors++;
-						routers[ID_neighbor].neighbors++;
-
-						routers[ID].neigh[dir] = routers[ID_neighbor];
-						routers[ID_neighbor].neigh[oppDir] = routers[ID];
+						_routers [ID].subrouter [m].linkOut [dir] = dirA;
+						_routers [ID_neighbor].subrouter [m].linkIn [oppDir] = dirA;
+						_routers [ID].subrouter [m].linkIn [dir] = dirB;
+						_routers [ID_neighbor].subrouter [m].linkOut [oppDir] = dirB;
+						_routers [ID].subrouter [m].neighbors++;
+						_routers [ID_neighbor].subrouter [m].neighbors++;
+						_routers [ID].subrouter [m].neigh [dir] = _routers [ID_neighbor].subrouter [m];
+						_routers [ID_neighbor].subrouter [m].neigh [oppDir] = _routers [ID].subrouter [m];
 
 					}
 				}
@@ -207,8 +236,9 @@ namespace ICSimulator
 
 			if (Config.torus)
 				for (int i = 0; i < Config.N; i++)
-					if (routers[i].neighbors < 4)
-						throw new Exception("torus construction not successful!");
+					for (int j = 0; j < Config.sub_net; j++)
+						if (_routers[i].subrouter [j].neighbors < 4)
+							throw new Exception("torus construction not successful!");
 		}
 
 		public override void doStep()
@@ -225,12 +255,19 @@ namespace ICSimulator
 				nodes[n].doStep();
 			// step the network sim: first, routers
 				
-				for (int n = 0; n < Config.N; n++)	
-					routers[n].doStep();
+			for (int n = 0; n < Config.N; n++)	
+				_routers[n].doStep();
 	
 			// now, step each link
 			foreach (Link l in links)
 				l.doStep();
+		}
+
+		public override void close()
+		{
+			if (Config.RingClustered == false)
+				for (int n = 0; n < Config.N; n++)
+					_routers[n].close();
 		}
 
 	}

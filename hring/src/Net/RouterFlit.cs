@@ -109,6 +109,8 @@ namespace ICSimulator
 
         protected override void _doStep()
         {
+
+			// STEP 1: Ejection
 			if (Config.EjectBufferSize != -1)
 			{								
 				for (int dir =0; dir < 4; dir ++)
@@ -120,8 +122,6 @@ namespace ICSimulator
 				int bestdir = -1;			
 				for (int dir = 0; dir < 4; dir ++)
 					if (ejectBuffer[dir].Count > 0 && (bestdir == -1 || ejectBuffer[dir].Peek().injectionTime < ejectBuffer[bestdir].Peek().injectionTime))
-//					if (ejectBuffer[dir].Count > 0 && (bestdir == -1 || ejectBuffer[dir].Count > ejectBuffer[bestdir].Count))
-//					if (ejectBuffer[dir].Count > 0 && (bestdir == -1 || Simulator.rand.Next(2) == 1))
 						bestdir = dir;				
 				if (bestdir != -1)
 					acceptFlit(ejectBuffer[bestdir].Dequeue());
@@ -142,30 +142,34 @@ namespace ICSimulator
 				Flit f1 = null,f2 = null;
 				for (int i = 0; i < Config.meshEjectTrial; i++)
 				{
+					// Only support dual ejection (MAX.Config.meshEjectTrial = 2)
         	    	Flit eject = ejectLocal();
 					if (i == 0) f1 = eject; 
 					else if (i == 1) f2 = eject;
 					if (eject != null)             
-						acceptFlit(eject);				
+						acceptFlit(eject); 	// Eject flit			
 				}
 				if (f1 != null && f2 != null && f1.packet == f2.packet)
 					Simulator.stats.ejectsFromSamePacket.Add(1);
 				else if (f1 != null && f2 != null)
 					Simulator.stats.ejectsFromSamePacket.Add(0);
 			}
+
+			//STEP 2 : Prioritize and Injection
             for (int i = 0; i < 4; i++) input[i] = null;
             // grab inputs into a local array so we can sort
             int c = 0;
             for (int dir = 0; dir < 4; dir++)
                 if (linkIn[dir] != null && linkIn[dir].Out != null)
                 {
-                    input[c++] = linkIn[dir].Out;
-                    linkIn[dir].Out.inDir = dir;  // By Xiyue: what's the point?
+                    input[c++] = linkIn[dir].Out;  // c: # of incoming flits
+                    //linkIn[dir].Out.inDir = dir;  // By Xiyue: what's the point? Seems redundant
                     linkIn[dir].Out = null;
                 }
 
             // sometimes network-meddling such as flit-injection can put unexpected
             // things in outlinks...
+			// outCount: # of the outstanding flits at the inport of output link
             int outCount = 0;
             for (int dir = 0; dir < 4; dir++)
                 if (linkOut[dir] != null && linkOut[dir].In != null)
@@ -209,6 +213,7 @@ namespace ICSimulator
                     }
                     else
                         throw new Exception("what???inject null flits??");
+					
                     input[c++] = inj;
 #if DEBUG
                     Console.WriteLine("injecting flit {0}.{1} at node {2} cyc {3}",
@@ -227,7 +232,7 @@ namespace ICSimulator
 
            
             // inline bubble sort is faster for this size than Array.Sort()
-            // sort input[] by descending priority. rank(a,b) < 0 iff a has higher priority.
+            // sort input[] by descending priority. rank(a,b) < 0 if f0 has higher priority.
             for (int i = 0; i < 4; i++)
                 for (int j = i + 1; j < 4; j++)
                     if (input[j] != null &&
@@ -351,7 +356,7 @@ namespace ICSimulator
                     if (outDir == -1) throw new Exception(
                             String.Format("Ran out of outlinks in arbitration at node {0} on input {1} cycle {2} flit {3} c {4} neighbors {5} outcount {6}", coord, i, Simulator.CurrentRound, input[i], c, neighbors, outCount));
                 }
-            }
+            } // end assign output
         }
 
         public override bool canInjectFlit(Flit f)
