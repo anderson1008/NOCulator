@@ -104,8 +104,9 @@ namespace ICSimulator
             Simulator.stats.Finish();
             using (TextWriter tw = new StreamWriter(Config.output))
             {
-                Simulator.stats.DumpJSON(tw);
-                //Simulator.stats.Report(tw);
+				Simulator.stats.Report(tw);
+				tw.WriteLine("Overall dump begins.");
+				Simulator.stats.DumpJSON(tw);
             }
             if (Config.matlab != "")
             using (TextWriter tw = new StreamWriter(Config.matlab))

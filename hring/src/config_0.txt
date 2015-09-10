@@ -1,4 +1,3 @@
-
 router.addrPacketSize = 2
 router.dataPacketSize = 8
 router.maxPacketSize = 8
@@ -38,7 +37,7 @@ edge_loop = false
 
 
 finish = app
-insns = 1000000
+insns = 10000
 trace_wraparound = true
 
 

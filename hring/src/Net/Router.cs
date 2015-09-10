@@ -84,7 +84,7 @@ namespace ICSimulator
 	        statsInput();
 			
             _doStep();
-	        //statsOutput();
+	        statsOutput();
         }
 
         protected abstract void _doStep(); // called from Network

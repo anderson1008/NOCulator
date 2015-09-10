@@ -300,7 +300,7 @@ namespace ICSimulator
  
         // ----
 
-        public static bool histogram_bins = true;
+        public static bool histogram_bins = false;
 
         public static int barrier = 1;
 
@@ -530,7 +530,7 @@ namespace ICSimulator
 		public static int observerThreshold = 4;
 		public static bool NoPreference = false;
 		public static bool forcePreference = false;
-		public static bool simpleLivelock = false;
+		public static bool simpleLivelock = true;
 		public static int starveThreshold = 1000;
 		public static int starveDelay = 10;
 
