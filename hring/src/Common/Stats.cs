@@ -24,7 +24,8 @@ namespace ICSimulator
 		public SampledStat[] deflect_perflit_byreq;
 		public AccumStat[] deflect_flit_bysrc, deflect_flit_byloc,deflect_flit_byreq;
 		public AccumStat[] unprod_flit_bysrc, unprod_flit_byloc;
-		public AccumStat starve_flit,  deflect_flit, unprod_flit;
+		public AccumStat starve_flit,  deflect_flit, unprod_flit, bypass_flit;
+		public AccumStat flitsToRouter;
 		public AccumStat[] starve_flit_bysrc;          
 		public SampledStat[] starve_interval_bysrc;
 		public SampledStat net_decisionLevel;
@@ -32,7 +33,7 @@ namespace ICSimulator
 		public SampledStat[] hoq_latency_bysrc;
 
 
-		public AccumStat[] flitsTryToEject;
+		public AccumStat[] flitsTryToEject;  //  number of flits try to eject each cycle
 		public SampledStat ejectsFromSamePacket;
 		public SampledStat ejectTrial;
 		public SampledStat minNetLatency;
@@ -359,7 +360,7 @@ namespace ICSimulator
 		public AccumStat allNodeThrottled;
 		public AccumStat injStarvation;
 
-		public AccumStat flitsToRouter;
+
 		public AccumStat flitsToHRnode;
 		public AccumStat flitsToHRbridge;
 		public AccumStat flitsPassBy;
@@ -753,7 +754,11 @@ namespace ICSimulator
 				tw.WriteLine("network: {0}-{1}x{2}",Config.topology.ToString(),Config.network_nrX,Config.network_nrY);
 			else
 				tw.WriteLine("network: {0}-{3}-{1}x{2}",Config.topology.ToString(),Config.network_nrX,Config.network_nrY, Config.sub_net);
-			tw.WriteLine("router {0}", Config.router.algorithm.ToString());
+			tw.WriteLine("router: {0}", Config.router.algorithm.ToString());
+			if (Config.bypass_enable)
+				tw.WriteLine("number of bypass port: {0}", Config.num_bypass);
+			else
+				tw.WriteLine("Bypass is disabled");
 			tw.WriteLine("packet size (ctrl/data): {0}/{1} flits", Config.router.addrPacketSize, Config.router.dataPacketSize);
 			tw.WriteLine();
 			tw.WriteLine("---------------   Report   ---------------------");
@@ -776,6 +781,8 @@ namespace ICSimulator
 			tw.WriteLine("      traversal: {0} (unproductive traversal {1:0.00%})", flit_traversals.Count, (double)deflect_flit.Count/flit_traversals.Count);
 			tw.WriteLine("      deflections: {0} (rate {1:0.00} per cycle, each flit is deflected for {2:0.00} times)",
 			             deflect_flit.Count, deflect_flit.Rate, deflect_flit.Rate / inject_flit.Rate);
+			tw.WriteLine("      bypass: {0} (rate {1:0.00} per cycle, each flit is bypassed for {2:0.00} times)", 
+			             bypass_flit.Count, bypass_flit.Rate, bypass_flit.Rate / inject_flit.Rate);
 			tw.WriteLine("      unproductive deflection: {0} (fraction {1:0.00%} of total deflection)",
 			             unprod_flit.Count, (double)unprod_flit.Count/deflect_flit.Count);
 			tw.WriteLine("      starvations: {0} (rate {1:0.00} starved flits per cycle, each flit is starved for {2:0.00} times)",

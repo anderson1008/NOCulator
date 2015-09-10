@@ -609,6 +609,8 @@ namespace ICSimulator
         {
             switch (Config.router.algorithm)
             {
+				case RouterAlgorithm.BLESS_BYPASS:
+					return new Router_BLESS_BYPASS(c);
                 case RouterAlgorithm.DR_AFC:
                     return new Router_AFC(c);
 

@@ -106,6 +106,7 @@ namespace ICSimulator
 
 		// ----
 		// By Xiyue
+
 		public static double slowdown_epoch = 10000;
 		public static double ref_ipc = 1;
 		public static double[] target_slowdown = new double[16] {1.2, 1.5, 1.5, 1.5, 1.2, 1.5, 1.5, 1.5, 1.2, 1.5, 1.5, 1.5, 1.2, 1.5, 1.5, 1.5};
@@ -128,8 +129,8 @@ namespace ICSimulator
 
 		// For MBNoC
 		public static int sub_net = 2;
-
-
+		public static int num_bypass = 1; // not include local; 
+		public static bool bypass_enable = false;
 
 		// end Xiyue
 

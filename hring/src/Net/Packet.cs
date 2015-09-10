@@ -295,6 +295,7 @@ namespace ICSimulator
         public int currentY;
 
         public bool Deflected;
+		public bool Bypassed;
         public bool routingOrder;  //if (false): x direction prioritized over y
 
         public ulong injectionTime; // absolute injection timestamp
@@ -350,6 +351,7 @@ namespace ICSimulator
             this.flitNr = flitNr;
             hasFlitArrived = false;
             this.Deflected = false;
+			this.Bypassed = false;
             //deflections = new bool[100];
             //deflectionsIndex = 0;
             if (packet != null)
