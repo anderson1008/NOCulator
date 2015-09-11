@@ -9,23 +9,56 @@ namespace ICSimulator
     public class Stats
     {
 		// By Xiyue: for coherent packet profiling
-		//public SampledStat[] avg_slowdown_error;
-		public PeriodicAccumStat[] etimated_slowdown;
-		//public PeriodicAccumStat[] actual_slowdown;
+
+		// Design related 
 		public AccumStat[] active_cycles;
+		public SampledStat netutil;
+		public SampledStat net_latency, total_latency;
+		public SampledStat flit_inj_latency, flit_net_latency, flit_total_latency;
+		public SampledStat[] net_latency_bysrc, total_latency_bysrc;
+		public SampledStat[] net_latency_bydest, total_latency_bydest;
+		public AccumStat[] inject_flit_req;
+		public AccumStat flit_traversals;
+		public AccumStat[] traversals_pernode;
+		public SampledStat[] deflect_flit_byinc, unprod_flit_byinc; // deflected/uproductive flits w.r.t. # of incoming flits
+		public SampledStat[] deflect_perflit_byreq;
+		public AccumStat[] deflect_flit_bysrc, deflect_flit_byloc,deflect_flit_byreq;
+		public AccumStat[] unprod_flit_bysrc, unprod_flit_byloc;
+		public AccumStat starve_flit,  deflect_flit, unprod_flit, bypass_flit;
+		public AccumStat flitsToRouter;
+		public AccumStat[] starve_flit_bysrc;          
+		public SampledStat[] starve_interval_bysrc;
+		public SampledStat net_decisionLevel;
+		public SampledStat hoq_latency;  // latency between each successful injection
+		public SampledStat[] hoq_latency_bysrc;
+
+
+		public AccumStat[] flitsTryToEject;  //  number of flits try to eject each cycle
+		public SampledStat ejectsFromSamePacket;
+		public SampledStat ejectTrial;
+		public SampledStat minNetLatency;
+		public SampledStat destDeflectedNetLatency;
+		public SampledStat destDeflectedMinLatency;
+		public AccumStat multiEjectTrialFlits;
+		public AccumStat singleEjectTrialFlits;
+		public AccumStat starveTriggered; 
+		public AccumStat observerTriggered;
+
+		// app behavior related
+		public CacheProfileStat[] pkt_tier_count;
+		public PeriodicAccumStat[] insns_persrc_period;
+		public SampledStat[] mpki_bysrc;
+		public SampledStat allowed_sum_mpki;
+		public SampledStat total_sum_mpki;
+
+		// for slowdown quantification
+		public PeriodicAccumStat[] non_overlap_penalty_period;
+		public PeriodicAccumStat[] causeIntf;
+		public PeriodicAccumStat[] etimated_slowdown;
 		public AccumStat[] non_overlap_penalty;
 		public SampledStat[] queue_delay;
 		public SampledStat[] serialization_latency;
-		public CacheProfileStat[] pkt_tier_count;
-		public PeriodicAccumStat[] non_overlap_penalty_period;
-		public PeriodicAccumStat[] causeIntf;
 		public PeriodicAccumStat[] insns_persrc_ewma;
-		public PeriodicAccumStat[] insns_persrc_period;
-		public SampledStat net_latency, total_latency;
-		public SampledStat[] net_latency_bysrc, total_latency_bysrc;
-		public SampledStat[] net_latency_bydest, total_latency_bydest;
-		public SampledStat[] flit_inj_latency_byapp, flit_net_latency_byapp, flit_total_latency_byapp;
-		public SampledStat flit_inj_latency, flit_net_latency, flit_total_latency;
 
 		// an AccumStat is a statistic that counts discrete events (flit
 		// deflections, ...) and from which we can extract a rate
@@ -104,11 +137,16 @@ namespace ICSimulator
         public AccumStat[] insns_persrc;
         public AccumStat[] every_insns_persrc;
 
+		public SampledStat[] flit_inj_latency_byapp, flit_net_latency_byapp, flit_total_latency_byapp;
         public AccumStat[] opp_buff_preventable_stalls_persrc;
+		public SampledStat golden_pernode; // golden flits per node, per cycle (0, 1, 2, 3, 4)
+		public AccumStat[] golden_bycount; // histogram of the above
         //public EnumStat<StallSources>[] front_stalls_persrc;
         //public EnumStat<StallSources>[] back_stalls_persrc;
         //public EnumStat<StallSources>[] mem_back_stalls_persrc;
         //public EnumStat<StallSources>[] nonmem_back_stalls_persrc;
+
+
         public enum StallSources
         {
             MEMORY,
@@ -152,9 +190,6 @@ namespace ICSimulator
         public AccumStat[] throttled_counts_persrc;
         public AccumStat[] not_throttled_counts_persrc;
         public SampledStat total_th_off;
-        public SampledStat[] mpki_bysrc;
-        public SampledStat allowed_sum_mpki;
-        public SampledStat total_sum_mpki;
         public SampledStat total_th_rate;
         //ipc difference b/w free-injecting and throttled interval for each app
         //In the uniform controller, each app is put into a cluster, so that
@@ -165,20 +200,9 @@ namespace ICSimulator
         public AccumStat[] high_cluster;
 
         //public AccumStat[,] inject_flit_srcdest;
-        public AccumStat[] inject_flit_req;
 
-        public SampledStat flit_traversals, deflect_flit, unprod_flit;
-        public SampledStat[] deflect_flit_byinc, unprod_flit_byinc;
-        public SampledStat[] deflect_perflit_byreq;
 
-        public AccumStat[] deflect_flit_bysrc, deflect_flit_byloc,deflect_flit_byreq;
-        public AccumStat[] unprod_flit_bysrc, unprod_flit_byloc;
 
-        public AccumStat starve_flit;
-		public AccumStat[] starve_flit_bysrc;          
-        public SampledStat[] starve_interval_bysrc;
-
-        public SampledStat net_decisionLevel;
         //public AccumStat [] intdefl_bysrc;
 
         //public SampledStat send_buf, rcv_buf;
@@ -192,21 +216,13 @@ namespace ICSimulator
         //In AlwaysThrottled state
         public AccumStat[] always_throttle_time_bysrc;
 
-		public SampledStat hoq_latency;  
-        public SampledStat[] hoq_latency_bysrc;
 
-        public SampledStat golden_pernode; // golden flits per node, per cycle (0, 1, 2, 3, 4)
-        public AccumStat[] golden_bycount; // histogram of the above
-
-        public AccumStat[] traversals_pernode;
         //public AccumStat[,] traversals_pernode_bysrc; 
 
         public AccumStat flow_open, flow_close, flow_retx;
 
         //public SampledStat [] flit_head_latency_byapp;
         //public SampledStat flit_head_latency;
-
-        public SampledStat netutil;
 
         // AFC -- buffer power
         public AccumStat afc_buf_enabled, afc_buf_write, afc_buf_read, afc_xbar;
@@ -339,21 +355,12 @@ namespace ICSimulator
 		public SampledStat timeInGR1hop;
 		public SampledStat timeInGR2hop;
 
-		public AccumStat[] flitsTryToEject;
-		public SampledStat ejectsFromSamePacket;
-		public SampledStat ejectTrial;
-		public SampledStat minNetLatency;
-		public SampledStat destDeflectedNetLatency;
-		public SampledStat destDeflectedMinLatency;
-		public AccumStat multiEjectTrialFlits;
-		public AccumStat singleEjectTrialFlits;
-		public AccumStat starveTriggered; 
-		public AccumStat observerTriggered;
+
 
 		public AccumStat allNodeThrottled;
 		public AccumStat injStarvation;
 
-		public AccumStat flitsToRouter;
+
 		public AccumStat flitsToHRnode;
 		public AccumStat flitsToHRbridge;
 		public AccumStat flitsPassBy;
@@ -739,25 +746,53 @@ namespace ICSimulator
 
         public void Report(TextWriter tw)
         {
-            tw.WriteLine();
 
-            tw.WriteLine("--- Overall");
-            tw.WriteLine("      cycles: {0}", m_finishtime);
-            tw.WriteLine("      injections: {0} (rate {1:0.0000})", inject_flit.Count, inject_flit.Rate);
-            tw.WriteLine("      head flits: {0} (fraction {1:0.0000} of total)", inject_flit_head.Count,
-                         (double)inject_flit_head.Count / inject_flit.Count);
-            //tw.WriteLine("      deflections: {0} (rate {1:0.0000} per cycle, {2:0.0000} per flit",
-            //             deflect_flit.Count, deflect_flit.Rate, deflect_flit.Rate / inject_flit.Rate);
-            tw.WriteLine("      starvations: {0} (rate {1:0.0000} per cycle, {2:0.0000} per flit",
-                         starve_flit.Count, starve_flit.Rate, starve_flit.Rate / inject_flit.Rate);
+			tw.WriteLine();
+			tw.WriteLine("---------------   major configurations   ---------------------");
+			tw.WriteLine();
+			if (Config.topology != Topology.Mesh_Multi)
+				tw.WriteLine("network: {0}-{1}x{2}",Config.topology.ToString(),Config.network_nrX,Config.network_nrY);
+			else
+				tw.WriteLine("network: {0}-{3}-{1}x{2}",Config.topology.ToString(),Config.network_nrX,Config.network_nrY, Config.sub_net);
+			tw.WriteLine("router: {0}", Config.router.algorithm.ToString());
+			if (Config.bypass_enable)
+				tw.WriteLine("number of bypass port: {0}", Config.num_bypass);
+			else
+				tw.WriteLine("Bypass is disabled");
+			tw.WriteLine("packet size (ctrl/data): {0}/{1} flits", Config.router.addrPacketSize, Config.router.dataPacketSize);
+			tw.WriteLine();
+			tw.WriteLine("---------------   Report   ---------------------");
+			tw.WriteLine("  simulation cycles: {0}", m_finishtime);
+			tw.WriteLine();
+			tw.WriteLine("  per packet stat");
+			tw.WriteLine("      packet net latency: {0:0.00} | MAX {1:0.00} (in cycles)", net_latency.Avg, net_latency.Max);
+			tw.WriteLine("      packet tot latency: {0:0.00} | MAX {1:0.00} (in cycles)", total_latency.Avg, total_latency.Max);
+			tw.WriteLine();
+			tw.WriteLine("  per flit stat");
+			tw.WriteLine("      flit inj latency: {0:0.00} | MAX {1:0.00} (in cycles)", flit_inj_latency.Avg, flit_inj_latency.Max);
+			tw.WriteLine("      flit net latency: {0:0.00} | MAX {1:0.00} (in cycles)", flit_net_latency.Avg, flit_net_latency.Max);
+			tw.WriteLine("      flit tot latency: {0:0.00} | MAX {1:0.00} (in cycles)", flit_total_latency.Avg, flit_total_latency.Max);
+			tw.WriteLine("      flit min net latency: {0:0.00} | MAX {1:0.00} (in cycles)", minNetLatency.Avg, minNetLatency.Max);
+			tw.WriteLine();
+			tw.WriteLine("  network stat");
+			tw.WriteLine("      net utilization: {0:0.00%}", netutil.Avg);
+			tw.WriteLine("      throughput: {0:0.00} flits per cycle", inject_flit.Rate);
+			tw.WriteLine("      injections: {0} flits (NOTE flit size)", inject_flit.Count);
+			tw.WriteLine("      traversal: {0} (unproductive traversal {1:0.00%})", flit_traversals.Count, (double)deflect_flit.Count/flit_traversals.Count);
+			tw.WriteLine("      deflections: {0} (rate {1:0.00} per cycle, each flit is deflected for {2:0.00} times)",
+			             deflect_flit.Count, deflect_flit.Rate, deflect_flit.Rate / inject_flit.Rate);
+			tw.WriteLine("      bypass: {0} (rate {1:0.00} per cycle, each flit is bypassed for {2:0.00} times)", 
+			             bypass_flit.Count, bypass_flit.Rate, bypass_flit.Rate / inject_flit.Rate);
+			tw.WriteLine("      unproductive deflection: {0} (fraction {1:0.00%} of total deflection)",
+			             unprod_flit.Count, (double)unprod_flit.Count/deflect_flit.Count);
+			tw.WriteLine("      starvations: {0} (rate {1:0.00} starved flits per cycle, each flit is starved for {2:0.00} times)",
+			             starve_flit.Count, starve_flit.Rate, starve_flit.Rate / inject_flit.Rate);
+			tw.WriteLine("      rank level: {0:0.00} | MAX {1:0.00}", net_decisionLevel.Avg, net_decisionLevel.Max);
+			tw.WriteLine("      eject trial: {0:0.00} | MAX {1:0.00}", ejectTrial.Avg, ejectTrial.Max);
+			tw.WriteLine();
 
-            tw.WriteLine("      net latency: {0}", net_latency);
-            tw.WriteLine("      tot latency: {0}", total_latency);
-            tw.WriteLine("      stretch: {0}", stretch);
 
-            //            tw.WriteLine("      interference: {0} (rate {1:0.0000} per cycle, {2:0.0000} per flit",
-            //                         interference.Count, interference.Rate, interference.Rate / inject_flit.Rate);
-
+			/*
             for (int i = 0; i < N; i++)
             {
                 Coord c = new Coord(i);
@@ -780,16 +815,13 @@ namespace ICSimulator
 
                 tw.WriteLine("      net latency: {0}", net_latency_bysrc[i]);
                 tw.WriteLine("      tot latency: {0}", total_latency_bysrc[i]);
-                tw.WriteLine("      stretch: {0}", stretch_bysrc[i]);
 
-                //                tw.WriteLine("      ic: {0}", ic_bysrc[i]);
-                //                tw.WriteLine("      ie: {0}", ie_bysrc[i]);
                 tw.WriteLine();
 
-                /*foreach (Node n in Simulator.network.nodes)
-                    n.cpu.output(tw);*/
+                //foreach (Node n in Simulator.network.nodes)
+                //    n.cpu.output(tw);
                     
-            }
+            }*/
         }
         public static void addStat(StatsObject so)
         {
