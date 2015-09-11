@@ -11,13 +11,10 @@ namespace ICSimulator
     public abstract class Router
     {
         public Coord coord;
-		public int subnet;
         public int ID { get { return coord.ID; } }
 		public bool enable;
         public Link[] linkOut = new Link[4];
         public Link[] linkIn = new Link[4];
-		public Link[] bypassLinkIn = new Link[Config.num_bypass];
-		public Link[] bypassLinkOut = new Link[Config.num_bypass];
 		public Link[] LLinkIn;
 		public Link[] LLinkOut;
 		public Link[] GLinkIn;
@@ -87,7 +84,7 @@ namespace ICSimulator
 	        statsInput();
 			
             _doStep();
-	        statsOutput();
+	        //statsOutput();
         }
 
         protected abstract void _doStep(); // called from Network
@@ -290,16 +287,6 @@ namespace ICSimulator
 				for (int i = 0; i < 4; i++)
 					if (linkIn[i] != null && linkIn[i].Out != null)
 						Simulator.stats.flitsToRouter.Add(1);
-			if (Config.topology == Topology.Mesh_Multi)
-			{
-				for (int i = 0; i < 4; i++)
-					if (linkIn[i] != null && linkIn[i].Out != null)
-						Simulator.stats.flitsToRouter.Add(1);
-				for (int i = 0; i < Config.num_bypass; i++)
-					if (bypassLinkIn[i] != null && bypassLinkIn[i].Out != null)
-						Simulator.stats.flitsToRouter.Add(1);
-			}
-
 			if (Config.topology == Topology.HR_8drop || Config.topology == Topology.MeshOfRings)
 			{
 				if (this is Router_Node)
@@ -355,7 +342,6 @@ namespace ICSimulator
             int deflected = 0;
             int unproductive = 0;
             int traversals = 0;
-			int bypassed = 0;
             int links = (Config.RingClustered || Config.ScalableRingClustered)? 2:4;
             for (int i = 0; i < links; i++)
             {
@@ -388,16 +374,7 @@ namespace ICSimulator
                     //linkOut[i].In.deflectTest();
                 }
             }
-			for (int i = 0; i < Config.num_bypass; i++)
-			{
-				if (bypassLinkOut[i] != null && bypassLinkOut[i].In != null)
-				{
-					bypassed++;
-					traversals++;
-				}
-			}
 
-			Simulator.stats.bypass_flit.Add(bypassed);
             Simulator.stats.deflect_flit.Add(deflected);
             Simulator.stats.deflect_flit_byinc[incomingFlits].Add(deflected);
             Simulator.stats.unprod_flit.Add(unproductive);

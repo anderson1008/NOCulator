@@ -221,10 +221,11 @@ namespace ICSimulator
                 }
             }
 
-			// Just to verify the formed topology
-			//for ( int i=0; i<16; i++) {
-			//	Console.WriteLine ("Router {0} has {1} neighbors", i, routers[i].neighbors);
-			//}
+			for ( int i=0; i<16; i++) {
+				Console.WriteLine ("Router {0} has {1} neighbors", i, routers[i].neighbors);
+			}
+
+
 
             if (Config.torus)
                 for (int i = 0; i < Config.N; i++)
@@ -235,7 +236,8 @@ namespace ICSimulator
         // Pins specification for nodeRouters
         public const int CW = 0;				//clockwise 
         public const int CCW = 1;			//counter clockwise
-		        
+
+        
         // Pins specification for connectRouters
         public const int L0 = 0;
         public const int L1 = 1;
@@ -609,8 +611,6 @@ namespace ICSimulator
         {
             switch (Config.router.algorithm)
             {
-				case RouterAlgorithm.BLESS_BYPASS:
-					return new Router_BLESS_BYPASS(c);
                 case RouterAlgorithm.DR_AFC:
                     return new Router_AFC(c);
 

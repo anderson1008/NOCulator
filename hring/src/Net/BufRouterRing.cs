@@ -586,6 +586,7 @@ namespace ICSimulator
             else
                 throw new Exception("Not Supported");
 
+            return false;
         }
     }
 

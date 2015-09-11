@@ -5,6 +5,116 @@ using System.IO;
 
 namespace ICSimulator
 {
+	public class MultiMeshRouter : Router
+	{
+		public Router[] subrouter = new Router[Config.sub_net];
+
+		protected override void _doStep ()
+		{
+			for (int i = 0; i < Config.sub_net; i++) 
+				subrouter [i].doStep ();
+			
+		}
+
+		// only determine if can or cannot inject
+		public override bool canInjectFlit (Flit f)
+		{
+			bool can = false;
+			for (int i = 0; i < Config.sub_net; i++) 
+			{
+				can = can | subrouter [i].canInjectFlit (f);
+			}
+			return can;
+		}
+
+		// if more than one subrouter can inject, select one randomly
+		// or inject to the available one.
+		// Otherwise throttle the injection.
+		public override void InjectFlit (Flit f)
+		{
+			
+			Router [] availSubrouter = new Router [Config.sub_net];
+			int count = 0;
+
+			for (int i = 0; i < Config.sub_net; i++) 
+			{
+				if (subrouter [i].canInjectFlit (f)) 
+				{
+					availSubrouter [count] = subrouter [i];
+					count++;
+				}
+			}
+
+			if (count <= 0)
+				throw new Exception ("no subrouter is available for injection.");
+			else 
+			{
+				int selected = Simulator.rand.Next(count-1);
+				availSubrouter [selected].InjectFlit (f);
+			}
+			
+		}
+
+
+
+		public MultiMeshRouter (Coord c)
+		{
+			for (int i=0; i<Config.sub_net; i++) 
+			{
+				subrouter [i] = makeSubRouters (c);
+			}
+		}
+
+
+		Router makeSubRouters (Coord c)
+		{
+			switch (Config.router.algorithm)
+			{
+				case RouterAlgorithm.DR_AFC:
+				return new Router_AFC(c);
+
+				case RouterAlgorithm.DR_FLIT_SWITCHED_CTLR:
+				return new Router_Flit_Ctlr(c);
+
+				case RouterAlgorithm.DR_FLIT_SWITCHED_OLDEST_FIRST:
+				return new Router_Flit_OldestFirst(c);
+
+				case RouterAlgorithm.DR_SCARAB:
+				return new Router_SCARAB(c);
+
+				case RouterAlgorithm.DR_FLIT_SWITCHED_GP:
+				return new Router_Flit_GP(c);
+
+				case RouterAlgorithm.DR_FLIT_SWITCHED_CALF:
+				return new Router_SortNet_GP(c);
+
+				case RouterAlgorithm.DR_FLIT_SWITCHED_CALF_OF:
+				return new Router_SortNet_OldestFirst(c);
+
+				case RouterAlgorithm.DR_FLIT_SWITCHED_RANDOM:
+				return new Router_Flit_Random(c);
+
+				case RouterAlgorithm.ROUTER_FLIT_EXHAUSTIVE:
+				return new Router_Flit_Exhaustive(c);
+
+				case RouterAlgorithm.OLDEST_FIRST_DO_ROUTER:
+				return new OldestFirstDORouter(c);
+
+				case RouterAlgorithm.ROUND_ROBIN_DO_ROUTER:
+				return new RoundRobinDORouter(c);
+
+				case RouterAlgorithm.STC_DO_ROUTER:
+				return new STC_DORouter(c);
+
+				default:
+				throw new Exception("invalid routing algorithm " + Config.router.algorithm);
+			}
+		
+		}
+
+
+	}
+
 
 	public class MultiMesh : Network
 	{
@@ -122,23 +232,8 @@ namespace ICSimulator
 
 					}
 				}
-
-				// connect the subrouters
-				if (Config.bypass_enable)
-					for (int pi = 0; pi < Config.num_bypass; pi++)
-						for (int m = 0; m < Config.sub_net; m++)
-						{
-							Link bypass = new Link(0);
-							links.Add(bypass);
-							_routers[n].subrouter[m].bypassLinkOut[pi] = bypass;
-							_routers[n].subrouter[(m+1)%Config.sub_net].bypassLinkIn[pi] = bypass;
-							_routers [n].subrouter [m].neighbors++;
-							_routers [n].subrouter [m].neigh [pi] = _routers [n].subrouter [(m+1)%Config.sub_net];
-						}
-					
-				
 			}
-			// TORUS: be careful about the number of neighbors, which is based on if bypass is enabled.
+
 			if (Config.torus)
 				for (int i = 0; i < Config.N; i++)
 					for (int j = 0; j < Config.sub_net; j++)
@@ -149,7 +244,7 @@ namespace ICSimulator
 		public override void doStep()
 		{
 
-			doStats(); // only record the link utilization. Do not need to override.
+			doStats();
 
 			// step the golden controller
 			// golden.doStep();

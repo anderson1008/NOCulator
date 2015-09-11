@@ -16,8 +16,6 @@ namespace ICSimulator
 
     public enum RouterAlgorithm
     {
-		BLESS_BYPASS, // bufferless with bypass
-
         OLDEST_FIRST_DO_ROUTER,
         ROUND_ROBIN_DO_ROUTER,
         MIN_AD_OLDEST_FIRST_DO_ROUTER,

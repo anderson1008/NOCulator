@@ -1,5 +1,4 @@
-router.algorithm = BLESS_BYPASS
-bypass_enable = true
+
 router.addrPacketSize = 2
 router.dataPacketSize = 8
 router.maxPacketSize = 8
@@ -9,7 +8,7 @@ topology = Mesh_Multi
 network_nrX = 4
 network_nrY = 4
 
-//router.algorithm = DR_FLIT_SWITCHED_OLDEST_FIRST
+router.algorithm = DR_FLIT_SWITCHED_OLDEST_FIRST
 DeflectOrderRouting = true
 net_age_arbitration = false
 cheap_of = 1 // oldest-first age divisor
@@ -28,7 +27,7 @@ sh_cache_assoc = 4
 sh_cache_perfect = true
 cache_block = 5
 idealnet = false
-router.linkLatency = 3
+router.linkLatency = 2
 edge_loop = false 
 
 //controller = THROTTLE_QOS
@@ -39,7 +38,7 @@ edge_loop = false
 
 
 finish = app
-insns = 10000
+insns = 1000000
 trace_wraparound = true
 
 
