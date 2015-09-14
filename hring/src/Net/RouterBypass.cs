@@ -240,6 +240,28 @@ namespace ICSimulator
 			return ret;
 		}
 
+
+		protected void bubbleSort(ref Flit[] input)
+		{
+			// inline bubble sort is faster for this size than Array.Sort()
+			// sort input[] by descending priority. rank(a,b) < 0 if f0 has higher priority.
+			for (int i = 0; i < 4+Config.num_bypass; i++)
+				for (int j = i + 1; j < 4+Config.num_bypass; j++)
+					if (input[j] != null &&
+						(input[i] == null ||
+							rank(input[j], input[i]) < 0))
+					{
+						Flit t = input[i];
+						input[i] = input[j];
+						input[j] = t;
+					}
+		}
+
+		protected void partialSort(ref Flit[] input)
+		{
+			
+		}
+
 		Flit[] input = new Flit[4+Config.num_bypass]; // keep this as a member var so we don't
 		// have to allocate on every step
 
@@ -402,19 +424,7 @@ namespace ICSimulator
 				}
 			}
 
-
-			// inline bubble sort is faster for this size than Array.Sort()
-			// sort input[] by descending priority. rank(a,b) < 0 if f0 has higher priority.
-			for (int i = 0; i < 4+Config.num_bypass; i++)
-				for (int j = i + 1; j < 4+Config.num_bypass; j++)
-					if (input[j] != null &&
-					    (input[i] == null ||
-					 rank(input[j], input[i]) < 0))
-				{
-					Flit t = input[i];
-					input[i] = input[j];
-					input[j] = t;
-				}
+			bubbleSort (ref input);
 
 			// assign outputs
 			for (int i = 0; i < 4+Config.num_bypass && input[i] != null; i++)
