@@ -402,6 +402,11 @@ namespace ICSimulator
 
         public void doStats()
         {
+			/*
+			if (Simulator.CurrentRound % Config.subnet_reset_period == 0 && Simulator.CurrentRound > 0)
+				for (int i = 0; i < Config.sub_net; i++)
+					Simulator.stats.subnet_util[i].EndPeriod();
+			*/
             int used_links = 0;
             foreach (Link l in links)
                 if (l.Out != null)

@@ -31,7 +31,9 @@ namespace ICSimulator
 		public SampledStat net_decisionLevel;
 		public SampledStat hoq_latency;  // latency between each successful injection
 		public SampledStat[] hoq_latency_bysrc;
-
+		public SubnetProfileStat [] subnet_util;
+		public AccumStat permute; // power for permuter block
+		public AccumStat data_pkt, ctrl_pkt;
 
 		public AccumStat[] flitsTryToEject;  //  number of flits try to eject each cycle
 		public SampledStat ejectsFromSamePacket;
@@ -60,9 +62,59 @@ namespace ICSimulator
 		public SampledStat[] serialization_latency;
 		public PeriodicAccumStat[] insns_persrc_ewma;
 
-		// an AccumStat is a statistic that counts discrete events (flit
-		// deflections, ...) and from which we can extract a rate
-		// (events/time).
+		public class SubnetProfileStat : PeriodicAccumStat 
+		{	
+
+
+			/*
+			protected double m_count;
+
+			public SubnetProfileStat ()
+			{
+				Reset();
+			}
+
+			public void Add()
+			{
+				m_count++;
+			}
+
+			public void Add(ulong addee)
+			{
+				m_count += (ulong) addee;
+			}
+
+			public void Add(double addee)
+			{
+				m_count += addee;
+			}
+
+			public override void Reset()
+			{
+				m_count = 0;
+			}
+
+
+			public override void DumpJSON(TextWriter tw)
+			{
+				tw.Write("{0}", m_count);
+			}
+
+			public double Count
+			{ get { return m_count; } }
+			*/
+		}
+
+
+		SubnetProfileStat[] newSubnetProfileStatArray()
+		{
+			SubnetProfileStat[] ret = new SubnetProfileStat[Config.sub_net];
+			for (int i = 0; i < Config.sub_net; i++)
+				ret[i] = new SubnetProfileStat(); // initialize private variable
+			return ret;
+		}
+
+
 		public class CacheProfileStat : StatsObject
 		{
 			protected double m_count;
@@ -556,6 +608,8 @@ namespace ICSimulator
                     fi.SetValue(this, newSampledStatArray2D());
 				else if (t == typeof(CacheProfileStat[]))
 					fi.SetValue(this, newCacheProfileStatArray());
+				else if (t == typeof(SubnetProfileStat[]))
+					fi.SetValue(this, newSubnetProfileStatArray());
 				
             }
         }
@@ -778,6 +832,7 @@ namespace ICSimulator
 			tw.WriteLine("      net utilization: {0:0.00%}", netutil.Avg);
 			tw.WriteLine("      throughput: {0:0.00} flits per cycle", inject_flit.Rate);
 			tw.WriteLine("      injections: {0} flits (NOTE flit size)", inject_flit.Count);
+			tw.WriteLine("      permute: {0}", permute.Count);
 			tw.WriteLine("      traversal: {0} (unproductive traversal {1:0.00%})", flit_traversals.Count, (double)deflect_flit.Count/flit_traversals.Count);
 			tw.WriteLine("      deflections: {0} (rate {1:0.00} per cycle, each flit is deflected for {2:0.00} times)",
 			             deflect_flit.Count, deflect_flit.Rate, deflect_flit.Rate / inject_flit.Rate);
@@ -789,6 +844,11 @@ namespace ICSimulator
 			             starve_flit.Count, starve_flit.Rate, starve_flit.Rate / inject_flit.Rate);
 			tw.WriteLine("      rank level: {0:0.00} | MAX {1:0.00}", net_decisionLevel.Avg, net_decisionLevel.Max);
 			tw.WriteLine("      eject trial: {0:0.00} | MAX {1:0.00}", ejectTrial.Avg, ejectTrial.Max);
+			tw.WriteLine();
+			tw.WriteLine("  app behavior");
+			tw.WriteLine("      ctrl packet: {0}", ctrl_pkt.Count);
+			tw.WriteLine("      data packet: {0}", data_pkt.Count);
+			tw.WriteLine("      mpki: {0:0.00}", total_sum_mpki.Count);
 			tw.WriteLine();
 
 

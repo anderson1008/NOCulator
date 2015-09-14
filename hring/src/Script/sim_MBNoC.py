@@ -4,7 +4,7 @@ import sys
 import os
 
 workload_dir = "../bin/workload_list/"
-SIM_NUM = 1
+SIM_NUM = 100
 
 # 16-node MBNoC
 out_dir = "/home/anderson/Desktop/NOCulator/hring/src/results/MBNoC/4x4/"

@@ -523,7 +523,14 @@ namespace ICSimulator
 
         protected void statsEjectPacket(Packet p)
         {
-            ulong net_latency = Simulator.CurrentRound - p.injectionTime;
+			if (p.nrOfFlits == Config.router.addrPacketSize)
+				Simulator.stats.ctrl_pkt.Add();
+			else if (p.nrOfFlits == Config.router.dataPacketSize)
+				Simulator.stats.data_pkt.Add();
+			else
+				throw new Exception ("packet size is undefined, yet received!");
+
+			ulong net_latency = Simulator.CurrentRound - p.injectionTime;
             ulong total_latency = Simulator.CurrentRound - p.creationTime;
 
             Simulator.stats.net_latency.Add(net_latency);

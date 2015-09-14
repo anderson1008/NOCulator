@@ -30,6 +30,7 @@ namespace ICSimulator
 			return can;
 		}
 
+
 		// if more than one subrouter can inject, select one randomly
 		// or inject to the available one.
 		// Otherwise throttle the injection.
@@ -52,7 +53,10 @@ namespace ICSimulator
 				throw new Exception ("no subrouter is available for injection.");
 			else 
 			{
-				int selected = Simulator.rand.Next(count);
+				int selected;
+				select_subnet (count, out selected);
+
+				Simulator.stats.subnet_util[selected].Add();
 				availSubrouter [selected].InjectFlit (f);
 
 				#if PKTDUMP
@@ -60,6 +64,26 @@ namespace ICSimulator
 				//                  f.packet.ID, f.flitNr+1, f.packet.nrOfFlits, selected, coord, Simulator.CurrentRound);
 				#endif
 			}
+
+		}
+
+		protected void select_subnet (int count, out int selected)
+		{
+			selected = -1;
+			double util = double.MaxValue;
+			if (Config.subnet_sel_rand)
+				selected = Simulator.rand.Next(count);
+			else
+				for (int i = 0; i < count; i++)
+			{
+				if (Simulator.stats.subnet_util[i].Count < util)
+				{
+					selected = i;
+					util = Simulator.stats.subnet_util[i].Count;
+				}
+			}
+
+			if (selected == -1 || selected >= count) throw new Exception("no subnet is selected");
 
 		}
 
@@ -240,8 +264,15 @@ namespace ICSimulator
 			return ret;
 		}
 
+		protected void _sort ()
+		{
+			if (Config.partial_sort)
+				_partialSort(ref input);
+			else
+				_fullSort(ref input);
+		}
 
-		protected void bubbleSort(ref Flit[] input)
+		protected void _bubbleSort(ref Flit[] input)
 		{
 			// inline bubble sort is faster for this size than Array.Sort()
 			// sort input[] by descending priority. rank(a,b) < 0 if f0 has higher priority.
@@ -257,12 +288,161 @@ namespace ICSimulator
 					}
 		}
 
-		protected void partialSort(ref Flit[] input)
+		protected void _swap (ref Flit t0, ref Flit t1)
 		{
-			
+			if (t0 != null || t1 != null)
+				Simulator.stats.permute.Add();
+			if (rank(t1, t0)<0)
+			{
+				Flit t = t0;
+				t0 = t1;
+				t1 = t;
+			}
 		}
 
-		Flit[] input = new Flit[4+Config.num_bypass]; // keep this as a member var so we don't
+		protected void _partialSort(ref Flit[] input)
+		{
+			// only sort the first 4 flits; 
+			_swap (ref input[0],ref input[1]);
+			_swap (ref input[2],ref input[3]);
+			_swap (ref input[0],ref input[2]);
+			_swap (ref input[1],ref input[3]);
+		}
+
+		protected void _fullSort(ref Flit[] input)
+		{
+			// only sort the first 4 flits; 
+			_swap (ref input[0],ref input[1]);
+			_swap (ref input[2],ref input[3]);
+			_swap (ref input[0],ref input[2]);
+			_swap (ref input[1],ref input[3]);
+			_swap (ref input[0],ref input[2]);
+			_swap (ref input[1],ref input[3]);
+		}
+
+		protected void _installFlit(out Flit[] input, out int count)
+		{
+			input = new Flit[4+Config.num_bypass]; 
+			for (int i = 0; i < 4+Config.num_bypass; i++) input[i] = null;
+			// grab inputs into a local array so we can sort
+			count = 0;
+
+			if (Config.partial_sort)
+			{
+				for (int dir = 0; dir < 4; dir++)
+					if (linkIn[dir] != null && linkIn[dir].Out != null)
+				{
+					linkIn[dir].Out.inDir = dir;
+					input[dir] = linkIn[dir].Out;  // c: # of incoming flits
+					count++;
+					linkIn[dir].Out = null;
+				}
+			}
+			else{
+				for (int dir = 0; dir < 4; dir++)
+					if (linkIn[dir] != null && linkIn[dir].Out != null)
+				{
+					linkIn[dir].Out.inDir = dir;
+					input[count++] = linkIn[dir].Out;  // c: # of incoming flits
+					//linkIn[dir].Out.inDir = dir;  // By Xiyue: what's the point? Seems redundant
+					linkIn[dir].Out = null;
+				}
+			}
+
+			// regardless how we sort flits, bypass flit is always at the tail of input array
+			// this may affect how we will inject flit.
+			for (int bypass = 0; bypass < Config.num_bypass; bypass++)
+				if (bypassLinkIn[bypass] != null && bypassLinkIn[bypass].Out != null)
+			{
+				bypassLinkIn[bypass].Out.inDir = 4+bypass;
+				input[4+bypass] = bypassLinkIn[bypass].Out;
+				count++;
+				bypassLinkIn[bypass].Out = null;
+			}
+		}
+
+
+		protected void _inject (ref int c, out int outCount)
+		{
+			// sometimes network-meddling such as flit-injection can put unexpected
+			// things in outlinks...
+			// outCount: # of the unexpected outstanding flits at the inport of output link, usually, it is 0
+			outCount = 0;
+			for (int dir = 0; dir < 4; dir++)
+				if (linkOut[dir] != null && linkOut[dir].In != null)
+					outCount++;
+			for (int j = 0; j < Config.num_bypass; j++)
+				if (bypassLinkOut[j] != null && bypassLinkOut[j].In != null)
+					outCount++;
+			if (outCount != 0) throw new Exception("Unexpected flit on output!");
+
+			bool wantToInject = m_injectSlot2 != null || m_injectSlot != null;
+			bool canInject = (c + outCount) < neighbors;
+			bool starved = wantToInject && !canInject;
+
+			if (starved)
+			{
+				Flit starvedFlit = null;
+				if (starvedFlit == null) starvedFlit = m_injectSlot2;
+				if (starvedFlit == null) starvedFlit = m_injectSlot;
+
+				#if PKTDUMP
+				Console.WriteLine("PKT {0}-{1}/{2} is STARVED at router {3}/{4} at time {5}",
+				                  starvedFlit.packet.ID, starvedFlit.flitNr+1, starvedFlit.packet.nrOfFlits, coord, subnet, Simulator.CurrentRound);
+				#endif
+				Simulator.controller.reportStarve(coord.ID);
+				statsStarve(starvedFlit);
+			}
+			if (canInject && wantToInject)
+			{				
+				Flit inj_peek=null; 
+				if(m_injectSlot2!=null)
+					inj_peek=m_injectSlot2;
+				else if (m_injectSlot!=null)
+					inj_peek=m_injectSlot;
+				if(inj_peek==null)
+					throw new Exception("Inj flit peek is null!!");
+
+				if(!Simulator.controller.ThrottleAtRouter || Simulator.controller.tryInject(coord.ID))
+				{
+					Flit inj = null;
+					if (m_injectSlot2 != null)
+					{
+						inj = m_injectSlot2;
+						m_injectSlot2 = null;
+					}
+					else if (m_injectSlot != null)
+					{
+						inj = m_injectSlot;
+						m_injectSlot = null;
+					}
+					else
+						throw new Exception("what???inject null flits??");
+
+					inj.inDir = 4+Config.num_bypass;
+					if (Config.partial_sort)
+					{
+						for (int i = 0; i < 4+Config.num_bypass; i++) 
+							if (input[i] == null)
+						{
+							input[i] = inj;
+							c++;
+							break;
+						}
+					}
+					else
+						input[c++] = inj;
+					
+					#if PKTDUMP
+					Console.WriteLine("PKT {0}-{1}/{2} is INJECTED at router {3}/{4} at time {5}", 
+					                  inj.packet.ID, inj.flitNr+1, inj.packet.nrOfFlits, coord, subnet, Simulator.CurrentRound);
+					#endif
+					statsInjectFlit(inj);
+				}
+			}
+		}
+
+		Flit[] input; // keep this as a member var so we don't
 		// have to allocate on every step
 
 		protected override void _doStep()
@@ -339,98 +519,24 @@ namespace ICSimulator
 					Simulator.stats.ejectsFromSamePacket.Add(0);
 			}
 
+
 			//STEP 2 : Prioritize and Injection
-			for (int i = 0; i < 4+Config.num_bypass; i++) input[i] = null;
 			// grab inputs into a local array so we can sort
-			int c = 0;
-			for (int dir = 0; dir < 4; dir++)
-				if (linkIn[dir] != null && linkIn[dir].Out != null)
-			{
-				linkIn[dir].Out.inDir = dir;
-				input[c++] = linkIn[dir].Out;  // c: # of incoming flits
-				//linkIn[dir].Out.inDir = dir;  // By Xiyue: what's the point? Seems redundant
-				linkIn[dir].Out = null;
-			}
-			for (int bypass = 0; bypass < Config.num_bypass; bypass++)
-				if (bypassLinkIn[bypass] != null && bypassLinkIn[bypass].Out != null)
-			{
-				bypassLinkIn[bypass].Out.inDir = 4+bypass;
-				input[c++] = bypassLinkIn[bypass].Out;
-				bypassLinkIn[bypass].Out = null;
-			}
-
-			// sometimes network-meddling such as flit-injection can put unexpected
-			// things in outlinks...
-			// TODO: outCount: # of the unexpected outstanding flits at the inport of output link, usually, it is 0 (verify is later)
-			int outCount = 0;
-			for (int dir = 0; dir < 4; dir++)
-				if (linkOut[dir] != null && linkOut[dir].In != null)
-					outCount++;
-			for (int j = 0; j < Config.num_bypass; j++)
-				if (bypassLinkOut[j] != null && bypassLinkOut[j].In != null)
-					outCount++;
-			if (outCount != 0) throw new Exception("Unexpected flit on output!");
-		
-			bool wantToInject = m_injectSlot2 != null || m_injectSlot != null;
-			bool canInject = (c + outCount) < neighbors;
-			bool starved = wantToInject && !canInject;
-
-			if (starved)
-			{
-				Flit starvedFlit = null;
-				if (starvedFlit == null) starvedFlit = m_injectSlot2;
-				if (starvedFlit == null) starvedFlit = m_injectSlot;
-
-#if PKTDUMP
-				Console.WriteLine("PKT {0}-{1}/{2} is STARVED at router {3}/{4} at time {5}",
-				                  starvedFlit.packet.ID, starvedFlit.flitNr+1, starvedFlit.packet.nrOfFlits, coord, subnet, Simulator.CurrentRound);
-#endif
-				Simulator.controller.reportStarve(coord.ID);
-				statsStarve(starvedFlit);
-			}
-			if (canInject && wantToInject)
-			{				
-				Flit inj_peek=null; 
-				if(m_injectSlot2!=null)
-					inj_peek=m_injectSlot2;
-				else if (m_injectSlot!=null)
-					inj_peek=m_injectSlot;
-				if(inj_peek==null)
-					throw new Exception("Inj flit peek is null!!");
-
-				if(!Simulator.controller.ThrottleAtRouter || Simulator.controller.tryInject(coord.ID))
-				{
-					Flit inj = null;
-					if (m_injectSlot2 != null)
-					{
-						inj = m_injectSlot2;
-						m_injectSlot2 = null;
-					}
-					else if (m_injectSlot != null)
-					{
-						inj = m_injectSlot;
-						m_injectSlot = null;
-					}
-					else
-						throw new Exception("what???inject null flits??");
-
-					inj.inDir = 4+Config.num_bypass;
-					input[c++] = inj;
-#if PKTDUMP
-					Console.WriteLine("PKT {0}-{1}/{2} is INJECTED at router {3}/{4} at time {5}", 
-					                  inj.packet.ID, inj.flitNr+1, inj.packet.nrOfFlits, coord, subnet, Simulator.CurrentRound);
-#endif
-					statsInjectFlit(inj);
-				}
-			}
-
-			bubbleSort (ref input);
+			//for (int i = 0; i < 4+Config.num_bypass; i++) input[i] = null;
+			int c;
+			int outCount;
+			_installFlit(out input, out c);
+			_sort();
+			_inject (ref c, out outCount);
 
 			// assign outputs
-			for (int i = 0; i < 4+Config.num_bypass && input[i] != null; i++)
+			for (int i = 0; i < 4+Config.num_bypass; i++)
 			{
+				if (input[i]==null)
+					continue;
 
 				PreferredDirection pd = determineDirection(input[i], coord);
+
 				#if PKTDUMP
 				if (pd.xDir != Simulator.DIR_NONE)
 					Console.WriteLine("PKT {0}-{1}/{2} PDir={7} ARRIVES at port {3} router {4}/{5} at time {6}",
@@ -445,90 +551,37 @@ namespace ICSimulator
 				int outDir = -1;
 				bool deflect = false;
 				bool bypass = false;
-				if (Config.RandOrderRouting)
-				{
-					int dimensionOrder = Simulator.rand.Next(2);  //0: x over y   1:y over x
-					if (dimensionOrder == 0)
-					{
-						if (pd.xDir != Simulator.DIR_NONE && linkOut[pd.xDir].In == null)
-						{
-							linkOut[pd.xDir].In = input[i];
-							outDir = pd.xDir;
-						}
-						else if (pd.yDir != Simulator.DIR_NONE && linkOut[pd.yDir].In == null)
-						{
-							linkOut[pd.yDir].In = input[i];
-							outDir = pd.yDir;
-						}
-						else 
-							bypass = true;
-					}
-					else       //y over x
-					{
-						if (pd.yDir != Simulator.DIR_NONE && linkOut[pd.yDir].In == null)
-						{
-							linkOut[pd.yDir].In = input[i];
-							outDir = pd.yDir;
-						}
-						else if (pd.xDir != Simulator.DIR_NONE && linkOut[pd.xDir].In == null)
-						{
-							linkOut[pd.xDir].In = input[i];
-							outDir = pd.xDir;
-						}
-						else 
-							bypass = true;
-					}
-				}
-				else if (Config.DeflectOrderRouting)
-				{
-					if (input[i].routingOrder == false)
-					{
-						if (pd.xDir != Simulator.DIR_NONE && linkOut[pd.xDir].In == null)
-						{
-							linkOut[pd.xDir].In = input[i];
-							linkOut[pd.xDir].In.routingOrder = false;
-							outDir = pd.xDir;
-						}
-						else if (pd.yDir != Simulator.DIR_NONE && linkOut[pd.yDir].In == null)
-						{
-							linkOut[pd.yDir].In = input[i];
-							linkOut[pd.yDir].In.routingOrder = true;
-							outDir = pd.yDir;
-						}
-						else 
-							bypass = true;
-					}
-					else       //y over x
-					{
-						if (pd.yDir != Simulator.DIR_NONE && linkOut[pd.yDir].In == null)
-						{
-							linkOut[pd.yDir].In = input[i];
-							linkOut[pd.yDir].In.routingOrder = true;
-							outDir = pd.yDir;
-						}
-						else if (pd.xDir != Simulator.DIR_NONE && linkOut[pd.xDir].In == null)
-						{
-							linkOut[pd.xDir].In = input[i];
-							linkOut[pd.xDir].In.routingOrder = false;
-							outDir = pd.xDir;
-						}
-						else 
-							bypass = true;
-					}
 
-
-				}
-				else //original Router
+				if (input[i].routingOrder == false)
 				{
 					if (pd.xDir != Simulator.DIR_NONE && linkOut[pd.xDir].In == null)
 					{
 						linkOut[pd.xDir].In = input[i];
+						linkOut[pd.xDir].In.routingOrder = false;
 						outDir = pd.xDir;
 					}
 					else if (pd.yDir != Simulator.DIR_NONE && linkOut[pd.yDir].In == null)
 					{
 						linkOut[pd.yDir].In = input[i];
+						linkOut[pd.yDir].In.routingOrder = true;
 						outDir = pd.yDir;
+					}
+					else 
+						bypass = true;
+				}
+				else       //y over x
+				{
+					if (pd.yDir != Simulator.DIR_NONE && linkOut[pd.yDir].In == null)
+					{
+						linkOut[pd.yDir].In = input[i];
+						linkOut[pd.yDir].In.routingOrder = true;
+						outDir = pd.yDir;
+					}
+					else if (pd.xDir != Simulator.DIR_NONE && linkOut[pd.xDir].In == null)
+					{
+						linkOut[pd.xDir].In = input[i];
+						linkOut[pd.xDir].In.routingOrder = false;
+						outDir = pd.xDir;
 					}
 					else 
 						bypass = true;
@@ -571,7 +624,6 @@ namespace ICSimulator
 					}
 
 				}
-
 				
 				#if PKTDUMP
 				if (bypass != true && deflect != true)

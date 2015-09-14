@@ -249,6 +249,7 @@ namespace ICSimulator
         ulong m_shdelay; // probe delay at shared cache (for first access)
         ulong m_opdelay; // pass-through delay once an operation is in progress
         int m_datapkt_size;
+		int m_ctrlpkt_size;
         bool m_sh_perfect; // shared cache perfect?
         Dictionary<ulong, CmpCache_State> m_perf_sh;
 
@@ -309,6 +310,7 @@ namespace ICSimulator
             m_shdelay = (ulong)Config.shcache_lat;
             m_opdelay = (ulong)Config.cacheop_lat;
             m_datapkt_size = Config.router.dataPacketSize;
+			m_ctrlpkt_size = Config.router.addrPacketSize;
             m_sh_perfect = Config.sh_cache_perfect;
         }
 
@@ -1024,7 +1026,7 @@ namespace ICSimulator
             pkt.to = to;
             pkt.txn = txn;
 
-            pkt.flits = data ? m_datapkt_size : 1; // get the packet size here.
+			pkt.flits = data ? m_datapkt_size : m_ctrlpkt_size; // get the packet size here.
             pkt.vc_class = 0; // gets filled in once DAG is complete
 
             pkt.done = done;	// by Xiyue: indicate this is the last packet associate with a txn
@@ -1072,7 +1074,7 @@ namespace ICSimulator
 			pkt.txn = txn; 
 			pkt.critical = critical;
 
-			pkt.flits = data ? m_datapkt_size : 1;
+			pkt.flits = data ? m_datapkt_size : m_ctrlpkt_size;
 			pkt.vc_class = 0; // gets filled in once DAG is complete
 
 			pkt.done = done; // indicate this is the last packet associate with a txn

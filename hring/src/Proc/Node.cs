@@ -130,6 +130,16 @@ namespace ICSimulator
 
                     m_router.InjectFlit(f);  // by Xiyue: inject into a router
 
+					// For MBNoC, inject multiple flits if possible. 
+					if (Config.topology == Topology.Mesh_Multi)
+						for (int i = 0 ; i < Config.sub_net - 1; i++)
+							if (m_injQueue_flit.Count > 0 && m_router.canInjectFlit(m_injQueue_flit.Peek()))
+						{
+							f = m_injQueue_flit.Dequeue();
+							m_router.InjectFlit(f);
+						}
+
+
                     // for Ring based Network, inject two flits if possible
                     for (int i = 0 ; i < Config.RingInjectTrial - 1; i++)
 						if (m_injQueue_flit.Count > 0 && m_router.canInjectFlit(m_injQueue_flit.Peek()))

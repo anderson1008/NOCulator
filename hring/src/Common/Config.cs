@@ -119,9 +119,6 @@ namespace ICSimulator
 		public static ulong STC_batchCount = 1024;
 		//public static double default_throttle = 0.9;
 	
-
-
-
 		//public static double[] default_throttle = new double[16] {0.0, 0.9, 0.9, 0.9, 0.85, 0.9, 0.9, 0.9, 0.85, 0.9, 0.9, 0.9, 0.85, 0.9, 0.9, 0.9};
 		public static double ewmv_factor = 0.3; // weight of old value
 		public static double thrt_sweep = 0.1;
@@ -130,7 +127,11 @@ namespace ICSimulator
 		// For MBNoC
 		public static int sub_net = 2;
 		public static int num_bypass = 1; // not include local; 
-		public static bool bypass_enable = false;
+		public static bool bypass_enable = true;
+		public static bool partial_sort = true;
+		public static bool randomize_defl = false; // false: static deflection; true: randomized deflection
+		public static bool subnet_sel_rand = true;
+		public static ulong subnet_reset_period = 500;
 
 		// end Xiyue
 
@@ -459,7 +460,7 @@ namespace ICSimulator
         public static bool stopOnEnd = false;
         public static int network_nrX = 2;
         public static int network_nrY = 2;
-        public static bool randomize_defl = true;
+        
         public static int network_loopback = -1;
         public static int network_quantum = -1;
         public static int entropy_quantum = 1000; // in cycles

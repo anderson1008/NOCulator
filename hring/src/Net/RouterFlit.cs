@@ -103,6 +103,62 @@ namespace ICSimulator
             return ret;
         }
 
+		protected void _swap (ref Flit t0, ref Flit t1)
+		{
+			if (t0 != null || t1 != null)
+				Simulator.stats.permute.Add();
+			if (rank(t1, t0)<0)
+			{
+				Flit t = t0;
+				t0 = t1;
+				t1 = t;
+			}
+		}
+
+		protected void _fullSort(ref Flit[] input)
+		{
+			// only sort the first 4 flits;
+			_swap (ref input[0],ref input[1]);
+			_swap (ref input[2],ref input[3]);
+			_swap (ref input[0],ref input[2]);
+			_swap (ref input[1],ref input[3]);
+			_swap (ref input[0],ref input[2]);
+			_swap (ref input[1],ref input[3]);
+		}
+
+		protected void _bubbleSort(ref Flit[] input)
+		{
+			// inline bubble sort is faster for this size than Array.Sort()
+			// sort input[] by descending priority. rank(a,b) < 0 if f0 has higher priority.
+			for (int i = 0; i < 4+Config.num_bypass; i++)
+				for (int j = i + 1; j < 4+Config.num_bypass; j++)
+					if (input[j] != null &&
+					    (input[i] == null ||
+					 rank(input[j], input[i]) < 0))
+				{
+					Flit t = input[i];
+					input[i] = input[j];
+					input[j] = t;
+				}
+		}
+
+		protected void _installFlit(out Flit[] input, out int count)
+		{
+			input = new Flit[4+Config.num_bypass]; 
+			for (int i = 0; i < 4+Config.num_bypass; i++) input[i] = null;
+			// grab inputs into a local array so we can sort
+			count = 0;
+
+		
+			for (int dir = 0; dir < 4; dir++)
+				if (linkIn[dir] != null && linkIn[dir].Out != null)
+			{
+				linkIn[dir].Out.inDir = dir;
+				input[count++] = linkIn[dir].Out;  // c: # of incoming flits
+				linkIn[dir].Out = null;
+			}
+		}
+
         Flit[] input = new Flit[4]; // keep this as a member var so we don't
         // have to allocate on every step (why can't
         // we have arrays on the stack like in C?)	
@@ -233,7 +289,8 @@ namespace ICSimulator
            
             // inline bubble sort is faster for this size than Array.Sort()
             // sort input[] by descending priority. rank(a,b) < 0 if f0 has higher priority.
-            for (int i = 0; i < 4; i++)
+            /*
+			for (int i = 0; i < 4; i++)
                 for (int j = i + 1; j < 4; j++)
                     if (input[j] != null &&
                         (input[i] == null ||
@@ -243,6 +300,8 @@ namespace ICSimulator
                         input[i] = input[j];
                         input[j] = t;
                     }
+			*/
+			_fullSort(ref input);
 
             // assign outputs
             for (int i = 0; i < 4 && input[i] != null; i++)
