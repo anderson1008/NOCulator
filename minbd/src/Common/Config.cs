@@ -93,8 +93,8 @@ namespace ICSimulator
         public static MemoryConfig memory  = new MemoryConfig();
         public static RouterConfig router  = new RouterConfig();
 
-        public static bool synthGen = false;
-        public static double synthRate = 0.0;
+        public static bool synthGen = true;
+        public static double synthRate = 0.1;
         public static int synthQueueLimit = 1000;
         public static SynthTrafficPattern synthPattern = SynthTrafficPattern.UR;
 

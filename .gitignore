@@ -1,3 +1,5 @@
 /hring/src/bin/*
 /mono/*
 /hring/src/results/*
+*.log
+/minbd/*

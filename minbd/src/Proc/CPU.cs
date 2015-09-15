@@ -114,7 +114,7 @@ namespace ICSimulator
             if (tracefile == "null")
             {
                 m_trace = null;
-		Console.WriteLine("tracefile at {0} is null",m_ID);
+				Console.WriteLine("tracefile at {0} is null",m_ID);
                 return;
             }
             

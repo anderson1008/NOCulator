@@ -1,17 +1,17 @@
-router.algorithm = BLESS_BYPASS
+//router.algorithm = BLESS_BYPASS
 bypass_enable = true
-router.addrPacketSize = 2
-router.dataPacketSize = 8
-router.maxPacketSize = 8
+router.addrPacketSize = 1
+router.dataPacketSize = 4
+router.maxPacketSize = 4
 //topology = Mesh
-topology = Mesh_Multi
+//topology = Mesh_Multi
 
 network_nrX = 4
 network_nrY = 4
 
 //router.algorithm = DR_FLIT_SWITCHED_OLDEST_FIRST
 DeflectOrderRouting = true
-net_age_arbitration = false
+//net_age_arbitration = false
 cheap_of = 1 // oldest-first age divisor
 cheap_of_cap = -1 // if not -1, livelock limit at which we flush
 
@@ -39,7 +39,7 @@ edge_loop = false
 
 
 finish = app
-insns = 100000
+insns = 1000
 trace_wraparound = true
 
 

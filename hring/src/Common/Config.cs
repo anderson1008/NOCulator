@@ -315,7 +315,7 @@ namespace ICSimulator
 
         // ---- synth traces
         public static double synth_reads_fraction = 0.8;
-        public static double synth_rate = 0.1;
+        public static double synth_rate = 0.01;
 		public static bool bSynthBitComplement = false;
 		public static bool bSynthTranspose = false;
 		public static bool bSynthHotspot = false;
@@ -387,7 +387,7 @@ namespace ICSimulator
         public static bool rxbuf_cache_only = true;
         public static bool ctrl_data_split = false;
 
-        public static bool ignore_livelock = true;
+        public static bool ignore_livelock = false;
         public static ulong livelock_thresh = 1000000;
         // ----
 
