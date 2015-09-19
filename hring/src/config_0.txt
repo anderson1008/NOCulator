@@ -39,7 +39,7 @@ edge_loop = false
 
 
 finish = app
-insns = 1000
+insns = 10000
 trace_wraparound = true
 
 

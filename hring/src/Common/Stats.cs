@@ -833,7 +833,7 @@ namespace ICSimulator
 			tw.WriteLine("      throughput: {0:0.00} flits per cycle", inject_flit.Rate);
 			tw.WriteLine("      injections: {0} flits (NOTE flit size)", inject_flit.Count);
 			tw.WriteLine("      permute: {0}", permute.Count);
-			tw.WriteLine("      traversal: {0} (unproductive traversal {1:0.00%})", flit_traversals.Count, (double)deflect_flit.Count/flit_traversals.Count);
+			tw.WriteLine("      traversal: {0} (deflection rate {1:0.00%})", flit_traversals.Count, (double)deflect_flit.Count/flit_traversals.Count);
 			tw.WriteLine("      deflections: {0} (rate {1:0.00} per cycle, each flit is deflected for {2:0.00} times)",
 			             deflect_flit.Count, deflect_flit.Rate, deflect_flit.Rate / inject_flit.Rate);
 			tw.WriteLine("      bypass: {0} (rate {1:0.00} per cycle, each flit is bypassed for {2:0.00} times)", 

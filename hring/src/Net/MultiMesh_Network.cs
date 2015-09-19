@@ -43,6 +43,7 @@ namespace ICSimulator
 				endOfTraceBarrier[n] = false;
 			}
 
+
 			// create the Golden manager
 			// NOT sure if needed
 			golden = new Golden();
