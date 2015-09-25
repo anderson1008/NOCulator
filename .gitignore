@@ -2,3 +2,5 @@
 /mono/*
 /hring/src/results/*
 /result/*
+/hring/src/bin/*
+/minbd/*
