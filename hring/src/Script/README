@@ -1,0 +1,28 @@
+// This document indexes the python scripts.
+
+
+********************* For collect result ***********************
+1. To collect results for SPEC simualtion, run final_eval.py.
+
+2. To collect results for synthetic simulation, run final_eval_synth.py
+	# if want to compare BLESS, MBNoC, and MBNoC4, set "varied_subnet" to true
+
+
+********************* For simulation *************************
+
+3. Run sim_DESIGN_SIZE.py to simulate SPEC2006CPU with DESIGN in a network of SIZE.
+	# DESIGN = {BLESS, MBNoC}
+	# SIZE = {4x4, 8x8, 16x16}
+4. Run sim_DESIGN_synth.py to simulate synthetic traces in DESIGN.
+	# DESIGN = {BLESS, MBNoC, MBNoC4}
+
+******************* Other files ***********************
+collect_stat.py: basic module to extract metrics of interest from EACH simulation output file.
+
+MBNoC_collect_py: a intermediate module to collect and compute metrics of interest from a batch of output files.
+
+my_print.py: print functions for different purpose, including printing the final output.
+
+power.py:compute the static and dynamic power
+
+

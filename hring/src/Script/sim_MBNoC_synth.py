@@ -15,7 +15,7 @@ insns = "1000000"
 traffic = 'uniform_random' # [bit_complement, transpose, uniform_random]
 out_dir = "../results/Synthetic/" + traffic + "/MBNoC/4x4/"
 synth_reads_fraction = 0.8
-synth_rate_base = 0.005
+synth_rate_base = 0.0005
 bSynthBitComplement = "false"
 bSynthTranspose = "false"
 bSynthHotspot = "false"
@@ -30,7 +30,7 @@ network_nrX = "4"
 network_nrY = "4"
 topology = "Mesh_Multi"
 
-#  Injection rate sweep: 0.005 - 0.3 at 0.005 internal
+#  Injection rate sweep: 0.0005 - 0.1 at 0.0005 internal
 
 for sim_index in range(1, SIM_NUM+1, 1):
 	print ("New Simulation!")
@@ -45,7 +45,7 @@ for sim_index in range(1, SIM_NUM+1, 1):
 traffic = 'transpose' # [bit_complement, transpose, uniform_random]
 out_dir = "../results/Synthetic/" + traffic + "/MBNoC/4x4/"
 synth_reads_fraction = 0.8
-synth_rate_base = 0.005
+synth_rate_base = 0.0005
 bSynthBitComplement = "false"
 bSynthTranspose = "true"
 bSynthHotspot = "false"
@@ -60,7 +60,7 @@ network_nrX = "4"
 network_nrY = "4"
 topology = "Mesh_Multi"
 
-#  Injection rate sweep: 0.005 - 0.3 at 0.005 internal
+#  Injection rate sweep: 0.0005 - 0.1 at 0.0005 internal
 
 for sim_index in range(1, SIM_NUM+1, 1):
 	print ("New Simulation!")
@@ -75,7 +75,7 @@ for sim_index in range(1, SIM_NUM+1, 1):
 traffic = 'uniform_random' # [bit_complement, transpose, uniform_random]
 out_dir = "../results/Synthetic/" + traffic + "/MBNoC/4x4/"
 synth_reads_fraction = 0.8
-synth_rate_base = 0.005
+synth_rate_base = 0.0005
 bSynthBitComplement = "true"
 bSynthTranspose = "false"
 bSynthHotspot = "false"
@@ -90,7 +90,7 @@ network_nrX = "4"
 network_nrY = "4"
 topology = "Mesh_Multi"
 
-#  Injection rate sweep: 0.005 - 0.3 at 0.005 internal
+#  Injection rate sweep: 0.0005 - 0.1 at 0.0005 internal
 
 for sim_index in range(1, SIM_NUM+1, 1):
 	print ("New Simulation!")
@@ -107,7 +107,7 @@ for sim_index in range(1, SIM_NUM+1, 1):
 traffic = 'uniform_random' # [bit_complement, transpose, uniform_random]
 out_dir = "../results/Synthetic/" + traffic + "/MBNoC/8x8/"
 synth_reads_fraction = 0.8
-synth_rate_base = 0.005
+synth_rate_base = 0.0005
 bSynthBitComplement = "false"
 bSynthTranspose = "false"
 bSynthHotspot = "false"
@@ -122,7 +122,7 @@ network_nrX = "8"
 network_nrY = "8"
 topology = "Mesh_Multi"
 
-#  Injection rate sweep: 0.005 - 0.3 at 0.005 internal
+#  Injection rate sweep: 0.0005 - 0.1 at 0.0005 internal
 
 for sim_index in range(1, SIM_NUM+1, 1):
 	print ("New Simulation!")
@@ -137,7 +137,7 @@ for sim_index in range(1, SIM_NUM+1, 1):
 traffic = 'transpose' # [bit_complement, transpose, uniform_random]
 out_dir = "../results/Synthetic/" + traffic + "/MBNoC/8x8/"
 synth_reads_fraction = 0.8
-synth_rate_base = 0.005
+synth_rate_base = 0.0005
 bSynthBitComplement = "false"
 bSynthTranspose = "true"
 bSynthHotspot = "false"
@@ -152,7 +152,7 @@ network_nrX = "8"
 network_nrY = "8"
 topology = "Mesh_Multi"
 
-#  Injection rate sweep: 0.005 - 0.3 at 0.005 internal
+#  Injection rate sweep: 0.0005 - 0.1 at 0.0005 internal
 
 for sim_index in range(1, SIM_NUM+1, 1):
 	print ("New Simulation!")
@@ -167,7 +167,7 @@ for sim_index in range(1, SIM_NUM+1, 1):
 traffic = 'uniform_random' # [bit_complement, transpose, uniform_random]
 out_dir = "../results/Synthetic/" + traffic + "/MBNoC/8x8/"
 synth_reads_fraction = 0.8
-synth_rate_base = 0.005
+synth_rate_base = 0.0005
 bSynthBitComplement = "true"
 bSynthTranspose = "false"
 bSynthHotspot = "false"
@@ -182,7 +182,7 @@ network_nrX = "8"
 network_nrY = "8"
 topology = "Mesh_Multi"
 
-#  Injection rate sweep: 0.005 - 0.3 at 0.005 internal
+#  Injection rate sweep: 0.0005 - 0.1 at 0.0005 internal
 
 for sim_index in range(1, SIM_NUM+1, 1):
 	print ("New Simulation!")
@@ -200,7 +200,7 @@ for sim_index in range(1, SIM_NUM+1, 1):
 traffic = 'uniform_random' # [bit_complement, transpose, uniform_random]
 out_dir = "../results/Synthetic/" + traffic + "/MBNoC/16x16/"
 synth_reads_fraction = 0.8
-synth_rate_base = 0.005
+synth_rate_base = 0.0005
 bSynthBitComplement = "false"
 bSynthTranspose = "false"
 bSynthHotspot = "false"
@@ -215,7 +215,7 @@ network_nrX = "16"
 network_nrY = "16"
 topology = "Mesh_Multi"
 
-#  Injection rate sweep: 0.005 - 0.3 at 0.005 internal
+#  Injection rate sweep: 0.0005 - 0.1 at 0.0005 internal
 
 for sim_index in range(1, SIM_NUM+1, 1):
 	print ("New Simulation!")
@@ -230,7 +230,7 @@ for sim_index in range(1, SIM_NUM+1, 1):
 traffic = 'transpose' # [bit_complement, transpose, uniform_random]
 out_dir = "../results/Synthetic/" + traffic + "/MBNoC/16x16/"
 synth_reads_fraction = 0.8
-synth_rate_base = 0.005
+synth_rate_base = 0.0005
 bSynthBitComplement = "false"
 bSynthTranspose = "true"
 bSynthHotspot = "false"
@@ -245,7 +245,7 @@ network_nrX = "16"
 network_nrY = "16"
 topology = "Mesh_Multi"
 
-#  Injection rate sweep: 0.005 - 0.3 at 0.005 internal
+#  Injection rate sweep: 0.0005 - 0.1 at 0.0005 internal
 
 for sim_index in range(1, SIM_NUM+1, 1):
 	print ("New Simulation!")
@@ -260,7 +260,7 @@ for sim_index in range(1, SIM_NUM+1, 1):
 traffic = 'uniform_random' # [bit_complement, transpose, uniform_random]
 out_dir = "../results/Synthetic/" + traffic + "/MBNoC/16x16/"
 synth_reads_fraction = 0.8
-synth_rate_base = 0.005
+synth_rate_base = 0.0005
 bSynthBitComplement = "true"
 bSynthTranspose = "false"
 bSynthHotspot = "false"
@@ -275,7 +275,7 @@ network_nrX = "16"
 network_nrY = "16"
 topology = "Mesh_Multi"
 
-#  Injection rate sweep: 0.005 - 0.3 at 0.005 internal
+#  Injection rate sweep: 0.0005 - 0.1 at 0.0005 internal
 
 for sim_index in range(1, SIM_NUM+1, 1):
 	print ("New Simulation!")

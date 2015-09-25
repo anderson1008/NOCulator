@@ -7,6 +7,8 @@ import fnmatch
 import string
 
 def collect (sim_index, node, file_dir, insns_count):	
+	# Collect desired metrics from the raw output file obtained through simulation.
+	# return stat_out which is a dictionary including all desired metrics.
 	file_out = "sim_" + str(sim_index) + ".out"
 	found = False
 	for file in os.listdir(file_dir):

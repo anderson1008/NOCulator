@@ -19,7 +19,7 @@ class_factor = [0,0]
 file_dir_bless = ''
 file_dir_mbnoc = ''
 
-# unit: power - uw; energy - nJ; time - second; deflection rate - flits/cycle; injection rate = flits/cycle/node
+# unit: power - uw; energy - uJ; time - second; deflection rate - flits/cycle; injection rate - flits/cycle/node; Throughput - flit/cycle
 # component order: router, dff, portAllo, rc, xbar, local, permNet, link (if any)
 
 mbnoc_clk_period = 1.18*10**(-9)
@@ -40,6 +40,7 @@ break_down_power = []
 overall_power = []
 synth_entry_mbnoc = []
 synth_entry_bless = []
+max_defl = 0
 
 def main(argv):
 	# to use it: [node, subnet] = main(sys.argv[1:])
@@ -84,6 +85,7 @@ def evaluation():
 	global overall_power
 	global file_dir_bless
 	global file_dir_mbnoc
+	global max_defl
 
 	synth_entry_mbnoc = [] # important to reset the global list.
 	synth_entry_bless = [] # important to reset the global list.
@@ -130,10 +132,7 @@ def evaluation():
 		stat_mbnoc = collect_stat.collect(sim_index, node, file_dir_mbnoc, insns_count)
 
 		if (stat_bless == None or stat_mbnoc == None):
-			continue
-		#else:
-			#my_print.print_stat_dict(stat_bless)
-			#my_print.print_stat_dict(stat_mbnoc)
+			continue			
 	
 		## comupte weighted speedup
 		effective_count = effective_count + 1
@@ -149,10 +148,13 @@ def evaluation():
 		w_speedup_mbnoc = float("{:.2f}".format(accm_ws))
 		throughput_bless = float(stat_bless['throughput'])
 		throughput_mbnoc = float(stat_mbnoc['throughput'])
-		normalized_throughput = float("{:.2f}".format(throughput_mbnoc / throughput_bless/subnet)) # scaled by subnet size because of the flit size is smaller
+		normalized_throughput = float("{:.2f}".format(throughput_mbnoc / throughput_bless/subnet*clk_scale_factor)) # scaled by subnet size because of the flit size is smaller
 		deflect_flit_per_cycle_bless = float(stat_bless['deflect_flit_per_cycle'])
-		deflect_flit_per_cycle_mbnoc = float(stat_mbnoc['deflect_flit_per_cycle'])	
-		normalized_deflection_rate = float("{:.2f}".format(deflect_flit_per_cycle_mbnoc / deflect_flit_per_cycle_bless /subnet)) # scaled by subnet size because of the flit size is smaller
+		deflect_flit_per_cycle_mbnoc = float(stat_mbnoc['deflect_flit_per_cycle'])/subnet
+		if deflect_flit_per_cycle_bless	> 0: normalized_deflection_rate = float("{:.2f}".format(deflect_flit_per_cycle_mbnoc / deflect_flit_per_cycle_bless)) # scaled by subnet size because of the flit size is smaller
+		else: normalized_deflection_rate = 1
+		deflect_per_flit_bless =  float(stat_bless['deflect_per_flit'])
+		if max_defl < deflect_per_flit_bless: max_defl = deflect_per_flit_bless
 		mpki = float(stat_mbnoc['mpki'])
 
 		## energy computation
@@ -203,8 +205,8 @@ def evaluation():
 
 		###### For synthetic traffic
 		inject_rate_mbnoc = "{:.2f}".format(float(stat_mbnoc['inject_rate'])/subnet) # must be scaled based on the flit size
-		tot_latency_mbnoc = "{:.2f}".format(float(stat_mbnoc['pkt_tot_latency']))
-		synth_entry_mbnoc.append((inject_rate_mbnoc, "{:.2f}".format(energy_mbnoc), tot_latency_mbnoc, str(throughput_mbnoc), str(deflect_flit_per_cycle_mbnoc)))
+		tot_latency_mbnoc = "{:.2f}".format(float(stat_mbnoc['pkt_tot_latency'])/clk_scale_factor)
+		synth_entry_mbnoc.append((inject_rate_mbnoc, "{:.2f}".format(energy_mbnoc), tot_latency_mbnoc, str("{:.2f}".format(throughput_mbnoc/subnet*clk_scale_factor)), str(deflect_flit_per_cycle_mbnoc)))
 		inject_rate_bless = "{:.2f}".format(float(stat_bless['inject_rate']))
 		tot_latency_bless = "{:.2f}".format(float(stat_bless['pkt_tot_latency']))
 		synth_entry_bless.append((inject_rate_bless, "{:.2f}".format(energy_bless), tot_latency_bless, str(throughput_bless), str(deflect_flit_per_cycle_bless)))

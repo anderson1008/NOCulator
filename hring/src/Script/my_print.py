@@ -103,8 +103,8 @@ def print_synth (stat):
 	traffic = str(stat.pop(0))
 	network = str(stat.pop(0))
 	output_str = '\n\n#############    ' + "Traffic = " + traffic.ljust(20) + "Network = " + network.ljust(20) + '   ################\n\n'
-	output_str = output_str + 'Inject_rate'.ljust(20) + 'Energy'.ljust(20) + 'Latency'.ljust(20) + 'Deflect_rate'.ljust(20) + '\n\n'
-	output_str = output_str + 'BLESS'.ljust(10) + 'MBNoC'.ljust(10) + 'BLESS'.ljust(10) + 'MBNoC'.ljust(10) + 'BLESS'.ljust(10) + 'MBNoC'.ljust(10) + 'BLESS'.ljust(10) + 'MBNoC'.ljust(10) + '\n'
+	output_str = output_str + 'Inject_rate'.ljust(20) + 'Energy'.ljust(20) + 'Latency'.ljust(20) + 'Deflect_rate'.ljust(20) + 'Throughput'.ljust(20) + '\n\n'
+	output_str = output_str + 'BLESS'.ljust(10) + 'MBNoC'.ljust(10) + 'BLESS'.ljust(10) + 'MBNoC'.ljust(10) + 'BLESS'.ljust(10) + 'MBNoC'.ljust(10) + 'BLESS'.ljust(10) + 'MBNoC'.ljust(10) + 'BLESS'.ljust(10) + 'MBNoC'.ljust(10) + '\n'
 	for i in range (0, len(stat[0])):
 		for j in range (0, len(stat)):
 			output_str = output_str + str(stat[j][i]).ljust(10)
@@ -112,7 +112,21 @@ def print_synth (stat):
 	output_str = output_str + '********* Based on %u data points ************' % len(stat[0])
 	print output_str
 		
-
+def print_synth_varied_subnet (stat):
+	traffic = str(stat.pop(0))
+	network = str(stat.pop(0))
+	output_str = '\n\n#############    ' + "Traffic = " + traffic.ljust(20) + "Network = " + network.ljust(20) + '   ################\n\n'
+	output_str = output_str + 'Inject_rate'.ljust(30) + 'Energy'.ljust(30) + 'Latency'.ljust(30) + 'Deflect_rate'.ljust(30) + 'Throughput'.ljust(30) + '\n\n'
+	output_str = output_str + 'BLESS'.ljust(10) + 'MBNoC'.ljust(10) + 'MBNoC4'.ljust(10) + 'BLESS'.ljust(10) + 'MBNoC'.ljust(10) + 'MBNoC4'.ljust(10) + 'BLESS'.ljust(10) + 'MBNoC'.ljust(10) + 'MBNoC4'.ljust(10) + 'BLESS'.ljust(10) + 'MBNoC'.ljust(10) + 'MBNoC4'.ljust(10) + 'BLESS'.ljust(10) + 'MBNoC'.ljust(10) + 'MBNoC4'.ljust(10) + '\n'	
+	for i in range (0, len(stat[0])):
+		for j in range (0, len(stat)):
+			if i < len(stat[j]):
+				output_str = output_str + str(stat[j][i]).ljust(10)
+			else:
+				output_str = output_str + '0.00'.ljust(10)
+		output_str = output_str + '\n'
+	output_str = output_str + '********* Based on %u data points ************' % len(stat[0])
+	print output_str
 
 
 
