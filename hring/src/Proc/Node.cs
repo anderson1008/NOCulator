@@ -45,6 +45,7 @@ namespace ICSimulator
 
         private IPrioPktPool m_inj_pool;
         private Queue<Flit> m_injQueue_flit, m_injQueue_evict;
+		private Queue<Flit> [] m_injQueue_multi_flit;
         public Queue<Packet> m_local;
 
         public int RequestQueueLen { get { return m_inj_pool.FlitCount + m_injQueue_flit.Count; } }
@@ -70,6 +71,9 @@ namespace ICSimulator
             Simulator.controller.setInjPool(m_coord.ID, m_inj_pool);
             m_injQueue_flit = new Queue<Flit>();
             m_injQueue_evict = new Queue<Flit>();
+			m_injQueue_multi_flit = new Queue<Flit> [Config.sub_net];
+			for (int i=0; i<Config.sub_net; i++)
+				m_injQueue_multi_flit[i] = new Queue<Flit> ();
             m_local = new Queue<Packet>();
 
             m_rxbuf_naive = new RxBufNaive(this,
@@ -82,8 +86,56 @@ namespace ICSimulator
             m_router = r;
         }
 
+
+		
+		void synthGen(double rate)
+		{
+			if (Simulator.rand.NextDouble() < rate)
+			{
+				if (m_inj_pool.Count > Config.synthQueueLimit)
+					Simulator.stats.synth_queue_limit_drop.Add();
+				else
+				{
+					int dest = m_coord.ID;
+					Coord c = new Coord(dest);
+					switch (Config.synthPattern) {
+						case SynthTrafficPattern.UR:
+						dest = Simulator.rand.Next(Config.N);
+						c = new Coord(dest);
+						break;
+						case SynthTrafficPattern.BC:
+						dest = ~dest & (Config.N - 1);
+						c = new Coord(dest);
+						break;
+						case SynthTrafficPattern.TR:
+						c = new Coord(m_coord.y, m_coord.x);
+						break;
+					}
+					int packet_size;
+					if (Config.uniform_size_enable == true) 
+						if (Config.topology == Topology.Mesh_Multi)
+							packet_size = Config.uniform_size * Config.sub_net;
+						else
+							packet_size = Config.uniform_size;
+					else
+					{
+						if (Simulator.rand.NextDouble() < 0.5) packet_size = Config.router.addrPacketSize;
+						else  packet_size = Config.router.dataPacketSize;
+					}
+					Packet p = new Packet(null,0,packet_size,m_coord, c);
+					queuePacket(p);
+				}
+			}
+		}
+
         public void doStep()
         {
+
+			if (Config.synthGen)
+			{
+				synthGen(Config.synth_rate);
+			}
+
             while (m_local.Count > 0 &&
                     m_local.Peek().creationTime < Simulator.CurrentRound)
             {
@@ -106,48 +158,91 @@ namespace ICSimulator
             }
 			else // By Xiyue: Actual injection into network
             {
-                Packet p = m_inj_pool.next(); 
-                if (p != null)
-                {
-                    foreach (Flit f in p.flits)
-                        m_injQueue_flit.Enqueue(f);
-                }
+                Packet p = m_inj_pool.next();
 
-				if (m_injQueue_evict.Count > 0 && m_router.canInjectFlit(m_injQueue_evict.Peek())) // By Xiyue: ??? What is m_injQueue_evict ?
-                {
-                    Flit f = m_injQueue_evict.Dequeue();
-                    m_router.InjectFlit(f);
-                }
-				else if (m_injQueue_flit.Count > 0 && m_router.canInjectFlit(m_injQueue_flit.Peek())) // By Xiyue: ??? Dif from m_injQueue_evict?
-                {
-                    Flit f = m_injQueue_flit.Dequeue();
-#if PACKETDUMP
-                    if (f.flitNr == 0)
-                        if (m_coord.ID == 0)
-                            Console.WriteLine("start to inject packet {0} at node {1} (cyc {2})",
-                                f.packet, coord, Simulator.CurrentRound);
-#endif
+				if (Config.topology == Topology.Mesh_Multi) {
+					// serialize packet to flit and select a subnetwork
+					// assume infinite NI buffer
+					int selected = -1;
+					selected = Simulator.rand.Next(Config.sub_net);
 
-                    m_router.InjectFlit(f);  // by Xiyue: inject into a router
+					if (p != null && p.creationTime <= Simulator.CurrentRound)
+						foreach (Flit f in p.flits)
+							m_injQueue_multi_flit[selected].Enqueue(f);
 
-					// For MBNoC, inject multiple flits if possible. 
-					if (Config.topology == Topology.Mesh_Multi)
-						for (int i = 0 ; i < Config.sub_net - 1; i++)
-							if (m_injQueue_flit.Count > 0 && m_router.canInjectFlit(m_injQueue_flit.Peek()))
+					//int load = Simulator.stats.inject_flit.Count / Config.N / Simulator.CurrentRound / Config.sub_net;
+					/*
+					int inject_trial = 0;
+					int [] inject_trial_subnet;
+					inject_trial_subnet = new int[Config.sub_net];
+					for (int i = 0 ; i < Config.sub_net; i++)
+						inject_trial_subnet [i] = 0;
+					*/
+
+					for (int i = 0 ; i < Config.sub_net; i++)
+					{
+						if (m_injQueue_multi_flit[i].Count > 0 && m_router.canInjectFlitMultNet(i, m_injQueue_multi_flit[i].Peek()))
 						{
-							f = m_injQueue_flit.Dequeue();
-							m_router.InjectFlit(f);
+							Flit f = m_injQueue_multi_flit[i].Dequeue();
+							m_router.InjectFlitMultNet(i, f);
+							//inject_trial_subnet [i] ++;
 						}
+						/*
+						else if (m_injQueue_multi_flit[i].Count == 0)
+						{
+							// randomly pick a non-empty inject queue, cannot be itself, and each subnet cannot inject more than twice
+							selected = Simulator.rand.Next(Config.sub_net);
+							int find_trial = 0; // only loop 8 times to ensure not stuck there forever.
+							while ((selected == i || m_injQueue_multi_flit[selected].Count == 0 || inject_trial_subnet [selected] >= 2) && (find_trial < 8))
+							{
+								find_trial ++;
+								selected = Simulator.rand.Next(Config.sub_net);
+							}
+							if (m_injQueue_multi_flit[selected].Count > 0 && m_router.canInjectFlitMultNet(i, m_injQueue_multi_flit[selected].Peek()))
+							{
+								Flit f = m_injQueue_multi_flit[selected].Dequeue();
+								m_router.InjectFlitMultNet(i, f);
+								inject_trial_subnet [selected] ++;
+							}
 
+						}*/
+					}
+				}
+				else
+				{
 
-                    // for Ring based Network, inject two flits if possible
-                    for (int i = 0 ; i < Config.RingInjectTrial - 1; i++)
-						if (m_injQueue_flit.Count > 0 && m_router.canInjectFlit(m_injQueue_flit.Peek()))
-    	                {
-        	            	f = m_injQueue_flit.Dequeue();
-            	        	m_router.InjectFlit(f);
-                	    }
-                }
+	                if (p != null)
+	                {
+	                    foreach (Flit f in p.flits)
+	                        m_injQueue_flit.Enqueue(f);
+	                }
+
+					if (m_injQueue_evict.Count > 0 && m_router.canInjectFlit(m_injQueue_evict.Peek())) // By Xiyue: ??? What is m_injQueue_evict ?
+	                {
+	                    Flit f = m_injQueue_evict.Dequeue();
+	                    m_router.InjectFlit(f);
+	                }
+					else if (m_injQueue_flit.Count > 0 && m_router.canInjectFlit(m_injQueue_flit.Peek())) // By Xiyue: ??? Dif from m_injQueue_evict?
+	                {
+	                    Flit f = m_injQueue_flit.Dequeue();
+	#if PACKETDUMP
+	                    if (f.flitNr == 0)
+	                        if (m_coord.ID == 0)
+	                            Console.WriteLine("start to inject packet {0} at node {1} (cyc {2})",
+	                                f.packet, coord, Simulator.CurrentRound);
+	#endif
+
+	                    m_router.InjectFlit(f);  // by Xiyue: inject into a router
+
+	                    // for Ring based Network, inject two flits if possible
+	                    for (int i = 0 ; i < Config.RingInjectTrial - 1; i++)
+							if (m_injQueue_flit.Count > 0 && m_router.canInjectFlit(m_injQueue_flit.Peek()))
+	    	                {
+	        	            	f = m_injQueue_flit.Dequeue();
+	            	        	m_router.InjectFlit(f);
+	                	    }
+	                }
+				}
             }
         }
 

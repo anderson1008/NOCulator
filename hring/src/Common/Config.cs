@@ -79,6 +79,13 @@ namespace ICSimulator
         EQUAL_PER,
         DELTA
     }
+
+	public enum SynthTrafficPattern
+	{
+		UR,
+		BC,
+		TR
+	}
 	
     public enum Topology
     {
@@ -124,15 +131,22 @@ namespace ICSimulator
 		public static double thrt_sweep = 0.1;
 
 
+
 		// For MBNoC
 		public static int sub_net = 2;
 		public static int num_bypass = 1; // not include local; 
 		public static bool bypass_enable = true;
+		public static bool bridge_subnet = true;
 		public static bool partial_sort = true;
 		public static bool randomize_defl = false; // false: static deflection; true: randomized deflection
-		public static bool subnet_sel_rand = true;
+		public static bool subnet_sel_rand = false;
 		public static ulong subnet_reset_period = 500;
-
+		public static bool synthGen = false;
+		public static double synth_rate = 0.5;
+		public static int synthQueueLimit = 1000;
+		public static bool uniform_size_enable = true;
+		public static int uniform_size = 1;
+		public static SynthTrafficPattern synthPattern = SynthTrafficPattern.UR;
 		// end Xiyue
 
         // ----
@@ -315,7 +329,7 @@ namespace ICSimulator
 
         // ---- synth traces
         public static double synth_reads_fraction = 0.8;
-        public static double synth_rate = 0.01;
+        //public static double synth_rate = 0.005;
 		public static bool bSynthBitComplement = false;
 		public static bool bSynthTranspose = false;
 		public static bool bSynthHotspot = false;

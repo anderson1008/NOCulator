@@ -9,6 +9,8 @@ import string
 def collect (sim_index, node, file_dir, insns_count):	
 	# Collect desired metrics from the raw output file obtained through simulation.
 	# return stat_out which is a dictionary including all desired metrics.
+	if not os.path.exists(file_dir):
+		os.makedirs(file_dir)
 	file_out = "sim_" + str(sim_index) + ".out"
 	found = False
 	for file in os.listdir(file_dir):
@@ -34,11 +36,20 @@ def collect (sim_index, node, file_dir, insns_count):
 			ipc = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 		elif node == 256:
 			ipc = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+		core_disable = False
 		for i in range (0, node, 1):
-			ipc[i] = float(insns_count) / int(active_cycles[i])
-			sum_active_cycle = sum_active_cycle + int(active_cycles[i])
+			if int(active_cycles[i]) > 0:
+				ipc[i] = float(insns_count) / int(active_cycles[i])
+				sum_active_cycle = sum_active_cycle + int(active_cycles[i])
+			else:
+				core_disable = True
+
+		if core_disable is False:						
 			avg_time = sum_active_cycle / node
-	
+		else:
+			searchObj = re.search(r'simulation cycles: (.*)',content)
+			avg_time = float(searchObj.group(1))			 
+
 		searchObj = re.search(r'packet net latency: (.*?) | [.*]',content)
 		pkt_net_latency = searchObj.group(1)
 
@@ -54,7 +65,7 @@ def collect (sim_index, node, file_dir, insns_count):
 		searchObj = re.search(r'permute: (.*?)\n',content)
 		permute = searchObj.group(1)
 
-		searchObj = re.search(r'traversal: (.*?) \(unproductive traversal (.*?%)\)',content) # unproducive traversal in the original stat = deflection rate; it is corrected in the latest version.
+		searchObj = re.search(r'traversal: (.*?) \((.*?) (.*?%)\)',content) # unproducive traversal in the original stat = deflection rate; it is corrected in the latest version.
 		traversal = searchObj.group(1)
 		deflection_rate = searchObj.group(2)
 

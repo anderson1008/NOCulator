@@ -99,40 +99,108 @@ def print_for_plot (stat):
 	print output_str
 	return output_str
 
-def print_synth (stat):
+def print_synth (stat, design):
 	traffic = str(stat.pop(0))
 	network = str(stat.pop(0))
-	output_str = '\n\n#############    ' + "Traffic = " + traffic.ljust(20) + "Network = " + network.ljust(20) + '   ################\n\n'
-	output_str = output_str + 'Inject_rate'.ljust(20) + 'Energy'.ljust(20) + 'Latency'.ljust(20) + 'Deflect_rate'.ljust(20) + 'Throughput'.ljust(20) + '\n\n'
-	output_str = output_str + 'BLESS'.ljust(10) + 'MBNoC'.ljust(10) + 'BLESS'.ljust(10) + 'MBNoC'.ljust(10) + 'BLESS'.ljust(10) + 'MBNoC'.ljust(10) + 'BLESS'.ljust(10) + 'MBNoC'.ljust(10) + 'BLESS'.ljust(10) + 'MBNoC'.ljust(10) + '\n'
-	for i in range (0, len(stat[0])):
+	#output_str = '\n\n#############    ' + "Traffic = " + traffic.ljust(20) + "Network = " + network.ljust(20) + '   ################\n\n'
+	#output_str = output_str + 'Inject_rate'.ljust(20) + 'Energy'.ljust(20) + 'Latency'.ljust(20) + 'Deflect_rate'.ljust(20) + 'Throughput'.ljust(20) + '\n\n'
+	#output_str = output_str + 'BLESS'.ljust(10) + 'MBNoC'.ljust(10) + 'BLESS'.ljust(10) + 'MBNoC'.ljust(10) + 'BLESS'.ljust(10) + 'MBNoC'.ljust(10) + 'BLESS'.ljust(10) + 'MBNoC'.ljust(10) + 'BLESS'.ljust(10) + 'MBNoC'.ljust(10) + '\n'
+
+	output_str = '\n\n#############    ' + 'Traffic = ' + traffic.ljust(20) + 'Network = ' + network.ljust(20) + '   ################\n\n'
+	type_stat = len(stat) / len(design)
+	#for i in range (0, type_stat):
+	space = (len(design)+1)*10
+	output_str = output_str + 'Energy'.ljust(space) + 'Latency'.ljust(space) +  'Throughput'.ljust(space) + 'Deflect_rate'.ljust(space) + '\n\n'
+
+	for i in range (1, 80, 1):
+		load = "{:.2f}".format(float(i)/100)
 		for j in range (0, len(stat)):
-			output_str = output_str + str(stat[j][i]).ljust(10)
+			if j % len(design) is 0:
+				output_str = output_str + load.ljust(10)
+			if load in stat[j]:
+				output_str = output_str + str(stat[j][load]).ljust(10)
+			else:
+				output_str = output_str + '-'.ljust(10)
 		output_str = output_str + '\n'
+
+	#for i in range (0, len(stat[0])):
+	#	for j in range (0, len(stat)):
+	#		output_str = output_str + str(stat[j][i]).ljust(10)
+	#	output_str = output_str + '\n'
 	output_str = output_str + '********* Based on %u data points ************' % len(stat[0])
 	print output_str
 		
-def print_synth_varied_subnet (stat):
+def print_synth_wrt_load (stat, design):
 	traffic = str(stat.pop(0))
 	network = str(stat.pop(0))
-	output_str = '\n\n#############    ' + "Traffic = " + traffic.ljust(20) + "Network = " + network.ljust(20) + '   ################\n\n'
-	output_str = output_str + 'Inject_rate'.ljust(30) + 'Energy'.ljust(30) + 'Latency'.ljust(30) + 'Deflect_rate'.ljust(30) + 'Throughput'.ljust(30) + '\n\n'
-	output_str = output_str + 'BLESS'.ljust(10) + 'MBNoC'.ljust(10) + 'MBNoC4'.ljust(10) + 'BLESS'.ljust(10) + 'MBNoC'.ljust(10) + 'MBNoC4'.ljust(10) + 'BLESS'.ljust(10) + 'MBNoC'.ljust(10) + 'MBNoC4'.ljust(10) + 'BLESS'.ljust(10) + 'MBNoC'.ljust(10) + 'MBNoC4'.ljust(10) + 'BLESS'.ljust(10) + 'MBNoC'.ljust(10) + 'MBNoC4'.ljust(10) + '\n'	
-	for i in range (0, len(stat[0])):
+
+	output_str = '\n\n#############    ' + 'Traffic = ' + traffic.ljust(20) + 'Network = ' + network.ljust(20) + '   ################\n\n'
+	type_stat = len(stat) / len(design)
+	#for i in range (0, type_stat):
+	space = (len(design)+1)*10
+	output_str = output_str + 'Latency'.ljust(space) +  'Throughput'.ljust(space) + 'Deflect_rate'.ljust(space) + '\n\n'
+
+	for i in range (0, type_stat):
+	 	output_str = output_str + 'InjRate'.ljust(10)
+		for element in design:
+			output_str = output_str + element.ljust(10)
+	output_str = output_str + '\n'	
+
+	for i in range (1, 80, 1):
+		load = "{:.2f}".format(float(i)/100)	
 		for j in range (0, len(stat)):
-			if i < len(stat[j]):
-				output_str = output_str + str(stat[j][i]).ljust(10)
+			if j % len(design) is 0:
+				output_str = output_str + load.ljust(10)
+			if load in stat[j]:
+				output_str = output_str + str(stat[j][load]).ljust(10)
 			else:
-				output_str = output_str + '0.00'.ljust(10)
+				output_str = output_str + '-'.ljust(10)
 		output_str = output_str + '\n'
+			
 	output_str = output_str + '********* Based on %u data points ************' % len(stat[0])
 	print output_str
 
 
+def print_synth_avg_reduction (stat, design):
+	output_str = ''
+	for element in design:
+		output_str = output_str + element.ljust(10)
+	baseline = stat[0]
+	output_str = output_str + '\n' + '1'.ljust(10)
+	stat.pop(0)
+	for element in stat:
+		reduction = ''
+		if baseline > 0: reduction = "{:.2f}".format((baseline - element) / baseline)
+		output_str = output_str + reduction.ljust(10)
+	output_str = output_str + '\n'
+	print output_str
 
 
 
+def print_synth_avg_gain (stat, design):
+	output_str = ''
+	for element in design:
+		output_str = output_str + element.ljust(10)
+	baseline = stat[0]
+	output_str = output_str + '\n' + '1'.ljust(10)
+	stat.pop(0)
+	for element in stat:
+		reduction = ''
+		if baseline > 0: reduction = "{:.2f}".format((element - baseline) / baseline)
+		output_str = output_str + reduction.ljust(10)
+	output_str = output_str + '\n'
+	print output_str
 
+def print_final (stat, design):
+	output_str = ''
+	for element in design:
+		output_str = output_str + element.ljust(10)
+	output_str = output_str + '\n'
+	for element in stat:
+		output_str = output_str + "{:.2f}".format(float(element)).ljust(10)
+
+	output_str = output_str + '\n'
+	print output_str
 
 
 

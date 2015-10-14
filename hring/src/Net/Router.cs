@@ -94,7 +94,8 @@ namespace ICSimulator
 		public virtual void Scalable_doStep() {return;}
         public abstract bool canInjectFlit(Flit f); // called from Processor
         public abstract void InjectFlit(Flit f); // called from Processor
-
+		public virtual void InjectFlitMultNet(int subnet, Flit f) {} // For multiple networks
+		public virtual bool canInjectFlitMultNet(int subnet, Flit f) { return false; }
         public virtual int rank(Flit f1, Flit f2) { return 0; }
 
         // finally, subclasses should call myProcessor.ejectFlit() whenever a flit
@@ -371,7 +372,7 @@ namespace ICSimulator
                         if (linkOut[i].In.packet != null)
                         {
                             Simulator.stats.deflect_flit_bysrc[linkOut[i].In.packet.src.ID].Add();
-                            Simulator.stats.deflect_flit_byreq[linkOut[i].In.packet.requesterID].Add();
+                            //Simulator.stats.deflect_flit_byreq[linkOut[i].In.packet.requesterID].Add();
                         }
                     }
 
@@ -517,8 +518,8 @@ namespace ICSimulator
 
             //f.dumpDeflections();
             Simulator.stats.deflect_perdist[f.distance].Add(f.nrOfDeflections);
-            if(f.nrOfDeflections!=0)
-                Simulator.stats.deflect_perflit_byreq[f.packet.requesterID].Add(f.nrOfDeflections);
+            //if(f.nrOfDeflections!=0)
+//                Simulator.stats.deflect_perflit_byreq[f.packet.requesterID].Add(f.nrOfDeflections);
         }
 
         protected void statsEjectPacket(Packet p)

@@ -14,6 +14,7 @@ namespace ICSimulator
 		public AccumStat[] active_cycles;
 		public SampledStat netutil;
 		public SampledStat net_latency, total_latency;
+		public AccumStat synth_queue_limit_drop;
 		public SampledStat flit_inj_latency, flit_net_latency, flit_total_latency;
 		public SampledStat[] net_latency_bysrc, total_latency_bysrc;
 		public SampledStat[] net_latency_bydest, total_latency_bydest;

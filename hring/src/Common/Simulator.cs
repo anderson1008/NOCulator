@@ -164,6 +164,8 @@ namespace ICSimulator
 				Router.livelockFreedom();
             controller.doStep();
 
+			//if (Config.synthGen)
+			//	return Simulator.stats.re
             return !network.isFinished() && (Config.ignore_livelock || !network.isLivelocked());
         }
 

@@ -300,7 +300,7 @@ for i in traffic:
 			print "Deflection rate reduce by %.2f%%" % (avg_reduce_deflect*100)
 			#avg_gain_throughput = average_gain(throughput_mbnoc, inject_rate_mbnoc, throughput_bless, inject_rate_bless)
 			avg_gain_throughput = extract_delta(throughput_bless, throughput_mbnoc)
-			print "Improve throughput by %.2f%%" % (-avg_gain_throughput*100)
+			print "Improve throughput by %.2f%%" % (avg_gain_throughput*100)
 
 
 

@@ -125,7 +125,8 @@ namespace ICSimulator
 				}
 
 				// connect the subrouters
-				if (Config.bypass_enable)
+
+				if (Config.bypass_enable && Config.bridge_subnet)
 					for (int pi = 0; pi < Config.num_bypass; pi++)
 						for (int m = 0; m < Config.sub_net; m++)
 						{
@@ -133,13 +134,27 @@ namespace ICSimulator
 							links.Add(bypass);
 							_routers[n].subrouter[m].bypassLinkOut[pi] = bypass;
 							_routers[n].subrouter[(m+1)%Config.sub_net].bypassLinkIn[pi] = bypass;
-							_routers [n].subrouter [m].neighbors++;
-							_routers [n].subrouter [m].neigh [pi] = _routers [n].subrouter [(m+1)%Config.sub_net];
+							_routers [n].subrouter[m].neighbors++;
+							//_routers [n].subrouter [m].neigh [pi] = _routers [n].subrouter [(m+1)%Config.sub_net];
 						}
-					
+
 				
 			}
-			// TORUS: be careful about the number of neighbors, which is based on if bypass is enabled.
+
+			if (Config.bypass_enable == true && Config.bridge_subnet == false)
+				for (int i = 0; i < Config.sub_net; i++)
+					for (int k = 0; k < Config.network_nrY; k++)
+						for (int j = 0; j < Config.network_nrX; j++)
+					{
+						Link bypass = new Link(0);
+						links.Add(bypass);
+						_routers[k * Config.network_nrX+j%Config.network_nrX].subrouter[i].bypassLinkOut[0] = bypass;
+						_routers[k * Config.network_nrX+(j+1)%Config.network_nrX].subrouter[i].bypassLinkIn[0] = bypass;
+						_routers[k * Config.network_nrX+j%Config.network_nrX].subrouter [i].neighbors++;
+					}
+
+
+			// TORUS: be careful about the number of neighbors, which is based on if bypass is enabled. NOT tested.
 			if (Config.torus)
 				for (int i = 0; i < Config.N; i++)
 					for (int j = 0; j < Config.sub_net; j++)

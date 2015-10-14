@@ -31,6 +31,18 @@ namespace ICSimulator
 		}
 
 
+		public override bool canInjectFlitMultNet (int subnet, Flit f)
+		{
+			return subrouter [subnet].canInjectFlit (f);
+		}
+
+		public override void InjectFlitMultNet (int subnet, Flit f)
+		{	
+			subrouter [subnet].InjectFlit (f);
+			Simulator.stats.subnet_util[subnet].Add();
+			
+		}
+
 		// if more than one subrouter can inject, select one randomly
 		// or inject to the available one.
 		// Otherwise throttle the injection.
@@ -87,7 +99,7 @@ namespace ICSimulator
 
 		}
 
-		public MultiMeshRouter (Coord c)
+		public MultiMeshRouter (Coord c):base(c)
 		{
 			for (int i=0; i<Config.sub_net; i++) 
 			{
@@ -377,7 +389,8 @@ namespace ICSimulator
 			if (outCount != 0) throw new Exception("Unexpected flit on output!");
 
 			bool wantToInject = m_injectSlot2 != null || m_injectSlot != null;
-			bool canInject = (c + outCount) < neighbors;
+			//bool canInject = (c + outCount) < (neighbors - 1); // conservative inject: # of input < # of port - 1 -> prevent making network more congested.
+			bool canInject = (c + outCount) < neighbors;  // aggressive inject: as long as # of input < # of port
 			bool starved = wantToInject && !canInject;
 
 			if (starved)

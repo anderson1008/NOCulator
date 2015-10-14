@@ -25,6 +25,7 @@ file_dir_mbnoc = ''
 mbnoc_clk_period = 1.18*10**(-9)
 bless_clk_period = 1.44*10**(-9)
 clk_scale_factor = bless_clk_period / mbnoc_clk_period
+#clk_scale_factor = 1
 static_mbnoc = [206.58, 10.21, 1.92, 0.75, 93.14, 21.4, 20.73, 30.5]
 static_bless = [306.87, 17.17, 2.69, 0.75, 159.36, 0.0, 50.58, 61.0]
 switch_mbnoc = [3227.2, 14.53, 49.32, 12.13, 1971.7, 404.17, 902.81] # no link
@@ -132,7 +133,7 @@ def evaluation():
 		stat_mbnoc = collect_stat.collect(sim_index, node, file_dir_mbnoc, insns_count)
 
 		if (stat_bless == None or stat_mbnoc == None):
-			continue			
+			continue
 	
 		## comupte weighted speedup
 		effective_count = effective_count + 1
