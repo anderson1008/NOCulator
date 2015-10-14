@@ -5,7 +5,7 @@
 1. To collect results for SPEC simualtion, run final_eval.py.
 
 2. To collect results for synthetic simulation, run final_eval_synth.py
-	# if want to compare BLESS, MBNoC, and MBNoC4, set "varied_subnet" to true
+	# if want to compare varied subnets, set "varied_subnet" to true
 
 
 ********************* For simulation *************************
@@ -14,7 +14,7 @@
 	# DESIGN = {BLESS, MBNoC}
 	# SIZE = {4x4, 8x8, 16x16}
 4. Run sim_DESIGN_synth.py to simulate synthetic traces in DESIGN.
-	# DESIGN = {BLESS, MBNoC, MBNoC4}
+	# DESIGN = {BLESS, MBNoC1, MBNoC, MBNoC3, MBNoC4}
 
 ******************* Other files ***********************
 collect_stat.py: basic module to extract metrics of interest from EACH simulation output file.
