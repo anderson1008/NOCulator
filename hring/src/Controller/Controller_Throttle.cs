@@ -53,10 +53,34 @@ namespace ICSimulator
 
 		public static ulong [] app_rank = new ulong[Config.N];
 
+		public void ranking_app_global ()
+		{
+			ulong[] app_index = new ulong[Config.N]; // construct a one-dimensional array, indicating the application ID
+			double[] app_slowdown = new double[Config.N];
+			for (int i = 0; i < Config.N; i++) 
+			{
+				Simulator.stats.app_rank [i].EndPeriod();
+				app_index [i] = (ulong)i;
+				app_slowdown [i] = Simulator.stats.etimated_slowdown [i].LastPeriodValue;
+			}
+
+			Array.Sort (app_slowdown, app_index);
+			for (int i = 0; i < Config.N; i++)
+			{
+				int temp_reverse_rank = Array.IndexOf (app_index, (ulong)i);
+				//app_rank [i] = (ulong)((temp_reverse_rank+Config.N-1) % Config.N);
+				app_rank [i] = (ulong)temp_reverse_rank;
+
+				Simulator.stats.app_rank [i].Add(app_rank [i]);
+
+			}
+		}
 
 		public void ranking_app (int node)
 		{
 			double slowdown = Simulator.stats.etimated_slowdown [node].Count;
+			Simulator.stats.app_rank [node].EndPeriod();
+
 
 			if (slowdown <= 1.2)
 				app_rank [node] = 1;
@@ -83,7 +107,10 @@ namespace ICSimulator
 			else
 				app_rank [node] = 12;
 
-			//Console.WriteLine ("Core {0} Rank is {1}.", node, app_rank[node]);
+			Simulator.stats.app_rank [node].Add ((float)app_rank[node]);
+
+
+			//Console.  ("Core {0} Rank is {1}.", node, app_rank[node]);
 		}
 
 
@@ -170,11 +197,14 @@ namespace ICSimulator
 			bool need_slowdown_qos = true;
 			// update slowdown info periodically here.
 
-			for (int i = 0; i < Config.N; i++) 
-			{
-				insns_current = Simulator.stats.insns_persrc_period[i].Count;
-				if (insns_current > 0 && insns_current >= Config.slowdown_epoch )
+			if (Simulator.CurrentRound > 0 && Simulator.CurrentRound % Config.slowdown_epoch == 0) {
+
+
+				for (int i = 0; i < Config.N; i++) 
 				{
+					insns_current = Simulator.stats.insns_persrc_period[i].Count;
+					//if (insns_current > 0 && insns_current >= Config.slowdown_epoch )
+					//{
 					need_slowdown_qos = globalSlowdown ();
 					ulong penalty_cycle = (ulong)Simulator.stats.non_overlap_penalty_period [i].Count;
 					estimated_slowdown_period = (double)(Simulator.CurrentRound-m_lastCheckPoint [i])/(Simulator.CurrentRound-m_lastCheckPoint [i]-penalty_cycle);
@@ -186,7 +216,7 @@ namespace ICSimulator
 					Simulator.stats.etimated_slowdown [i].Add (estimated_slowdown);
 
 					m_lastCheckPoint [i] = Simulator.CurrentRound;
-					ranking_app (i);
+					//ranking_app (i);
 					insns_ewma = Simulator.stats.insns_persrc_ewma [i].ExpWhtMvAvg (); // predict performance in next epoch
 
 
@@ -233,8 +263,18 @@ namespace ICSimulator
 					Simulator.stats.insns_persrc_period [i].EndPeriod ();
 					Simulator.stats.non_overlap_penalty_period [i].EndPeriod ();
 					Simulator.stats.causeIntf [i].EndPeriod ();
+					//}
 				}
+
+
+				ranking_app_global ();
+
+
 			}
+
+
+
+
 
 
 

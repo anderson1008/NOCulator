@@ -105,7 +105,7 @@ namespace ICSimulator
 
 		// ----
 		// By Xiyue
-		public static double slowdown_epoch = 100000;
+		public static double slowdown_epoch = 10000;
 		public static double ref_ipc = 1;
 		public static double[] target_slowdown = new double[16] {1.2, 1.5, 1.5, 1.5, 1.2, 1.5, 1.5, 1.5, 1.2, 1.5, 1.5, 1.5, 1.2, 1.5, 1.5, 1.5};
 		public static double throt_min = 0.5;  // share with Sigcomm paper
@@ -595,7 +595,8 @@ namespace ICSimulator
         public void readConfig(string filename)
         {
             Char[] delims = new Char[] { '=' }; //took out ' ' for better listing capabilities
-            StreamReader configReader = File.OpenText(filename);
+
+			StreamReader configReader = File.OpenText(filename);
 
             if (configReader == null)
                 return;

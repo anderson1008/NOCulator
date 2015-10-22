@@ -409,8 +409,8 @@ namespace ICSimulator
 				f1_batch_dist =  (ulong)Math.Abs((int)current_batch - (int)f1.packet.batchID) % Config.STC_batchCount;
 				f2_batch_dist =  (ulong)Math.Abs((int)current_batch - (int)f2.packet.batchID) % Config.STC_batchCount;
 
-				c0 = -f1_critical.CompareTo (f2_critical);
-				c1 = -f1_batch_dist.CompareTo (f2_batch_dist);
+				//c0 = -f1_critical.CompareTo (f2_critical);
+				//c1 = -f1_batch_dist.CompareTo (f2_batch_dist);
 				c2 = -f1.packet.rank.CompareTo(f2.packet.rank); 
 				c3 = f1.packet.ID.CompareTo(f2.packet.ID);
 				c4 = f1.flitNr.CompareTo(f2.flitNr);

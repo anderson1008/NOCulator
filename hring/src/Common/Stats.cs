@@ -12,6 +12,7 @@ namespace ICSimulator
 		//public SampledStat[] avg_slowdown_error;
 		public PeriodicAccumStat[] etimated_slowdown;
 		public PeriodicAccumStat[] etimated_slowdown_period;
+		public PeriodicAccumStat[] app_rank; 
 
 		//public PeriodicAccumStat[] actual_slowdown;
 		public AccumStat[] active_cycles;
@@ -1090,7 +1091,7 @@ namespace ICSimulator
 		public double LastPeriodValue
 		{
 			get{
-				if (history.Count > 1)
+				if (history.Count >= 1)
 					return history [history.Count - 1];
 				else
 					return 1;
@@ -1134,9 +1135,25 @@ namespace ICSimulator
         {
 			tw.Write (Environment.NewLine);
             tw.Write("{");
+			foreach (double i in history)
+				tw.Write ("{0},",i);
+			tw.Write ("{0},",m_count);
+
+			/*
             foreach (double i in history)
-                tw.Write("{0},", i);
-            tw.Write("{0}", m_count);
+			{
+				if (i is int || i is ulong)
+					tw.Write ("{0},",i);
+				else if (i is float || i is double)
+                	tw.Write("{0:0.00},", i);
+				else
+					throw new Exception ("Dump type is undefined.");
+			}
+			if (m_count is int || m_count is ulong)
+				tw.Write ("{0},",m_count);
+			else if (m_count is float || m_count is double)
+				tw.Write("{0:0.00}", m_count);
+			*/
 			tw.Write("}");
         }
     }
