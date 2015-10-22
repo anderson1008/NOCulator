@@ -9,7 +9,7 @@ import collect_stat
 import sys
 
 # CHANGE ME
-varied_subnet = False # set it to True while comparing BLESS, MBNOC1-4
+varied_subnet = True # set it to True while comparing BLESS, MBNOC1-4
 
 
 # Each metric of interest is installed as: metric (traffic, design, network)
