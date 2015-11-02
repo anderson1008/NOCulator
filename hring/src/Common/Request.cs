@@ -253,6 +253,7 @@ namespace ICSimulator
 				ulong est_serviceCycle_no_intf = _serviceCycle - _interferenceCycle;
 				ulong actual_intf_cycle;
 
+				// goal: estimate when there is no interference, what is the time for retiring the current instruction
 				if (est_serviceCycle_no_intf < last_retire) {
 					actual_intf_cycle = _serviceCycle - last_retire;
 					intf_cycle = Math.Max (max_intf_cycle, actual_intf_cycle);

@@ -47,11 +47,17 @@ namespace ICSimulator
     }
 
 
+	public enum APP_TYPE {LATENCY_SEN, THROUGHPUT_SEN}; // latency sensitive = non-memory intensive; throughput_sensitive = memory intensive
 
 	public class Controller_QoSThrottle : Controller
 	{
 
 		public static ulong [] app_rank = new ulong[Config.N];
+		public static APP_TYPE [] app_type = new APP_TYPE[Config.N];
+		public static bool [] most_mem_inten = new bool[Config.N];
+
+
+		public static bool enable_qos;
 
 		public void ranking_app_global ()
 		{
@@ -65,14 +71,37 @@ namespace ICSimulator
 			}
 
 			Array.Sort (app_slowdown, app_index);
+
+			if ((app_slowdown[Config.N-1]-app_slowdown[0]) / app_slowdown[0]  > 0.15) enable_qos = true;
+			else enable_qos = false;
+
 			for (int i = 0; i < Config.N; i++)
 			{
 				int temp_reverse_rank = Array.IndexOf (app_index, (ulong)i);
 				//app_rank [i] = (ulong)((temp_reverse_rank+Config.N-1) % Config.N);
 				app_rank [i] = (ulong)temp_reverse_rank;
 
-				Simulator.stats.app_rank [i].Add(app_rank [i]);
+				//Simulator.stats.app_rank [i].Add(app_rank [i]);
 
+			}
+		}
+
+		public void adjust_app_ranking ()
+		{
+			ulong adjust_rank = 0;
+			for (int i = 0; i < Config.N; i++)
+			{
+				if (most_mem_inten[i] == true)
+				{
+					adjust_rank = app_rank[i];
+					break;
+				}
+			}
+
+			for (int i = 0; i < Config.N; i++)
+			{
+				if (app_rank[i] < adjust_rank) app_rank[i] = app_rank[i] + 1;
+				else if (app_rank[i] == app_rank [i]) app_rank [i] = 0;
 			}
 		}
 
@@ -140,7 +169,10 @@ namespace ICSimulator
 					setThrottleRate(i, TH_OFF);
 
 				m_lastCheckPoint[i] = 0;
-				app_rank [i] = 8;
+				app_rank [i] = 0;
+				app_type [i] = APP_TYPE.LATENCY_SEN;
+				most_mem_inten [i] = false;
+				enable_qos = false;
 			}
 		}
 
@@ -197,8 +229,7 @@ namespace ICSimulator
 			bool need_slowdown_qos = true;
 			// update slowdown info periodically here.
 
-			if (Simulator.CurrentRound > 0 && Simulator.CurrentRound % Config.slowdown_epoch == 0) {
-
+			if (Simulator.CurrentRound > (ulong)Config.warmup_cyc && Simulator.CurrentRound % Config.slowdown_epoch == 0 ) {
 
 				for (int i = 0; i < Config.N; i++) 
 				{
@@ -266,23 +297,10 @@ namespace ICSimulator
 					//}
 				}
 
-
 				ranking_app_global ();
 
-
-			}
-
-
-
-
-
-
-
-
-			//record mpki vals every 20k cycles
-			if (Simulator.CurrentRound > (ulong)Config.warmup_cyc &&
-				(Simulator.CurrentRound % (ulong)20000) == 0)
-			{
+				double mpki_max = 0;
+				//record mpki vals every 20k cycles
 				for (int i = 0; i < Config.N; i++)
 				{
 					prev_MPKI[i]=MPKI[i];
@@ -301,16 +319,30 @@ namespace ICSimulator
 
 				double mpki_sum=0;
 				double mpki=0;
+				int jj = 0;
 				for(int i=0;i<Config.N;i++)
 				{
 					mpki=MPKI[i];
 					mpki_sum+=mpki;
+					most_mem_inten[i] = false;
+					if (MPKI[i] > mpki_max) 
+					{
+						mpki_max = MPKI[i];
+						jj = i;
+					}
 					Simulator.stats.mpki_bysrc[i].Add(mpki);
+					// Classify applications
+					if (MPKI[i] >= 40) app_type[i] = APP_TYPE.THROUGHPUT_SEN;
+					else app_type[i] = APP_TYPE.LATENCY_SEN;
 				}
+
 				Simulator.stats.total_sum_mpki.Add(mpki_sum);
+				most_mem_inten[jj] = true;
+				//adjust_app_ranking (); // skip the first epoch
+				for(int i=0;i<Config.N;i++)
+					Simulator.stats.app_rank [i].Add(app_rank [i]);
 			}
-		}			
-				
+		}						
 	}
 
     public class Controller_Throttle : Controller_ClassicBLESS

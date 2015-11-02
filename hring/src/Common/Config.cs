@@ -97,6 +97,7 @@ namespace ICSimulator
             BufRingNetworkMulti
     }
 
+
     public class Config : ConfigGroup
     {
         public static ProcessorConfig proc = new ProcessorConfig();
@@ -105,7 +106,7 @@ namespace ICSimulator
 
 		// ----
 		// By Xiyue
-		public static double slowdown_epoch = 10000;
+		public static double slowdown_epoch = 50000;
 		public static double ref_ipc = 1;
 		public static double[] target_slowdown = new double[16] {1.2, 1.5, 1.5, 1.5, 1.2, 1.5, 1.5, 1.5, 1.2, 1.5, 1.5, 1.5, 1.2, 1.5, 1.5, 1.5};
 		public static double throt_min = 0.5;  // share with Sigcomm paper
@@ -117,9 +118,6 @@ namespace ICSimulator
 		public static ulong STC_batchCount = 8;
 		//public static double default_throttle = 0.9;
 	
-
-
-
 		//public static double[] default_throttle = new double[16] {0.0, 0.9, 0.9, 0.9, 0.85, 0.9, 0.9, 0.9, 0.85, 0.9, 0.9, 0.9, 0.85, 0.9, 0.9, 0.9};
 		public static double ewmv_factor = 0.3; // weight of old value
 		public static double thrt_sweep = 0.1;

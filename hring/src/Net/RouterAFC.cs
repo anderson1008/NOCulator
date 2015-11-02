@@ -344,7 +344,7 @@ namespace ICSimulator
 								requesters [pc] = top;
 								requester_dir [pc] = outdir;
 							} 
-							/*
+							
 							else if (requesters [pc] != null && top.CompareTo (requesters [pc]) > 0) {
 								if (top.flit.packet.requesterID != requesters [pc].flit.packet.requesterID) {
 									if (top.flit.packet.critical) // only log interferenceCycle for critical packet, but still log causeIntf.
@@ -352,7 +352,7 @@ namespace ICSimulator
 
 								}
 							}
-							*/
+
 						}
 				}
                 // find the highest-priority requester for each output, and pop
@@ -391,14 +391,14 @@ namespace ICSimulator
 								top = requesters [req];
 								top_indir = req;
 							}
-							/*
+							
 							else if (top != null && requesters [req].CompareTo (top) > 0) {
 								if (requesters [req].flit.packet.requesterID != top.flit.packet.requesterID) {
 									if (requesters [req].flit.packet.critical)
 										requesters [req].flit.packet.txn.interferenceCycle++;
 								}
 							}
-							*/
+
 
                         }
 					if (outdir == 4)

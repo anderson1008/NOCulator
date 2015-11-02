@@ -1062,7 +1062,7 @@ namespace ICSimulator
 
         public override void DumpJSON(TextWriter tw)
         {
-            tw.Write("{0}", m_count);
+            tw.Write("{0}", Math.Round(m_count,3));
         }
 
         public double Count
@@ -1136,8 +1136,8 @@ namespace ICSimulator
 			tw.Write (Environment.NewLine);
             tw.Write("{");
 			foreach (double i in history)
-				tw.Write ("{0},",i);
-			tw.Write ("{0},",m_count);
+				tw.Write ("{0},",Math.Round(i,3));
+			tw.Write ("{0},",Math.Round(m_count,3));
 
 			/*
             foreach (double i in history)

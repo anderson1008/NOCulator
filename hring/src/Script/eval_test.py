@@ -7,41 +7,93 @@ import fnmatch
 import string
 
 
-# evaluate test.out 
+#ipc_alone = [2.02, 1.85, 1.91, 2.51, 2.02, 1.85, 1.91, 2.51, 2.02, 1.85, 1.91, 2.51, 2.02, 1.85, 1.91, 2.51] # heter_app 1
+ipc_alone = [2.08, 2.16, 1.77, 1.91, 2.08, 2.16, 1.77, 1.91, 2.08, 2.16, 1.77, 1.91, 2.08, 2.16, 1.77, 1.91] # mix_app 1
 
-#work_dir = "/home/anderson/Desktop/NOCulator/hring/src/results/"
-work_dir = "/Users/xiyuexiang/GoogleDrive/NOCulator/hring/src/bin/"
-input_file = input('please input the file name: ' )
-test_file_name = work_dir + input_file
-print input_file
+def get_stat (file_name):
+  result_file = open (file_name, 'r')
+  result = result_file.read()
+  result_file.close()
+  return result
 
-result_file = open (test_file_name, 'r')
-result = result_file.read()
-result_file.close()
+def get_active_cycles (stat):
+  searchObj = re.search(r'(?:"active_cycles":\[(.*?)])',stat)
+  splitObj = re.split('\W+',searchObj.group(1))
+  active_cycles = splitObj
+  return active_cycles
 
-insns_count = 1000000
+def get_insns_persrc (stat):
+  searchObj = re.search(r'(?:"insns_persrc":\[(.*?)])',stat)
+  splitObj = re.split('\W+',searchObj.group(1))
+  insns_persrc = splitObj
+  return insns_persrc
 
-searchObj = re.search(r'(?:"active_cycles":\[(.*?)])',result)
-splitObj = re.split('\W+',searchObj.group(1))
-active_cycles = splitObj
-print active_cycles
+def cmp_ipc (insns_persrc, active_cycle):
+  ipc = []
+  for i,j in zip (insns_persrc, active_cycle):
+    ipc = ipc + [ round (float (i) / float(j),3)]
+  #print ipc
+  return ipc
 
-searchObj = re.search(r'(?:"non_overlap_penalty":\[(.*?)])',result)
-splitObj = re.split('\W+',searchObj.group(1))
-non_overlap_penalty = splitObj
+# compute weighted speedup
+def cmp_ws (ipc_alone, ipc_share):
+  if len(ipc_alone) != len(ipc_share):
+    raise Exception ("not enough ipc element")
+  ws = 0
+  for i,j in zip (ipc_alone, ipc_share):
+    if i == 0:
+      raise Exception ("ipc_alone is 0")
+    ws = ws + j/i
+  return ws
 
-ipc_alone = [2.16, 2.75, 2.08, 1.91, 2.16, 2.75, 2.08, 1.91, 2.16, 2.75, 2.08, 1.91, 2.16, 2.75, 2.08, 1.91]
-ipc_share = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-weighted_speedup = 0
-temp0 = 0
-for i in range (0, 16, 1):
-	ipc_share [i] = float(insns_count) / int(active_cycles[i])
-	weighted_speedup = ipc_share[i] / ipc_alone[i] + weighted_speedup
-	temp0 = ipc_alone[i] / ipc_share[i] + temp0
-harmonic_speedup = 16 / temp0
+#compute harmonic speedup
+def cmp_hs (ipc_alone, ipc_share):
+  if len(ipc_alone) != len(ipc_share):
+    raise Exception ("not enough ipc element")
+  temp = 0
+  for i,j in zip (ipc_alone, ipc_share):
+    if j == 0:
+      raise Exception ("ipc_share is 0")
+    temp = temp + i/j
+  if temp == 0:
+    raise Exception ("temp in cmp_hs() is 0")
+  hs = len (ipc_share) / temp
+  return hs
 
-print str("%.2f" % weighted_speedup)
-print str("%.2f" % harmonic_speedup)
+#compute the actual slowdown
+def cmp_real_sd (ipc_alone, ipc_share):
+  slowdown = []
+  for i,j in zip (ipc_alone, ipc_share):
+    slowdown = slowdown + [round(i/j,3)]
+  print slowdown
+  return slowdown
+
+#compute unfairness
+def cmp_uf (ipc_alone, ipc_share):
+  if len(ipc_alone) != len(ipc_share):
+    raise Exception ("not enough ipc element")
+  slowdown = cmp_real_sd(ipc_alone, ipc_share)
+  unfairness = max (slowdown)
+  return unfairness
+
+#work_dir = "/Users/xiyuexiang/GoogleDrive/NOCulator/hring/src/"
+dir_canpc = "/home/anderson/Desktop/NOCulator/hring/src/"
+work_dir = dir_canpc
+
+input_file = input('please input file_shared name: ' )
+test_file_name = work_dir + str(input_file)
+stat_shared = get_stat (test_file_name)
+act_t_shared = get_active_cycles(stat_shared)
+insns_shared = get_insns_persrc(stat_shared)
+ipc_shared = cmp_ipc (insns_shared, act_t_shared)
+
+ws = cmp_ws (ipc_alone, ipc_shared)
+hs = cmp_hs (ipc_alone, ipc_shared)
+uf = cmp_uf (ipc_alone, ipc_shared)
+
+print "Weighted Speedup = " + str("%.2f" % ws)
+print "Harmonic Speedup = " + str("%.2f" % hs)
+print "Unfairness = " + str("%.2f" % uf)
 			
 
 	

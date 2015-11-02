@@ -398,7 +398,7 @@ namespace ICSimulator
 			ulong f1_batch_dist, f2_batch_dist;
 			ulong current_batch = (Simulator.CurrentRound / Config.STC_batchPeriod) % Config.STC_batchCount;
 
-			int c0 = 0, c1 = 0, c2 = 0, c3 = 0, c4 = 0;
+			int c0 = 0, c1 = 0, c2 = 0, c3 = 0, c4 = 0, c5 = 0, c6 = 0, c7 = 0, c8 = 0;
 
 			if (f1.packet != null && f2.packet != null)
 			{
@@ -406,23 +406,44 @@ namespace ICSimulator
 				int f1_critical = (f1.packet.critical) ? 1 : -1;
 				int f2_critical = (f2.packet.critical) ? 1 : -1;
 
+				// higher rank number means slower.
+
+				if (((int)f1.packet.rank == Config.N-1) && ((int)f2.packet.rank == 0) && Controller_QoSThrottle.enable_qos) c5 = -1;
+				else if (((int)f1.packet.rank == 0) && ((int)f2.packet.rank == Config.N-1) && Controller_QoSThrottle.enable_qos) c5 = 1;
+				else c5 = 0;
+
+				if (((int)f1.packet.rank == Config.N-1) && Controller_QoSThrottle.enable_qos) c7 = -1;
+				else if (((int)f2.packet.rank == Config.N-1) && Controller_QoSThrottle.enable_qos) c7 = 1;
+				else c7 = 0;
+
+				if (((int)f1.packet.rank == 0) && Controller_QoSThrottle.enable_qos) c8 = 1;
+				else if (((int)f2.packet.rank == 0) && Controller_QoSThrottle.enable_qos) c8 = -1;
+				else c8 = 0;
+
+
 				f1_batch_dist =  (ulong)Math.Abs((int)current_batch - (int)f1.packet.batchID) % Config.STC_batchCount;
 				f2_batch_dist =  (ulong)Math.Abs((int)current_batch - (int)f2.packet.batchID) % Config.STC_batchCount;
 
 				//c0 = -f1_critical.CompareTo (f2_critical);
-				//c1 = -f1_batch_dist.CompareTo (f2_batch_dist);
-				c2 = -f1.packet.rank.CompareTo(f2.packet.rank); 
+				c0 = f1.packet.app_type.CompareTo(f2.packet.app_type);
+				c1 = -f1_batch_dist.CompareTo (f2_batch_dist);
+				c2 = -f1.packet.rank.CompareTo(f2.packet.rank); //  higher rank number win
 				c3 = f1.packet.ID.CompareTo(f2.packet.ID);
 				c4 = f1.flitNr.CompareTo(f2.flitNr);
+				c6 = -age(f1).CompareTo(age(f2));
 			}
 
 			int winner =  
-				(c0 != 0) ? c0 :
-				(c1 != 0) ? c1 :
-				(c2 != 0) ? c2 :
-				(c3 != 0) ? c3 :
-				c4;
-			
+				(c0 != 0) ? c0 :  // latency sensitive application first
+	        	(c7 != 0) ? c7 :  // slowest application first
+				//(c5 != 0) ? c5 :  // slower / slowest application first, but only enable when compare with the fastest applicatoin
+				(c6 != 0) ? c6 :  // oldest first
+				//(c8 != 0) ? c8 :  // demote fastest / most memory intensive application
+				//(c1 != 0) ? c1 :  // oldest batch first
+				//(c2 != 0) ? c2 :  // slower application first
+				(c3 != 0) ? c3 : // smallest pkt ID first
+				c4; // smallest flit ID first
+
 			return winner;
 		}
 

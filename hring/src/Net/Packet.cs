@@ -190,6 +190,8 @@ namespace ICSimulator
 			this.txn = txn;
 			this.critical = critical;
 			this.rank = Controller_QoSThrottle.app_rank[txn.node];
+			this.app_type = Controller_QoSThrottle.app_type[txn.node];
+			this.most_mem_inten = Controller_QoSThrottle.most_mem_inten[txn.node];
 			this.slowdown = Simulator.stats.etimated_slowdown [txn.node].LastPeriodValue; // TODO: by Xiyue: this is equivalent to have N ranking levels.
 		}
 
@@ -197,6 +199,9 @@ namespace ICSimulator
 		public double slowdown; // slowdown of the associated application
 		public ulong intfCycle = 0;
 		public ulong rank;
+		public APP_TYPE app_type;
+		public bool most_mem_inten;
+
 		public CmpCache_Txn txn;
 
 		//end Xiyue
