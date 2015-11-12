@@ -10,9 +10,9 @@ import string
 # slowdown_estimation
 
 workload_dir = "/home/anderson/Desktop/NOCulator/hring/src/bin/workload_list/"
-ipc_ref_file_name = workload_dir + "hetero_ipc_ref"
-workload_file_name = workload_dir + "hetero_workload"
-raw_out_dir = "/home/anderson/Desktop/NOCulator/hring/src/results/system_perfCache/error_rate/"
+ipc_ref_file_name = workload_dir + "hetero_ipc_4x4"
+workload_file_name = workload_dir + "hetero_4x4"
+raw_out_dir = "/home/anderson/Desktop/results/hetero/baseline/4x4/"
 
 ref_ipc_file = open (ipc_ref_file_name)
 ref_ipc = ref_ipc_file.readlines()
@@ -21,7 +21,7 @@ workload_file = open (workload_file_name)
 workload = workload_file.readlines()
 
 insns_count = 100000
-num_file = 100
+num_file = 30
 slowdown_error_accum = 0
 ipc_alone_error_accum = 0
 

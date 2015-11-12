@@ -183,6 +183,7 @@ namespace ICSimulator
 			_block = block; // may not come from request (see above)
 			_src = source;
 			_dest = dest;
+			_intfCycle = 0;
 			if (request != null)
 				request.setCarrier(this);
 			requesterID = -1;
@@ -197,13 +198,18 @@ namespace ICSimulator
 
 		public bool critical;
 		public double slowdown; // slowdown of the associated application
-		public ulong intfCycle = 0;
+		private int _intfCycle;
+		public ulong first_flit_arrival;
 		public ulong rank;
 		public APP_TYPE app_type;
 		public bool most_mem_inten;
-
 		public CmpCache_Txn txn;
-
+		public void add_intf () { _intfCycle++; }
+		public int intfCycle
+		{
+			get { return _intfCycle; }
+			set {_intfCycle = value; }
+		}
 		//end Xiyue
 
 
@@ -321,7 +327,10 @@ namespace ICSimulator
         public enum State { Normal, Placeholder, Rescuer, Carrier }
         public State state;
         public Coord rescuerCoord;
-		
+
+		// For counting the interference cycle of each flit
+		public int intfCycle = 0;
+
 		//for stats: how many useless cycles the flit is comsuming
 		public ulong timeIntoTheBuffer;
 		public ulong timeSpentInBuffer = 0;

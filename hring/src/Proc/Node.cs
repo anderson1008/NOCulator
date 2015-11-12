@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Collections;
 
 namespace ICSimulator
 {
@@ -27,6 +28,49 @@ namespace ICSimulator
       support both private and shared cache designs.
     */
 
+	public class Interference
+	{
+		private CmpCache_Txn _txn;
+		private Request _request;
+		private int _requesterID;
+		private bool valid;
+		private int interference_cycle;
+		private ulong _pktID;
+
+		public Interference (Packet pkt)
+		{
+			_txn = pkt.txn;
+			_request = pkt.request;
+			_requesterID = pkt.requesterID;
+			_pktID = pkt.ID;
+			valid = true;
+			interference_cycle = pkt.intfCycle;
+		}
+
+		public Interference ()
+		{
+			_txn = null;
+			_request = null;
+			_requesterID = 0;
+			valid = false;
+			interference_cycle = 0;
+		}
+
+		public bool compare (Packet pkt) 
+		{
+			if (pkt.ID == _pktID && pkt.requesterID == _requesterID)
+				return true;
+			else
+				return false;
+		}
+
+		public int intfCycle 
+		{
+			get {return interference_cycle;}
+		}
+	}
+
+
     public class Node
     {
         Coord m_coord;
@@ -40,6 +84,7 @@ namespace ICSimulator
         public CPU cpu { get { return m_cpu; } }
         private CPU m_cpu;
         private MemCtlr m_mem;
+		private ArrayList m_intfArray;
 
         private Router m_router;
 
@@ -50,6 +95,21 @@ namespace ICSimulator
         public int RequestQueueLen { get { return m_inj_pool.FlitCount + m_injQueue_flit.Count; } }
 
         RxBufNaive m_rxbuf_naive;
+
+
+		public int get_txn_intf (Packet new_inj_pkt) {
+			int intfCycle = 0;
+			foreach (Interference i in m_intfArray)
+			{
+				if (i.compare(new_inj_pkt))
+				{
+					intfCycle = i.intfCycle;
+					m_intfArray.Remove(i);
+					return intfCycle; 
+				}
+			}
+			return 0;
+		}
 
         public Node(NodeMapping mapping, Coord c)
         {
@@ -71,10 +131,14 @@ namespace ICSimulator
             m_injQueue_flit = new Queue<Flit>();
             m_injQueue_evict = new Queue<Flit>();
             m_local = new Queue<Packet>();
+			m_intfArray =  new ArrayList();
 
             m_rxbuf_naive = new RxBufNaive(this,
                     delegate(Flit f) { m_injQueue_evict.Enqueue(f); },
                     delegate(Packet p) { receivePacket(p); });
+
+
+
         }
 
         public void setRouter(Router r)
@@ -107,10 +171,16 @@ namespace ICSimulator
 			else // By Xiyue: Actual injection into network
             {
                 Packet p = m_inj_pool.next(); 
+
                 if (p != null)
                 {
+					// TODO: hand over interference cycles. It is very slow at this moment.
+					int intfCycle = get_txn_intf(p);
                     foreach (Flit f in p.flits)
+					{
+						f.intfCycle = intfCycle;
                         m_injQueue_flit.Enqueue(f);
+					}
                 }
 
 				if (m_injQueue_evict.Count > 0 && m_router.canInjectFlit(m_injQueue_evict.Peek())) // By Xiyue: ??? What is m_injQueue_evict ?
@@ -150,9 +220,28 @@ namespace ICSimulator
 
         void receiveFlit_noBuf(Flit f)
         {
-            f.packet.nrOfArrivedFlits++;
-            if (f.packet.nrOfArrivedFlits == f.packet.nrOfFlits)
-                receivePacket(f.packet);
+
+			// intfCycle gets updates only at the first and last flit of a packet arrival.
+			f.packet.nrOfArrivedFlits++;
+			if (f.packet.nrOfArrivedFlits == 1)
+			{
+				// Record the inteference cycle of flits.
+				f.packet.intfCycle = f.intfCycle;
+				f.packet.first_flit_arrival = Simulator.CurrentRound;
+			}
+
+			if (f.packet.nrOfArrivedFlits == f.packet.nrOfFlits)
+			{
+				// Compute the inteference cycle of a pacekt.
+				int intfCycle = (int)f.packet.intfCycle + ((int)Simulator.CurrentRound - (int)f.packet.first_flit_arrival - f.packet.nrOfFlits + 1);
+				if (f.packet.intfCycle > 0 && f.packet.requesterID != m_cpu.ID)
+				{
+					f.packet.intfCycle = intfCycle;
+					Interference intf_entry =  new Interference (f.packet);
+					m_intfArray.Add(intf_entry);
+				}
+				receivePacket(f.packet);
+			}
         }
 
         public void evictFlit(Flit f)
@@ -167,6 +256,8 @@ namespace ICSimulator
             Console.WriteLine("receive packet {0} at node {1} (cyc {2}) (age {3})",
                 p, coord, Simulator.CurrentRound, Simulator.CurrentRound - p.creationTime);
 #endif
+
+			// TODO: log the interference cycle of packet here.
 
             if (p is RetxPacket)
             {

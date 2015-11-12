@@ -235,7 +235,7 @@ namespace ICSimulator
 
 		// by Xiyue
 		public ulong minimalCycle;
-		public ulong interferenceCycle;
+		public int interferenceCycle;
 		public ulong throttleCycle;
 		public ulong causeIntf;
 		public ulong req_addr;

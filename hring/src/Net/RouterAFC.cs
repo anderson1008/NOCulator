@@ -333,7 +333,10 @@ namespace ICSimulator
 								if (requesters [pc] != null) {
 									if (top.flit.packet.requesterID != requesters [pc].flit.packet.requesterID) {
 										if (requesters [pc].flit.packet.critical) // only log interferenceCycle for critical packet, but still log causeIntf.
-											requesters [pc].flit.packet.txn.interferenceCycle++;
+										{
+											requesters [pc].flit.intfCycle++;
+											//requesters [pc].flit.packet.txn.interferenceCycle++;
+										}
 										top.flit.packet.txn.causeIntf++;
 										#if DEBUG
 										Console.WriteLine ("BLOCK Req_addr = {1}, Node {2}, intfCycle = {3}, time = {0}", Simulator.CurrentRound, requesters [pc].flit.packet.txn.req_addr, ID, requesters [pc].flit.packet.txn.interferenceCycle);
@@ -348,7 +351,10 @@ namespace ICSimulator
 							else if (requesters [pc] != null && top.CompareTo (requesters [pc]) > 0) {
 								if (top.flit.packet.requesterID != requesters [pc].flit.packet.requesterID) {
 									if (top.flit.packet.critical) // only log interferenceCycle for critical packet, but still log causeIntf.
-										top.flit.packet.txn.interferenceCycle++;
+									{
+										//top.flit.packet.txn.interferenceCycle++;
+										top.flit.intfCycle++;
+									}
 
 								}
 							}
@@ -378,7 +384,10 @@ namespace ICSimulator
 								if (top != null) {
 									if (requesters [req].flit.packet.requesterID != top.flit.packet.requesterID) {
 										if (top.flit.packet.critical)
-											top.flit.packet.txn.interferenceCycle++;
+										{
+											//top.flit.packet.txn.interferenceCycle++;
+											top.flit.intfCycle++;
+										}
 										requesters [req].flit.packet.txn.causeIntf++;
 
 										#if DEBUG
@@ -395,7 +404,12 @@ namespace ICSimulator
 							else if (top != null && requesters [req].CompareTo (top) > 0) {
 								if (requesters [req].flit.packet.requesterID != top.flit.packet.requesterID) {
 									if (requesters [req].flit.packet.critical)
-										requesters [req].flit.packet.txn.interferenceCycle++;
+									{
+										//requesters [req].flit.packet.txn.interferenceCycle++;
+										requesters [req].flit.intfCycle++;
+									}
+
+									top.flit.packet.txn.causeIntf ++;
 								}
 							}
 

@@ -73,7 +73,7 @@ def cmp_uf (ipc_alone, ipc_share):
   if len(ipc_alone) != len(ipc_share):
     raise Exception ("not enough ipc element")
   slowdown = cmp_real_sd(ipc_alone, ipc_share)
-  unfairness = max (slowdown)
+  unfairness = max (slowdown) - min (slowdown)
   return unfairness
 
 #work_dir = "/Users/xiyuexiang/GoogleDrive/NOCulator/hring/src/"

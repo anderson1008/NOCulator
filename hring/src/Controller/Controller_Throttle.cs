@@ -59,6 +59,10 @@ namespace ICSimulator
 
 		public static bool enable_qos;
 
+
+
+
+
 		public void ranking_app_global ()
 		{
 			ulong[] app_index = new ulong[Config.N]; // construct a one-dimensional array, indicating the application ID
@@ -67,12 +71,15 @@ namespace ICSimulator
 			{
 				Simulator.stats.app_rank [i].EndPeriod();
 				app_index [i] = (ulong)i;
-				app_slowdown [i] = Simulator.stats.etimated_slowdown [i].LastPeriodValue;
+				app_slowdown [i] = Simulator.stats.etimated_slowdown [i].ExpWhtMvAvg();
 			}
 
 			Array.Sort (app_slowdown, app_index);
 
-			if ((app_slowdown[Config.N-1]-app_slowdown[0]) / app_slowdown[0]  > 0.15) enable_qos = true;
+			if ((app_slowdown[Config.N-1]-app_slowdown[0]) / app_slowdown[0]  > 0.05) {
+				enable_qos = true;
+				Console.WriteLine("Enable qos at {0}", Simulator.CurrentRound);
+			}
 			else enable_qos = false;
 
 			for (int i = 0; i < Config.N; i++)
@@ -288,12 +295,7 @@ namespace ICSimulator
 					double error_slowdown = (estimated_slowdown_period - actual_slowdown) / actual_slowdown;
 					error_slowdown = (error_slowdown > 0) ? error_slowdown : (-error_slowdown);
 
-					//reset
-					Simulator.stats.etimated_slowdown_period [i].EndPeriod ();
-					Simulator.stats.etimated_slowdown [i].EndPeriod ();
-					Simulator.stats.insns_persrc_period [i].EndPeriod ();
-					Simulator.stats.non_overlap_penalty_period [i].EndPeriod ();
-					Simulator.stats.causeIntf [i].EndPeriod ();
+
 					//}
 				}
 
@@ -340,7 +342,15 @@ namespace ICSimulator
 				most_mem_inten[jj] = true;
 				//adjust_app_ranking (); // skip the first epoch
 				for(int i=0;i<Config.N;i++)
+				{
 					Simulator.stats.app_rank [i].Add(app_rank [i]);
+					//reset
+					Simulator.stats.etimated_slowdown_period [i].EndPeriod ();
+					//Simulator.stats.etimated_slowdown [i].EndPeriod ();
+					Simulator.stats.insns_persrc_period [i].EndPeriod ();
+					Simulator.stats.non_overlap_penalty_period [i].EndPeriod ();
+					Simulator.stats.causeIntf [i].EndPeriod ();
+				}
 			}
 		}						
 	}

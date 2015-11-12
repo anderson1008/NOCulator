@@ -24,8 +24,6 @@ namespace ICSimulator
         InstructionWindow m_ins;
         ulong m_last_retired;
 
-
-
         public struct MSHR
         {
             public bool valid;
@@ -160,7 +158,11 @@ namespace ICSimulator
 		//     2) calling reqDone
         public void receivePacket(CachePacket p) 
         {
-            if (p.cb != null) p.cb();
+            if (p.cb != null) 
+			{
+				p.txn.interferenceCycle = p.intfCycle;  // The interference cycle of a txn is determined by that of the response packet.
+				p.cb();
+			}
         }
 
         void doStats(ulong retired)
@@ -371,13 +373,14 @@ namespace ICSimulator
 
 			if (retired > 0)
 				m_last_retired = Simulator.CurrentRound;
-
+		
 			if (!m_trace_valid)
 				m_trace_valid = advanceTrace(); // doStats needs to see the next record
 
 			doStats(retired); // by Xiyue: periodical slowdown is also logged here.
 
-			if (m_ins.isFull()) return true;
+			if (m_ins.isFull()) 
+				return true;
 
 			bool done = false;
 			int nIns = Config.proc.instructionsPerCycle;
