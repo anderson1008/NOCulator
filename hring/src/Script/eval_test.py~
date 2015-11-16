@@ -92,9 +92,9 @@ ws = cmp_ws (ipc_alone, ipc_shared)
 hs = cmp_hs (ipc_alone, ipc_shared)
 uf = cmp_uf (ipc_alone, ipc_shared)
 
-print "Weighted Speedup = " + str("%.3f" % ws)
-print "Harmonic Speedup = " + str("%.3f" % hs)
-print "Unfairness = " + str("%.3f" % uf)
+print "Weighted Speedup = " + str("%.2f" % ws)
+print "Harmonic Speedup = " + str("%.2f" % hs)
+print "Unfairness = " + str("%.2f" % uf)
 			
 
 	

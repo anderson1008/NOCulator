@@ -14,7 +14,7 @@ input_workload = input('please input workload (homo_mem, homo_non_mem, hetero): 
 workload_dir = "/home/anderson/Desktop/NOCulator/hring/src/bin/workload_list/"
 ipc_ref_file_name = workload_dir + str(input_workload) + "_ipc_4x4"
 workload_file_name = workload_dir + str(input_workload) + "_4x4"
-raw_out_dir = "/home/anderson/Desktop/results_old/" + str(input_workload) + "/baseline/4x4/"
+raw_out_dir = "/home/anderson/Desktop/results/" + str(input_workload) + "/baseline/4x4/"
 
 ref_ipc_file = open (ipc_ref_file_name)
 ref_ipc = ref_ipc_file.readlines()
