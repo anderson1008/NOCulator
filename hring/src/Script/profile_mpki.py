@@ -1,4 +1,6 @@
 #!/usr/bin/python
+# use to profile the application running solo.
+
 import re
 import os
 import sys
@@ -10,7 +12,7 @@ if os.path.exists(filename_out) == True:
 	os.remove(filename_out)
 fo_out = open(filename_out, "a")
 
-fo_out.write('\n\n' + 'Profile mpki and ipc ' + '\n\n')
+fo_out.write('\n\n' + 'Profile mpki, ipc' + '\n\n')
 fo_out.write('ordered by mpki' + '\n\n')
 fo_out.write('\n')
 fo_out.write('Index'.ljust(5) + 'File Name'.ljust(15) + 'IPC'.ljust(10) + 'MPKI'.ljust(10))

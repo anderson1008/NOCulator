@@ -106,19 +106,35 @@ namespace ICSimulator
 
 		// ----
 		// By Xiyue
+		public static bool preempt = false;
+		public static bool slowdown_aware = false;
+		public static double preempt_threshold = 8;
+		public static double slowdown_delta = 0.01; // slowdown difference between each ranking level
+		public static double enable_qos_non_mem_threshold = 3; // i.e. enable_qos_non_mem_threhold * slowdown_delta
+		public static double enable_qos_mem_threshold = 3;
+		public static double mpki_threshold = 45;
 		public static double slowdown_epoch = 10000;
+
+		// Slowdown-aware Throttling
+		public static bool throttle_enable = false;
+		public static double sweep_th_rate = 0; 		// static throttle rate, intial value of dynamic throttle rate
+		// specify which node to throttle when using static throttle controller
+		public static string throttle_node = "1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1";
+
+		//public static string throttle_node = "1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1";
 		public static double ref_ipc = 1;
 		public static double[] target_slowdown = new double[16] {1.2, 1.5, 1.5, 1.5, 1.2, 1.5, 1.5, 1.5, 1.2, 1.5, 1.5, 1.5, 1.2, 1.5, 1.5, 1.5};
 		public static double throt_min = 0.5;  // share with Sigcomm paper
 		public static double throt_max = 0.9;	// share with Sigcomm paper
-		public static bool throttle_enable = false;
+        public static double th_unfairness = 0.2; 
+        public static int th_consecutive_fair = 3;
+        public static double th_unfairness_delta = 0.05;
+
 		public static double[] default_throttle = new double[16] {0.0, 0.1, 0.1, 0.2, 0.0, 0.1, 0.1, 0.2, 0.0, 0.1, 0.1, 0.2, 0.0, 0.1, 0.1, 0.2};
-		public static bool slowdown_aware = false;
 		public static ulong STC_batchPeriod = 1000;
 		public static ulong STC_batchCount = 8;
 		//public static double default_throttle = 0.9;
 	
-		//public static double[] default_throttle = new double[16] {0.0, 0.9, 0.9, 0.9, 0.85, 0.9, 0.9, 0.9, 0.85, 0.9, 0.9, 0.9, 0.85, 0.9, 0.9, 0.9};
 		public static double ewmv_factor = 0.1; // weight of old value
 		public static double thrt_sweep = 0.1;
 		// end Xiyue
@@ -219,12 +235,6 @@ namespace ICSimulator
 
         // ---- Cluster will try to map far node to the same cluster
         public static bool distanceAwareCluster = true;
-
-        // ---- Static Controller
-        // static throttle rate
-        public static double sweep_th_rate = 0;
-        // specify which node to throttle when using static throttle controller
-        public static string throttle_node = "1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1";
 
         // ---- Three level throttling controller
         // # of sampling periods for each applications test.

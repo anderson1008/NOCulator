@@ -32,8 +32,8 @@ namespace ICSimulator
 				linkIn[0].Out = null;
 			}
 #if DEBUG
-            if (ret != null)
-                Console.WriteLine("ejecting flit {0}.{1} at node {2} cyc {3}", ret.packet.ID, ret.flitNr, coord, Simulator.currentRound);
+            //if (ret != null)
+             //   Console.WriteLine("ejecting flit {0}.{1} at node {2} cyc {3}", ret.packet.ID, ret.flitNr, coord, Simulator.currentRound);
 #endif
 			
             return ret;

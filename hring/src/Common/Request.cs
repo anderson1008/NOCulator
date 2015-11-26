@@ -175,7 +175,7 @@ namespace ICSimulator
 			get { return _interferenceCycle; } 
 			set { _interferenceCycle = value; }
 		}
-		ulong _issueTimeIntf; // the interference cycle at issue time
+		//ulong _issueTimeIntf; // the interference cycle at issue time
 
         public ulong blockAddress { get { return _address >> Config.cache_block; } }
         public ulong address { get { return _address; } }
@@ -211,7 +211,7 @@ namespace ICSimulator
             this._address = address;
             this._write = write;
             this._creationTime = Simulator.CurrentRound;
-			this._issueTimeIntf = (ulong)Simulator.stats.non_overlap_penalty[requesterID].Count;
+			//this._issueTimeIntf = (ulong)Simulator.stats.non_overlap_penalty[requesterID].Count;
 			this._interferenceCycle = 0;
         }
 
@@ -254,7 +254,7 @@ namespace ICSimulator
 			else{
 
 				#if DEBUG
-				Console.WriteLine ("PENALTY: at node {0}, addr = {1}, _intf = {2}, time = {3} ", _requesterID, _address, _interferenceCycle, Simulator.CurrentRound);
+				//Console.WriteLine ("PENALTY: at node {0}, addr = {1}, _intf = {2}, time = {3} ", _requesterID, _address, _interferenceCycle, Simulator.CurrentRound);
 				#endif
 
 				ulong est_serviceCycle_no_intf = _serviceCycle - _interferenceCycle;
@@ -269,7 +269,7 @@ namespace ICSimulator
 					intf_cycle = Math.Min (max_intf_cycle, _interferenceCycle);
 				
 				#if DEBUG
-					Console.WriteLine ("PENALTY: at node {0}, _intf = {1}, time = {2} ", _requesterID, intf_cycle, Simulator.CurrentRound);
+					//Console.WriteLine ("PENALTY: at node {0}, _intf = {1}, time = {2} ", _requesterID, intf_cycle, Simulator.CurrentRound);
 				#endif
 			}
 			return intf_cycle;

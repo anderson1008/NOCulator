@@ -23,6 +23,7 @@ namespace ICSimulator
 
         InstructionWindow m_ins;
         ulong m_last_retired;
+		public bool stall;
 
         public struct MSHR
         {
@@ -224,7 +225,7 @@ namespace ICSimulator
             
             // any stall: either (i) window is full, or (ii) window is not full
             // but next insn (LD / ST) can't be issued
-            bool stall = windowFull || (nextIsMem && noFreeMSHRs);
+            stall = windowFull || (nextIsMem && noFreeMSHRs);
 
             // MSHR stall: window not full, next insn is memory, but we have no free MSHRs
             bool stallMem = !windowFull && (nextIsMem && noFreeMSHRs);
@@ -295,7 +296,7 @@ namespace ICSimulator
 			m_ins.setReady(addr, write);
 
 			#if DEBUG
-			Console.WriteLine ("DONE at node = {1}, req_addr = {2}, time = {0}", Simulator.CurrentRound, m_ID, addr);
+			//Console.WriteLine ("DONE at node = {1}, req_addr = {2}, time = {0}", Simulator.CurrentRound, m_ID, addr);
 			#endif
 
 			if (!write && m_mshrs[mshr].pending_write)

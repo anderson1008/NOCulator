@@ -1,4 +1,7 @@
 //#define DEBUG
+//#define PREMPT
+
+
 
 using System;
 using System.Collections.Generic;
@@ -28,6 +31,7 @@ namespace ICSimulator
             else
                 throw new ArgumentException("bad comparison");
         }
+
     }
 
     public class AFCUtilAvg
@@ -69,6 +73,27 @@ namespace ICSimulator
         // buffers, indexed by physical channel and virtual network
         protected MinHeap<AFCBufferSlot>[,] m_buf;
         int m_buf_occupancy;
+		int [,] m_arb_trial;  // counter to register the cycles the flit sits at the front of each VC.
+
+
+		//check priority inversion
+		private void prior_inv_check (int pc, int vnet)
+		{
+			if (m_buf [pc, vnet].Count > 1) { // has more than 1 flit
+				AFCBufferSlot top = m_buf [pc, vnet].Peek ();
+				for (int i = 2; i <= m_buf [pc, vnet].Count; i++)
+				{
+					AFCBufferSlot flit = m_buf [pc, vnet].Peek (i);
+					if (flit.CompareTo(top) < 0) 
+					{
+						Simulator.stats.priority_inv.Add(1);
+						break;
+					}
+				}
+
+			}
+		}
+
 
         // buffers active?
         protected bool m_buffered;
@@ -79,13 +104,18 @@ namespace ICSimulator
             m_injectSlot = null;
 
             m_buf = new MinHeap<AFCBufferSlot>[5, Config.afc_vnets];
+			m_arb_trial = new int[5, Config.afc_vnets];
             for (int pc = 0; pc < 5; pc++)
                 for (int i = 0; i < Config.afc_vnets; i++)
-                    m_buf[pc, i] = new MinHeap<AFCBufferSlot>();
+			{
+                m_buf[pc, i] = new MinHeap<AFCBufferSlot>();
+				m_arb_trial[pc, i] = 0;
+			}
 
             m_buffered = false;
             m_buf_occupancy = 0;
         }
+
 
         protected Router_AFC getNeigh(int dir)
         {
@@ -302,6 +332,7 @@ namespace ICSimulator
 						continue;
 					}
 					*/
+					ulong causeIntf = 0;
 					for (int vnet = 0; vnet < Config.afc_vnets; vnet++)
 						if (m_buf [pc, vnet].Count > 0) {
 							AFCBufferSlot top = m_buf [pc, vnet].Peek ();
@@ -309,23 +340,40 @@ namespace ICSimulator
 							PreferredDirection pd = determineDirection (top.flit, coord);
 							int outdir = (pd.xDir != Simulator.DIR_NONE) ?
                                 pd.xDir : pd.yDir;
+
 							if (outdir == Simulator.DIR_NONE)
 								outdir = 4; // local ejection
-
 
 							// skip if (i) not local ejection and (ii)
 							// destination router is buffered and (iii)
 							// no credits left to destination router
+							bool correct_block = true; // it is true when all the downstream VCs are full.
 							if (outdir != 4) {
 								Router_AFC nrouter = (Router_AFC)neigh [outdir];
 								int ndir = (outdir + 2) % 4;
 								if (nrouter.m_buf [ndir, vnet].Count >= capacity (vnet) &&
 								    nrouter.m_buffered)
+								{
+								// Let's check the occurance when the other VC has empty slot whereas the required VC is full
+									m_arb_trial[pc, vnet] ++;
+									prior_inv_check (pc, vnet);
+									for (int vnet_neigh = 0; vnet_neigh < Config.afc_vnets; vnet_neigh++)
+										if (nrouter.m_buf[ndir,vnet_neigh].Count < capacity (vnet) &&
+										    nrouter.m_buffered)
+										{
+											Simulator.stats.false_block.Add(1);
+											correct_block = false;
+											break;
+										}
+									if (correct_block)
+										Simulator.stats.correct_block.Add(1);
 									continue;
+								}
 							}
 
 							// otherwise, contend for top requester from this
 							// physical channel
+							
 							if (requesters [pc] == null ||
 							    top.CompareTo (requesters [pc]) < 0) {
 								// By Xiyue:
@@ -335,13 +383,18 @@ namespace ICSimulator
 										if (requesters [pc].flit.packet.critical) // only log interferenceCycle for critical packet, but still log causeIntf.
 										{
 											requesters [pc].flit.intfCycle++;
+											
 											//requesters [pc].flit.packet.txn.interferenceCycle++;
 										}
-										top.flit.packet.txn.causeIntf++;
+										causeIntf++;
+										//top.flit.packet.txn.causeIntf++;
+										
 										#if DEBUG
-										Console.WriteLine ("BLOCK Req_addr = {1}, Node {2}, intfCycle = {3}, time = {0}", Simulator.CurrentRound, requesters [pc].flit.packet.txn.req_addr, ID, requesters [pc].flit.packet.txn.interferenceCycle);
+										//Console.WriteLine ("BLOCK Req_addr = {1}, Node {2}, intfCycle = {3}, time = {0}", Simulator.CurrentRound, requesters [pc].flit.packet.txn.req_addr, ID, requesters [pc].flit.packet.txn.interferenceCycle);
 										#endif
-									}										
+									}
+									prior_inv_check (pc, requesters [pc].flit.packet.getClass());
+									m_arb_trial[pc, requesters [pc].flit.packet.getClass()] ++;
 								}
 									
 								requesters [pc] = top;
@@ -355,29 +408,36 @@ namespace ICSimulator
 										//top.flit.packet.txn.interferenceCycle++;
 										top.flit.intfCycle++;
 									}
-
+									causeIntf++;
+									//requesters[pc].flit.packet.txn.causeIntf ++;
+									
 								}
+								m_arb_trial[pc, top.flit.packet.getClass()] ++;
+								prior_inv_check (pc, top.flit.packet.getClass());
 							}
 
 						}
+					if (requesters[pc] != null && causeIntf != 0)
+						requesters[pc].flit.packet.txn.causeIntf = requesters[pc].flit.packet.txn.causeIntf + causeIntf;
 				}
+
                 // find the highest-priority requester for each output, and pop
                 // it from its heap
+
                 for (int outdir = 0; outdir < 5; outdir++)
                 {
                     AFCBufferSlot top = null;
 					AFCBufferSlot top2 = null;
 					int flitsTryToEject = 0;
-                    int top_indir = -1;
+                    int top_indir = -1;  // the channel
 					int top_indir2 = -1;
-
+					ulong causeIntf = 0;
                     for (int req = 0; req < 5; req++)
                         if (requesters[req] != null &&
                                 requester_dir[req] == outdir)
                         {
 							if (outdir == 4) flitsTryToEject ++;
-							if (top == null ||
-							                        requesters [req].CompareTo (top) < 0) {
+							if (top == null || requesters [req].CompareTo (top) < 0) {
 								// By Xiyue:
 								//	  Check Interference
 								//    here "top" is the flit being stalled.
@@ -388,12 +448,14 @@ namespace ICSimulator
 											//top.flit.packet.txn.interferenceCycle++;
 											top.flit.intfCycle++;
 										}
-										requesters [req].flit.packet.txn.causeIntf++;
-
+										//requesters [req].flit.packet.txn.causeIntf++;
+										causeIntf++;
 										#if DEBUG
-										Console.WriteLine ("BLOCK Req_addr = {1}, Node {2}, intfCycle = {3}, time = {0}", Simulator.CurrentRound, top.flit.packet.txn.req_addr, ID, top.flit.packet.txn.interferenceCycle);
+										//Console.WriteLine ("BLOCK Req_addr = {1}, Node {2}, intfCycle = {3}, time = {0}", Simulator.CurrentRound, top.flit.packet.txn.req_addr, ID, top.flit.packet.txn.interferenceCycle);
 										#endif
 									}
+									m_arb_trial[req, top.flit.packet.getClass()] ++;
+									prior_inv_check (req, top.flit.packet.getClass());
 								}
 
 								// end Xiyue
@@ -407,14 +469,19 @@ namespace ICSimulator
 									{
 										//requesters [req].flit.packet.txn.interferenceCycle++;
 										requesters [req].flit.intfCycle++;
+										
 									}
-
-									top.flit.packet.txn.causeIntf ++;
+									causeIntf++;
+									//top.flit.packet.txn.causeIntf ++;
 								}
+								m_arb_trial[req, requesters [req].flit.packet.getClass()] ++;
+								prior_inv_check (req, requesters [req].flit.packet.getClass());
 							}
 
 
                         }
+					if (top != null && causeIntf != 0)
+						top.flit.packet.txn.causeIntf = top.flit.packet.txn.causeIntf + causeIntf;
 					if (outdir == 4)
 						Simulator.stats.flitsTryToEject[flitsTryToEject].Add();
 					if (Config.meshEjectTrial == 2 && outdir == 4 && top_indir != -1) // ejectTwice
@@ -435,6 +502,7 @@ namespace ICSimulator
                     if (top_indir != -1)
                     {
                         m_buf[top_indir, top.flit.packet.getClass()].Dequeue();
+						m_arb_trial[top_indir, top.flit.packet.getClass()] = 0;
 						if (top.flit.enterBuffer == Simulator.CurrentRound)
 							Simulator.stats.afc_bufferBypass.Add(1);
                         Simulator.stats.afc_buf_read.Add();
@@ -462,6 +530,20 @@ namespace ICSimulator
 						acceptFlit(top2.flit);
 					}
                 }
+
+				// remove a flit from head after N trials.
+				if (Config.preempt)
+					for (int pc = 0; pc < 5; pc++) {
+						for (int vnet = 0; vnet < Config.afc_vnets; vnet++)
+							if (m_buf [pc, vnet].Count > 1) {  // do it only when the front flit is blocking some other flits.
+								if (m_arb_trial[pc,vnet] >= Config.preempt_threshold) 
+								{
+									AFCBufferSlot top = m_buf[pc, vnet].Dequeue();
+									m_buf[pc, vnet].Enqueue(top);
+									m_arb_trial[pc,vnet] = 0;
+								}
+							}
+					}
             }
             else // by Xiyue: for not buffered.
             {
@@ -597,10 +679,12 @@ namespace ICSimulator
 					{
 						slot.flit.packet.txn.serialization_latency = slot.flit.packet.txn.serialization_latency + (ulong)slot.flit.packet.nrOfFlits;
 						slot.flit.packet.txn.queue_latency = slot.flit.packet.txn.queue_latency + (ulong)Math.Max(temp_queueCycle,slot.flit.packet.nrOfFlits);
-						#if DEBUG
-						Console.WriteLine ("BLOCK pkt = {4}, txn req_addr = {5}, serilatency = {0}, queue_latency = {1}, at time = {2} node {3}",
+
+#if DEBUG
+					
+						Console.WriteLine ("!!!!!!BLOCK pkt = {4}, txn req_addr = {5}, serilatency = {0}, queue_latency = {1}, at time = {2} node {3}",
 							slot.flit.packet.txn.serialization_latency, slot.flit.packet.txn.queue_latency, Simulator.CurrentRound, ID, slot.flit.packet.ID, slot.flit.packet.txn.req_addr);
-						#endif
+#endif
 
 						if (slot.flit.packet.txn.queue_latency < slot.flit.packet.txn.serialization_latency)
 							throw new Exception("queue cycle less than serialization latency!");

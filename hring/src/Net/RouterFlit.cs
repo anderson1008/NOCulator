@@ -406,6 +406,39 @@ namespace ICSimulator
 
 			int c0 = 0, c1 = 0, c2 = 0, c3 = 0, c4 = 0, c5 = 0, c6 = 0, c7 = 0, c8 = 0;
 
+			int max_rank_non_mem = (int) Controller_QoSThrottle.max_rank_non_mem;
+			int max_rank_mem =  (int) Controller_QoSThrottle.max_rank_mem;
+
+			if (f1.packet != null && f2.packet != null)
+			{
+				c0 = f1.packet.app_type.CompareTo(f2.packet.app_type);
+				if (f1.packet.app_type == APP_TYPE.LATENCY_SEN && f2.packet.app_type == APP_TYPE.LATENCY_SEN && Controller_QoSThrottle.enable_qos_non_mem)
+				{
+					if (((int)f1.packet.rank == max_rank_non_mem) && (int)f2.packet.rank == 0) c5 = -1;
+					else if (((int)f1.packet.rank == 0) && (int)f2.packet.rank == max_rank_non_mem)  c5 = 1;
+				}
+				else if (f1.packet.app_type == APP_TYPE.THROUGHPUT_SEN && f2.packet.app_type == APP_TYPE.THROUGHPUT_SEN&& Controller_QoSThrottle.enable_qos_mem)
+				{
+					if (((int)f1.packet.rank == max_rank_mem) && (int)f2.packet.rank == 0) c5 = -1;
+					else if (((int)f1.packet.rank == 0) && (int)f2.packet.rank == max_rank_mem)  c5 = 1;
+
+					// geting the current ranking
+					int f1_rank = (int) get_app_rank(f1);  
+					int f2_rank = (int) get_app_rank(f2);
+					c2 = -f1_rank.CompareTo (f2_rank);
+
+					// slowest win
+					if (f1_rank == max_rank_mem && f2_rank != max_rank_mem) c7 = -1;
+					else if (f1_rank != max_rank_mem && f2_rank == max_rank_mem) c7 = 1;
+				}
+				c3 = f1.packet.ID.CompareTo(f2.packet.ID);
+				c4 = f1.flitNr.CompareTo(f2.flitNr);
+				c6 = -age(f1).CompareTo(age(f2));
+			}
+
+			/*
+			int max_rank = (int)Controller_QoSThrottle.max_rank;
+
 			if (f1.packet != null && f2.packet != null)
 			{
 				
@@ -414,21 +447,16 @@ namespace ICSimulator
 
 				// higher rank number means slower.
 
-				if (((int)f1.packet.rank == Config.N-1) && ((int)f2.packet.rank == 0) && Controller_QoSThrottle.enable_qos) c5 = -1;
-				else if (((int)f1.packet.rank == 0) && ((int)f2.packet.rank == Config.N-1) && Controller_QoSThrottle.enable_qos) c5 = 1;
+				if (((int)f1.packet.rank == max_rank) && ((int)f2.packet.rank == 0) && Controller_QoSThrottle.enable_qos) c5 = -1;
+				else if (((int)f1.packet.rank == 0) && ((int)f2.packet.rank == max_rank) && Controller_QoSThrottle.enable_qos) c5 = 1;
 				else c5 = 0;
 
 				int f1_rank = (int) get_app_rank(f1);  // geting the current ranking
 				int f2_rank = (int) get_app_rank(f2);
-				if ((f1_rank == Config.N-1) && Controller_QoSThrottle.enable_qos) c7 = -1;
-				else if ((f2_rank == Config.N-1) && Controller_QoSThrottle.enable_qos) c7 = 1;
-				else c7 = 0;
 
-				/*
-				if (((int)f1.packet.rank == Config.N-1) && Controller_QoSThrottle.enable_qos) c7 = -1;
-				else if (((int)f2.packet.rank == Config.N-1) && Controller_QoSThrottle.enable_qos) c7 = 1;
+				if (f1_rank == max_rank && f2_rank != max_rank && Controller_QoSThrottle.enable_qos) c7 = -1;
+				else if (f1_rank != max_rank && f2_rank == max_rank && Controller_QoSThrottle.enable_qos) c7 = 1;
 				else c7 = 0;
-				*/
 
 				if (((int)f1.packet.rank == 0) && Controller_QoSThrottle.enable_qos) c8 = 1;
 				else if (((int)f2.packet.rank == 0) && Controller_QoSThrottle.enable_qos) c8 = -1;
@@ -451,12 +479,25 @@ namespace ICSimulator
 				c4 = f1.flitNr.CompareTo(f2.flitNr);
 				c6 = -age(f1).CompareTo(age(f2));
 			}
+			*/
+			int zerosSeen = 0;
+			foreach (int i in new int[] { c0, c7, c6, c3, c4 })
+			{
+				if (i == 0)
+					zerosSeen++;
+				else
+					break;
+			}
+			Simulator.stats.net_decisionLevel.Add(zerosSeen);
+
 
 			int winner =  
+
 				(c0 != 0) ? c0 :  // latency sensitive application first
+				//(c2 != 0) ? c2 :  // slower application first
 				//(c1 != 0) ? c1 :  // oldest batch first
+			    (c5 != 0) ? c5 :  // slower / slowest application first, but only enable when compare with the fastest applicatoin
 	        	//(c7 != 0) ? c7 :  // slowest application first
-				//(c5 != 0) ? c5 :  // slower / slowest application first, but only enable when compare with the fastest applicatoin
 				(c6 != 0) ? c6 :  // oldest first
 				//(c8 != 0) ? c8 :  // demote fastest / most memory intensive application
 				//(c2 != 0) ? c2 :  // slower application first

@@ -290,7 +290,7 @@ namespace ICSimulator
                 Simulator.network.nodes[p.dest.ID].m_local.Enqueue(p);
             else // otherwise: enqueue on injection queue
             {
-                m_inj_pool.addPacket(p); //By Xiyue: Actual Injection. But core execution is still a question.
+                m_inj_pool.addPacket(p); //By Xiyue: Actual Injection.
             }
         }
 

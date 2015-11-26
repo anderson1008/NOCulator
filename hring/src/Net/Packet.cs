@@ -193,7 +193,7 @@ namespace ICSimulator
 			this.rank = Controller_QoSThrottle.app_rank[txn.node];
 			this.app_type = Controller_QoSThrottle.app_type[txn.node];
 			this.most_mem_inten = Controller_QoSThrottle.most_mem_inten[txn.node];
-			this.slowdown = Simulator.stats.etimated_slowdown [txn.node].LastPeriodValue; // TODO: by Xiyue: this is equivalent to have N ranking levels.
+			this.slowdown = Simulator.stats.estimated_slowdown [txn.node].LastPeriodValue; // TODO: by Xiyue: this is equivalent to have N ranking levels.
 		}
 
 		public bool critical;
@@ -427,7 +427,7 @@ namespace ICSimulator
         public override string ToString()
         {
             if (packet != null)
-                return String.Format("Flit {0} of packet {1} (state {2})", flitNr, packet, state);
+				return String.Format("Flit {0} of packet {1} {2} (state {3})", flitNr, packet.ID, packet, state);
             else
                 return String.Format("Flit {0} of packet <NONE> (state {1})", flitNr, state);
         }

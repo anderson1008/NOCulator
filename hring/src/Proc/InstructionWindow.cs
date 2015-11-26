@@ -187,9 +187,11 @@ namespace ICSimulator {
 					//Console.WriteLine ("COMMIT node = {0}, addr = {1}, intf = {3}, time = {2}", node, requests [oldest].address, Simulator.CurrentRound, requests [oldest].interferenceCycle);
 
 					// using >0 to exclude the local packets, which tend to be accessed at the same cycle as the request is generated.
-					if (requests [oldest].interferenceCycle > 0 && load == Config.proc.instWindowSize) {
+					//if (requests [oldest].interferenceCycle > 0 && load == Config.proc.instWindowSize) {
+					if (requests [oldest].interferenceCycle > 0 && m_cpu.stall) {
+
 						#if DEBUG
-						Console.WriteLine ("COMMIT node = {0}, addr = {1}, intf = {3}, time = {2}", node, requests [oldest].address, Simulator.CurrentRound, requests [oldest].interferenceCycle);
+						//Console.WriteLine ("COMMIT node = {0}, addr = {1}, intf = {3}, time = {2}", node, requests [oldest].address, Simulator.CurrentRound, requests [oldest].interferenceCycle);
 						#endif
 						max_intf_temp = requests [oldest].computePenalty (last_retired, max_intf);
 						//max_intf = max_intf + max_intf_temp;
@@ -244,8 +246,8 @@ namespace ICSimulator {
 				Simulator.stats.non_overlap_penalty_period [node].Add (max_intf);
 
 				#if DEBUG
-				Console.WriteLine ("ADD intfcyle = {0} to node = {1}, time = {2}", max_intf, node, Simulator.CurrentRound);
-				Console.WriteLine ("REPORT intfcyle = {0} to node = {1}, time = {2}", Simulator.stats.non_overlap_penalty [node].Count, node, Simulator.CurrentRound);
+					//Console.WriteLine ("ADD intfcyle = {0} to node = {1}, time = {2}", max_intf, node, Simulator.CurrentRound);
+					//Console.WriteLine ("REPORT intfcyle = {0} to node = {1}, time = {2}", Simulator.stats.non_overlap_penalty [node].Count, node, Simulator.CurrentRound);
 				#endif
 			}
 
@@ -356,7 +358,7 @@ namespace ICSimulator {
 						Simulator.stats.serialization_latency [m_cpu.ID].Add (serializationLatency);
 						Simulator.stats.queue_delay [m_cpu.ID].Add (queueCycle);
 						#if DEBUG
-						Console.WriteLine ("RECEIVE node = {0}, addr = {1}, intf = {2}, time = {3}", m_cpu.ID, addresses [i], requests [i].interferenceCycle, Simulator.CurrentRound);
+						//Console.WriteLine ("RECEIVE node = {0}, addr = {1}, intf = {2}, time = {3}", m_cpu.ID, addresses [i], requests [i].interferenceCycle, Simulator.CurrentRound);
 						#endif
 					}
 

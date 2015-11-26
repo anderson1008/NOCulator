@@ -241,8 +241,8 @@ namespace ICSimulator
                     m_throttled[i] = false;
 
 #if DEBUG
-                Console.WriteLine("cycle {0} node {1} ipf {2} (avg {3}) throttle {4}",
-                        Simulator.CurrentRound, i, m_ipf[i], avg_ipf, m_throttled[i]);
+                //Console.WriteLine("cycle {0} node {1} ipf {2} (avg {3}) throttle {4}",
+                 //       Simulator.CurrentRound, i, m_ipf[i], avg_ipf, m_throttled[i]);
 #endif
             }
 

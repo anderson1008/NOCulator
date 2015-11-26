@@ -35,6 +35,7 @@ fo_out_1.write('\n')
 for app_index in range (1, 27):
   mshr_plt = []
   ipc_plt = []
+  mpki_plt = []
   mpki_sum = 0
   ipc_sum = 0
   app = spec_workload [app_index-1].strip()
@@ -72,6 +73,7 @@ for app_index in range (1, 27):
     mshr = sim_index
     mshr_plt = mshr_plt + [mshr]
     ipc_plt = ipc_plt + [ipc]
+    mpki_plt = mpki_plt + [float(mpki)]
     ipc_sum = ipc_sum + float(ipc)
     mpki_sum = mpki_sum + float(mpki)
 
@@ -89,5 +91,5 @@ for app_index in range (1, 27):
 fo_out_0.close()
 fo_out_1.close()
 plt.legend()
-#plt.show()
+plt.show()
 print "^_^"

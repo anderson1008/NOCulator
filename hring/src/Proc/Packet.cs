@@ -26,13 +26,13 @@ namespace ICSimulator
         {
             cb = _cb;
             m_class = _class;
-            m_VCclass = mapClass(_vcclass);
+            m_VCclass = mapClass(_vcclass);   // assign network VC class here.
             requesterID = reqNode;
         }
 
         public override string ToString()
         {
-            return String.Format("pkt from {0} to {1} size {2}", src, dest, nrOfFlits);
+            return String.Format(" from {0} to {1} size {2}", src, dest, nrOfFlits);
         }
 
         protected int mapClass(int vn)

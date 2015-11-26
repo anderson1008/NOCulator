@@ -542,7 +542,7 @@ namespace ICSimulator
 			{
 				#if DEBUG
 				//if (throttleCycle != 0)
-				Console.WriteLine ("ISSUE L2 Req_addr = {1}, Node = {2} time = {0}", Simulator.CurrentRound, addr, node);
+				//Console.WriteLine ("ISSUE L2 Req_addr = {1}, Node = {2} time = {0}", Simulator.CurrentRound, addr, node);
 				#endif
 	
 				CmpCache_Txn txn = null;
@@ -1255,6 +1255,37 @@ namespace ICSimulator
             int node = map_addr_mem(requestor, addr);
             Simulator.network.nodes[node].mem.access(req, cb);
         }
+
+
+		void assignVCclasses_qos (CmpCache_Pkt root)
+		{	/*
+			workQ.Enqueue(root);
+			while (workQ.Count > 0)
+			{
+				CmpCache_Pkt pkt = workQ.Dequeue();
+				if (pkt.flits > 1) pkt.vc_class = Math.Max(4, pkt.vc_class); 
+
+				int succ;
+				if (pkt.send)
+				{
+
+				}
+				else
+				{
+					succ = pkt.vc_class;
+				}
+
+				int succ = pkt.send ? pkt.vc_class + 1 : pkt.vc_class;
+				foreach (CmpCache_Pkt s in pkt.wakeup)
+				{
+					int old = s.vc_class;
+					s.vc_class = Math.Max(succ, s.vc_class);
+					if (s.vc_class > old) workQ.Enqueue(s); // By Xiyue ???: Why????
+				}
+			}
+			*/
+		}
+
 
         private Queue<CmpCache_Pkt> workQ = new Queue<CmpCache_Pkt>(); // avoid alloc'ing this for each call
         void assignVCclasses(CmpCache_Pkt root)

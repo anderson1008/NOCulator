@@ -10,9 +10,54 @@ namespace ICSimulator
     {
 		// By Xiyue: for coherent packet profiling
 		//public SampledStat[] avg_slowdown_error;
-		public PeriodicAccumStat[] etimated_slowdown;
-		public PeriodicAccumStat[] etimated_slowdown_period;
+		public AccumStat false_block, correct_block;
+		public AccumStat priority_inv;
+		public PeriodicAccumStat[] estimated_slowdown;
+		public PeriodicAccumStat[] estimated_slowdown_period;
 		public PeriodicAccumStat[] app_rank; 
+
+
+		public SampledStat netutil;
+
+		// AFC -- buffer power
+		public AccumStat afc_buf_enabled, afc_buf_write, afc_buf_read, afc_xbar;
+		public AccumStat[] afc_buf_enabled_bysrc, afc_buf_write_bysrc, afc_buf_read_bysrc, afc_xbar_bysrc;
+		// AFC -- switching stats
+		public AccumStat afc_switch, afc_switch_bless, afc_switch_buf;
+		public AccumStat[] afc_switch_bysrc, afc_switch_bless_bysrc, afc_switch_buf_bysrc;
+		public AccumStat afc_buffered, afc_bless, afc_gossip;
+		public AccumStat[] afc_buffered_bysrc, afc_bless_bysrc, afc_gossip_bysrc;
+		public SampledStat afc_avg;
+		public SampledStat[] afc_avg_bysrc;
+		public SampledStat afc_buf_occupancy;
+		public SampledStat[] afc_buf_occupancy_bysrc;
+
+		public AccumStat[] afc_vnet;
+		public AccumStat afc_bufferBypass;
+
+		public SampledStat stretch;
+		public SampledStat[] stretch_bysrc, stretch_bydest;
+		//public SampledStat[,] stretch_srcdest;
+		public SampledStat minpath;
+		public SampledStat[] minpath_bysrc;
+		//public SampledStat [] netslow_bysrc;
+
+		//public SampledStat [] fairness_ie, fairness_ic;
+		//public SampledStat [] fairness_slowdown, fairness_texcess;
+		//public SampledStat [] fairness_ie_perpkt, fairness_ic_perpkt;
+
+		//public SampledStat [] injqueue_bysrc;
+		//public SampledStat injqueue;
+
+		public SampledStat[] fairness_ie_starve_perpkt, fairness_ie_defl_perpkt;
+
+		// ---- SCARAB impl
+		public AccumStat drop;
+		public AccumStat[] drop_by_src;
+		public AccumStat nack_unavail;
+		public AccumStat[] nack_unavail_by_src;
+
+		private static List<StatsObject> m_subobjects = new List<StatsObject>();
 
 		//public PeriodicAccumStat[] actual_slowdown;
 		public AccumStat[] active_cycles;
@@ -209,47 +254,7 @@ namespace ICSimulator
         //public SampledStat [] flit_head_latency_byapp;
         //public SampledStat flit_head_latency;
 
-        public SampledStat netutil;
-
-        // AFC -- buffer power
-        public AccumStat afc_buf_enabled, afc_buf_write, afc_buf_read, afc_xbar;
-        public AccumStat[] afc_buf_enabled_bysrc, afc_buf_write_bysrc, afc_buf_read_bysrc, afc_xbar_bysrc;
-        // AFC -- switching stats
-        public AccumStat afc_switch, afc_switch_bless, afc_switch_buf;
-        public AccumStat[] afc_switch_bysrc, afc_switch_bless_bysrc, afc_switch_buf_bysrc;
-        public AccumStat afc_buffered, afc_bless, afc_gossip;
-        public AccumStat[] afc_buffered_bysrc, afc_bless_bysrc, afc_gossip_bysrc;
-        public SampledStat afc_avg;
-        public SampledStat[] afc_avg_bysrc;
-        public SampledStat afc_buf_occupancy;
-        public SampledStat[] afc_buf_occupancy_bysrc;
-
-        public AccumStat[] afc_vnet;
-		public AccumStat afc_bufferBypass;
-
-        public SampledStat stretch;
-        public SampledStat[] stretch_bysrc, stretch_bydest;
-        //public SampledStat[,] stretch_srcdest;
-        public SampledStat minpath;
-        public SampledStat[] minpath_bysrc;
-        //public SampledStat [] netslow_bysrc;
-
-        //public SampledStat [] fairness_ie, fairness_ic;
-        //public SampledStat [] fairness_slowdown, fairness_texcess;
-        //public SampledStat [] fairness_ie_perpkt, fairness_ic_perpkt;
-
-        //public SampledStat [] injqueue_bysrc;
-        //public SampledStat injqueue;
-
-        public SampledStat[] fairness_ie_starve_perpkt, fairness_ie_defl_perpkt;
-
-        // ---- SCARAB impl
-        public AccumStat drop;
-        public AccumStat[] drop_by_src;
-        public AccumStat nack_unavail;
-        public AccumStat[] nack_unavail_by_src;
-
-        private static List<StatsObject> m_subobjects = new List<StatsObject>();
+        
 
         // energy stats
         // TODO
@@ -1066,7 +1071,9 @@ namespace ICSimulator
         }
 
         public double Count
-		{ get { return m_count; } }
+		{ 
+			get { return m_count; } 
+		}
 
         public double Rate // events per time unit
         { get { return (double)Count / (double)m_endtime; } }

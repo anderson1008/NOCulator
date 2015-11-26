@@ -10,14 +10,15 @@ import get
 
 dir_canpc = "/home/anderson/Desktop/results/homo_mem/"
 dir_alone = dir_canpc + "baseline/4x4_insn100K/"
-dir_share = dir_canpc + "qos_mpki_60/4x4/"
+dir_share = dir_canpc + "mshr/"
 
 sum_ws = 0
 sum_hs = 0
 sum_uf = 0
 eff_count = 0
+ipc_alone = [2.08, 2.16, 1.77, 1.91, 2.08, 2.16, 1.77, 1.91, 2.08, 2.16, 1.77, 1.91, 2.08, 2.16, 1.77, 1.91, 2.08, 2.16, 1.77, 1.91, 2.08, 2.16, 1.77, 1.91, 2.08, 2.16, 1.77, 1.91, 2.08, 2.16, 1.77, 1.91, 2.08, 2.16, 1.77, 1.91, 2.08, 2.16, 1.77, 1.91, 2.08, 2.16, 1.77, 1.91, 2.08, 2.16, 1.77, 1.91, 2.08, 2.16, 1.77, 1.91, 2.08, 2.16, 1.77, 1.91, 2.08, 2.16, 1.77, 1.91, 2.08, 2.16, 1.77, 1.91]
 
-for sim_index in range(1, 31, 1):
+for sim_index in range(1, 27, 1):
   input_file_alone = dir_alone + "sim_" + str(sim_index) + ".out"
   input_file_share = dir_share + "sim_" + str(sim_index) + ".out"
   exist_alone = os.path.exists(input_file_alone)
@@ -32,7 +33,8 @@ for sim_index in range(1, 31, 1):
   insns_share = get.get_insns_persrc (stat_share)
   act_t_alone = get.get_active_cycles (stat_alone)
   act_t_share = get.get_active_cycles (stat_share)
-  ipc_alone = compute.cmp_ipc (insns_alone, act_t_alone)
+  #ipc_alone = compute.cmp_ipc (insns_alone, act_t_alone)
+  
   ipc_share = compute.cmp_ipc (insns_share, act_t_share)
   ws = compute.cmp_ws (ipc_alone, ipc_share)
   hs = compute.cmp_hs (ipc_alone, ipc_share)

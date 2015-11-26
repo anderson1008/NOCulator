@@ -221,6 +221,14 @@ namespace ICSimulator
             return (ulong)(Math.Abs(c1.x - x) + Math.Abs(c1.y - y));
         }
 
+        public static ulong distance(int node1, int node2)
+        {
+            int x1, x2, y1, y2;
+            Coord.getXYfromID(node1, out x1, out y1);
+            Coord.getXYfromID(node2, out x2, out y2);
+            return (ulong)(Math.Abs(x1-x2) + Math.Abs(y1-y2));
+        }
+
         // helpers
 
         public static bool hasNeighbor(int dir, Router router)
