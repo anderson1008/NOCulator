@@ -223,9 +223,12 @@ namespace ICSimulator
                     noFreeMSHRs = false;
             }
             
+			// use up credit
+			bool stallThrottle = !windowFull && ((Config.mshrs - mshrs_free) > Controller_QoSThrottle.mshr_quota [m_ID]) && nextIsMem;
+
             // any stall: either (i) window is full, or (ii) window is not full
             // but next insn (LD / ST) can't be issued
-            stall = windowFull || (nextIsMem && noFreeMSHRs);
+			stall = windowFull || (nextIsMem && noFreeMSHRs) || stallThrottle;
 
             // MSHR stall: window not full, next insn is memory, but we have no free MSHRs
             bool stallMem = !windowFull && (nextIsMem && noFreeMSHRs);
@@ -234,6 +237,8 @@ namespace ICSimulator
                 Simulator.stats.cpu_stall[m_ID].Add();
             if (stallMem)
                 Simulator.stats.cpu_stall_mem[m_ID].Add();
+			if (stallThrottle)
+				Simulator.stats.cpu_stall_throttle [m_ID].Add();
 
         }
 
@@ -287,7 +292,12 @@ namespace ICSimulator
                 if (m_mshrs[i].block == block)
                     return true;
 
-            return mshrs_free > 0;
+			// Without throttling, an mshr entry can be issued as long as there is an available entry.
+			// In the case of throttling, we need to check credit.
+			if (!Config.throttle_enable)
+				return mshrs_free > 0;
+			else
+				return (mshrs_free > 0)&&((Config.mshrs - mshrs_free)<= Controller_QoSThrottle.mshr_quota [m_ID]);
         }
 
 		// called when completing a LD/ST request

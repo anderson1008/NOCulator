@@ -15,7 +15,9 @@ namespace ICSimulator
 		public PeriodicAccumStat[] estimated_slowdown;
 		public PeriodicAccumStat[] estimated_slowdown_period;
 		public PeriodicAccumStat[] app_rank; 
-
+		public AccumStat [] cpu_stall_throttle;
+		public SampledStat consec_fair, consec_unfair;
+		public SampledStat[] mshrs_credit, mshrs_util;
 
 		public SampledStat netutil;
 
@@ -987,7 +989,7 @@ namespace ICSimulator
 
         public override void DumpJSON(TextWriter tw)
         {
-            tw.Write("{{\"avg\":{0},\"min\":{1},\"max\":{2},\"std\":{3},\"count\":{4},\"binmin\":{5},\"binmax\":{6}",
+            tw.Write("\n{{\"avg\":{0},\"min\":{1},\"max\":{2},\"std\":{3},\"count\":{4},\"binmin\":{5},\"binmax\":{6}",
                      Avg, Min, Max, Math.Sqrt(Variance), Count, m_binmin, m_binmax);
 
             if (Config.histogram_bins)
