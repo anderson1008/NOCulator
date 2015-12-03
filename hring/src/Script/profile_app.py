@@ -45,16 +45,15 @@ for app_index in range (1, 27):
   if not os.path.exists(raw_data_dir + app):
     raise Exception ("dir" + raw_data_dir + app + "not found")
   file_count = 0
-  for sim_index in range (1, 17):
+  for sim_index in range (1,17):
     file_name = raw_data_dir + app + "/sim_" + str(sim_index) + '.out'
     if not os.path.exists(file_name):
       raise Exception ("file " + file_name + " not found") 
     fo_in = open(file_name, "r")
     file_count = file_count + 1
     content = fo_in.read();
-    
-    searchObj = re.search(r'"mpki_bysrc":\[(.*)\]', content)
-    searchObj = re.search(r'(?:\{"avg":.*?\},){31}(\{"avg":.*?\},)', searchObj.group(1))	
+
+    searchObj = re.search(r'"mpki_bysrc":\[\n(?:\{"avg":.*?\},\n){31}(\{"avg":.*?\},)', content)
     searchObj = re.search(r'(?:\{"avg":([\w.]+),)', searchObj.group(1))
     mpki = "%.3f" % float(searchObj.group(1))
 

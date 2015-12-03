@@ -116,7 +116,7 @@ namespace ICSimulator
 		public static double slowdown_epoch = 10000;
 
 		// Slowdown-aware Throttling
-		public static bool throttle_enable = false;
+		public static bool throttle_enable = true;
 		public static double sweep_th_rate = 0; 		// static throttle rate, intial value of dynamic throttle rate
 		// specify which node to throttle when using static throttle controller
 		public static string throttle_node = "1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1";
@@ -128,6 +128,8 @@ namespace ICSimulator
         public static double th_unfairness = 0.2; 
         public static int th_consecutive_fair = 5;
         public static double th_unfairness_delta = 0.1;
+		public static int throt_app_count = 4;
+
 
 		public static ulong STC_batchPeriod = 1000;
 		public static ulong STC_batchCount = 8;

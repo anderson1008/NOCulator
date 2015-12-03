@@ -14,9 +14,11 @@ namespace ICSimulator
 		public AccumStat priority_inv;
 		public PeriodicAccumStat[] estimated_slowdown;
 		public PeriodicAccumStat[] estimated_slowdown_period;
+		public PeriodicAccumStat[] noc_stc; // noc-level stall time criticality
 		public PeriodicAccumStat[] app_rank; 
 		public AccumStat [] cpu_stall_throttle;
 		public SampledStat consec_fair, consec_unfair;
+		public LogStat unfairness;
 		public SampledStat[] mshrs_credit, mshrs_util;
 
 		public SampledStat netutil;
@@ -76,6 +78,43 @@ namespace ICSimulator
 		public SampledStat[] net_latency_bydest, total_latency_bydest;
 		public SampledStat[] flit_inj_latency_byapp, flit_net_latency_byapp, flit_total_latency_byapp;
 		public SampledStat flit_inj_latency, flit_net_latency, flit_total_latency;
+
+		public class LogStat : StatsObject
+		{
+  
+			private List<double> history = new List<double>();
+			
+	        public override void Reset()
+	        {
+	            history.Clear();
+	        }
+	
+			public void Add(double val)
+	        {
+	            history.Add(val);
+	        }
+
+			public double Peek (int i)
+			{
+				return history[i];
+			}
+	
+	        public override void DumpJSON(TextWriter tw)
+	        {
+				tw.Write (Environment.NewLine);
+	            tw.Write("{");
+				foreach (double i in history)
+					tw.Write ("{0},",Math.Round(i,3));
+				tw.Write("}");
+	        }
+    
+		} 
+		
+		LogStat newLogStat()
+		{
+			LogStat ret = new LogStat();
+			return ret;
+		}
 
 		// an AccumStat is a statistic that counts discrete events (flit
 		// deflections, ...) and from which we can extract a rate
@@ -559,6 +598,8 @@ namespace ICSimulator
                     fi.SetValue(this, newSampledStatArray2D());
 				else if (t == typeof(CacheProfileStat[]))
 					fi.SetValue(this, newCacheProfileStatArray());
+				else if (t == typeof(LogStat))
+					fi.SetValue(this, newLogStat());
 				
             }
         }

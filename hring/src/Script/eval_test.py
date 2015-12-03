@@ -7,11 +7,11 @@ import fnmatch
 import string
 
 dir_macpro = "/Users/xiyuexiang/GoogleDrive/NOCulator/hring/src/bin/"
-dir_canpc = "/home/anderson/Desktop/NOCulator/hring/src/"
-work_dir = dir_macpro
+dir_canpc = "/home/anderson/Desktop/NOCulator/hring/src/bin/"
+
 
 #ipc_alone = [2.02, 1.85, 1.91, 2.51, 2.02, 1.85, 1.91, 2.51, 2.02, 1.85, 1.91, 2.51, 2.02, 1.85, 1.91, 2.51] # heter_app 1
-ipc_alone = [2.08, 2.16, 1.77, 1.91, 2.08, 2.16, 1.77, 1.91, 2.08, 2.16, 1.77, 1.91, 2.08, 2.16, 1.77, 1.91] # mix_app 1 in 16 node
+ipc_alone = [2.08, 2.16, 1.77, 1.91, 2.08, 2.16, 1.77, 1.91, 2.08, 2.16, 1.77, 1.91, 2.08, 2.16, 1.77, 1.91] # mix_app 2 in 16 node
 #ipc_alone = [1.43, 1.88, 1.30, 0.93, 1.43, 1.88, 1.30, 0.93, 1.43, 1.88, 1.30, 0.93, 1.43, 1.88, 1.30, 0.93, 1.43, 1.88, 1.30, 0.93, 1.43, 1.88, 1.30, 0.93, 1.43, 1.88, 1.30, 0.93, 1.43, 1.88, 1.30, 0.93, 1.43, 1.88, 1.30, 0.93, 1.43, 1.88, 1.30, 0.93, 1.43, 1.88, 1.30, 0.93, 1.43, 1.88, 1.30, 0.93, 1.43, 1.88, 1.30, 0.93, 1.43, 1.88, 1.30, 0.93, 1.43, 1.88, 1.30, 0.93, 1.43, 1.88, 1.30, 0.93] # mix_app 1 in 64 node
 
 def get_stat (file_name):
@@ -81,6 +81,12 @@ def cmp_uf (ipc_alone, ipc_share):
   unfairness = max (slowdown)
   return unfairness
 
+
+machine = input('which machine (1-canpc, 2-macpro): ')
+if machine is 1:
+  work_dir = dir_canpc
+elif machine is 2:
+  work_dir = dir_macpro
 
 input_file = input('please input file_shared name: ' )
 test_file_name = work_dir + str(input_file)

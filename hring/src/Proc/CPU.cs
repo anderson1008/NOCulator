@@ -224,7 +224,9 @@ namespace ICSimulator
             }
             
 			// use up credit
-			bool stallThrottle = !windowFull && ((Config.mshrs - mshrs_free) > Controller_QoSThrottle.mshr_quota [m_ID]) && nextIsMem;
+			bool stallThrottle = false;
+			if (Config.throttle_enable)
+				stallThrottle=!windowFull && ((Config.mshrs - mshrs_free) > Controller_QoSThrottle.mshr_quota [m_ID]) && nextIsMem;
 
             // any stall: either (i) window is full, or (ii) window is not full
             // but next insn (LD / ST) can't be issued
