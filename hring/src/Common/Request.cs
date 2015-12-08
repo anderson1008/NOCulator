@@ -222,8 +222,8 @@ namespace ICSimulator
             this._creationTime = Simulator.CurrentRound;
 			//this._issueTimeIntf = (ulong)Simulator.stats.non_overlap_penalty[requesterID].Count;
 			this._interferenceCycle = interference;
-			if (interference != 0)
-				Console.WriteLine("Req Th_Itf is {0}", interference);
+			//if (interference != 0)
+			//	Console.WriteLine("Req at {0} is issued with Init intf cycle {1} at TIME = {2}", requesterID, interference, Simulator.CurrentRound);
         }
 
         public override string ToString()
