@@ -85,10 +85,14 @@ for app_index in range (1, 27):
 	
   
   if mpki_sum / file_count > MEM_INTEN_THESHLD:
+    plt.figure(1)
+    plt.subplot(2,1,1)
     plt.plot(mshr_plt, ipc_plt, label=app.strip('.bin.gz'))
-
+    plt.legend()
+    plt.subplot(2,1,2)
+    plt.plot(mshr_plt, mpki_plt, label=app.strip('.bin.gz'))
+    plt.legend()
 fo_out_0.close()
 fo_out_1.close()
-plt.legend()
 plt.show()
 print "^_^"

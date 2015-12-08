@@ -242,7 +242,7 @@ namespace ICSimulator
 			if (stallThrottle) {
 				Simulator.stats.cpu_stall_throttle [m_ID].Add ();
 				throttleCycle ++;
-				Console.WriteLine("Core {0} ThrottleCycle {1} at TIME = {2}", m_ID, throttleCycle, Simulator.CurrentRound);
+				//Console.WriteLine("Core {0} ThrottleCycle {1} at TIME = {2}", m_ID, throttleCycle, Simulator.CurrentRound);
 			}
 
         }

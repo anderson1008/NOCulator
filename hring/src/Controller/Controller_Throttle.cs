@@ -70,6 +70,11 @@ namespace ICSimulator
 		private int m_least_stc;
 		ulong[] app_index = new ulong[Config.N]; // Sorted. construct a one-dimensional array, indicating the application ID
 		double[] app_stc = new double[Config.N]; // Sorted.	
+		double[] app_sd = new double[Config.N];
+		ulong[] app_index_stc = new ulong[Config.N];
+		ulong[] app_index_sd = new ulong[Config.N];
+
+
 		double unfairness = 0;
 		double unfairness_old = 0;
 		private bool[] pre_throt = new bool[Config.N];
@@ -129,30 +134,6 @@ namespace ICSimulator
 				}
 			}
 			m_phil_core_candidate.Clear();
-/*
-			ulong dist_slowest_old = ulong.MaxValue;
-			double slowdown_old = Simulator.stats.estimated_slowdown [m_slowest_core].Count;
-			for (int i = 0; i < Config.N; i++) {
-				ulong dist_slowest = Simulator.distance (m_slowest_core, i); // absolute distances from the slowest core
-				double slowdown = Simulator.stats.estimated_slowdown [i].Count;
-				bool mem_inten = app_type [i] == APP_TYPE.THROUGHPUT_SEN;
-				bool closet = (dist_slowest < dist_slowest_old);
-				if (slowdown_old > slowdown && mem_inten && String.Compare (throttle_node [i], "1") == 0) {
-					if (slowdown_old - slowdown < 1.0 && closet) {
-						m_philanthropic_core = i;
-						dist_slowest_old = dist_slowest;
-						slowdown_old = slowdown;
-						return;
-					}
-					else {
-						m_philanthropic_core = i;
-						dist_slowest_old = dist_slowest;
-						slowdown_old = slowdown;
-					}
-				}
-					
-            } // end for
-*/
 		}
 		
         public void throttle_up (int node)
@@ -183,8 +164,6 @@ namespace ICSimulator
 				if (app_rank [i] == max_rank_mem && app_type [i] == APP_TYPE.THROUGHPUT_SEN && mshr_quota [i] < Config.mshrs) {
 					mshr_quota [i] = mshr_quota [i] + 1;
 					Console.WriteLine ("Throttle Up Core {0} to {1}", i, mshr_quota[i]);
-
-
 				}
 			}
 
@@ -246,220 +225,115 @@ namespace ICSimulator
 		{
 			Console.WriteLine("MSHR is reset");
 			throttle_node = Config.throttle_node.Split(',');
-			m_philanthropic_core_old = -1;
-			m_philanthropic_core = -1;
 			for (int i = 0; i < Config.N; i++)
-			{
 				mshr_quota [i] = Config.mshrs;
-				pre_throt[i] = false;
-			}
+			m_consecutive_unfair_counter = 0;
 		}
 		
 		
 		
-		public void throttle_down_possible ()
+		public int throttle_down_possible ()
 		{
 			int throttled=0;
-			/*
-			for (int i=0; i<Config.N; i++)
-			{
-				if (mshr_quota [i] == Config.mshrs && String.Compare(throttle_node[i],"0")==0)
-				{
-					mshr_quota [i] = (int)(Config.mshrs * 0.7);
-					throttled++;
-					Console.WriteLine ("Throttle Down Core {0} to {1}", i, mshr_quota[i]);
-				}			
-				else if (mshr_quota[i] > Config.throt_min*Config.mshrs && mshr_quota [i] != Config.mshrs  && String.Compare(throttle_node[i],"0")==0)
-				{		
-					mshr_quota [i] = mshr_quota [i] - 1;
-					throttled++;
-					Console.WriteLine ("Throttle Down Core {0} to {1}", i, mshr_quota[i]);
-				}
-				else if (String.Compare(throttle_node[i],"0")==0)
-				    throttle_up (i);
-			}
-			*/
-			//bool [] dont_throt = new bool[Config.N];
-			//for (int i=0; i<Config.N; i++)
-			//	dont_throt [i] = false;
-			Console.WriteLine ("Unfairness new is {0:0.00}, old is {1:0.00}", unfairness, unfairness_old);
-			if (unfairness - unfairness_old > 0)
-				for (int i=0; i<Config.N; i++)
-					if (pre_throt[i] == true)
-						throttle_node[i] = "0"; // unthrottled core
-
-			for (int i=0; i<Config.N; i++)
-				pre_throt[i] = false;
-			
+			rank_by_stc ();
 			for (int i = 0; i < Config.N && throttled < Config.throt_app_count; i++) { 
-				int pick = (int) app_index[i];
+				int pick = (int) app_index_stc[i];
 				if (mshr_quota [pick] == Config.mshrs && String.Compare(throttle_node[pick],"1")==0)
 				{
 					mshr_quota [pick] = (int)(Config.mshrs * 0.7);
 					throttled++;
-					pre_throt[pick] = true;
 					Console.WriteLine ("Throttle Down Core {0} to {1}", pick, mshr_quota[pick]);
 				}			
 				else if (mshr_quota[pick] > Config.throt_min*Config.mshrs && mshr_quota [pick] != Config.mshrs && String.Compare(throttle_node[pick],"1")==0)
 				{		
 					mshr_quota [pick] = mshr_quota [pick] - 1;
 					throttled++;
-					pre_throt[pick] = true;
 					Console.WriteLine ("Throttle Down Core {0} to {1}", pick, mshr_quota[pick]);
 				}
 			}
-			
-			if (throttled < Config.throt_app_count)
-				throttle_reset();
+			return throttled;
 
 		}
 
 		public void throttle_stc()
 		{
-			rank_by_stc ();
+		
 
 			double max_sd = Simulator.stats.estimated_slowdown[m_slowest_core].LastPeriodValue;
             double min_sd = Simulator.stats.estimated_slowdown[m_fastest_core].LastPeriodValue;
             unfairness = max_sd - min_sd;
 			if (unfairness < 0)
             	throw new Exception("unfairness is negative.");
-			
+			int throttled = -1;
 			// throttle only the least stc critical app
 			if (unfairness > Config.th_unfairness)
 			{
-				//throttle_down (m_least_stc);
-				throttle_down_possible ();
+				mark_unthrottled();
+				throttled = throttle_down_possible ();
 				m_consecutive_unfair_counter = m_consecutive_unfair_counter + 1;
 				Console.WriteLine ("Unfair Phase: {0}", m_consecutive_unfair_counter);
 				Simulator.stats.consec_fair.Add (m_consecutive_fair_counter);
 				m_consecutive_fair_counter = 0;
 			}
 			else {
-				if (m_consecutive_fair_counter > Config.th_consecutive_fair)
-					throttle_all_up ();
+				throttle_all_up ();
 				m_consecutive_fair_counter = m_consecutive_fair_counter + 1;
 				Simulator.stats.consec_unfair.Add (m_consecutive_unfair_counter);
 				Console.WriteLine ("Fair Phase: {0}", m_consecutive_fair_counter);
 				m_consecutive_unfair_counter = 0;
 			}
+			if (m_consecutive_unfair_counter == Config.consec_throt_max || (throttled != -1 && throttled < Config.throt_app_count))
+				throttle_reset ();
 			for (int i = 0; i < Config.N; i++)
 				Simulator.stats.mshrs_credit [i].Add (Controller_QoSThrottle.mshr_quota [i]);
 			unfairness_old = unfairness;
 		}
 
-        public void throttle_ctrl ()
-        {
-            
-            double max_sd = Simulator.stats.estimated_slowdown[m_slowest_core].Count;
-            double min_sd = Simulator.stats.estimated_slowdown[m_fastest_core].Count;
-            double unfairness = max_sd - min_sd;
-			if (unfairness < 0)
-            	throw new Exception("unfairness is negative.");
-            
-			find_phil_core ();
-
-			Console.WriteLine ("Unfairness new is {0:0.00}, old is {1:0.00}", unfairness, unfairness_old);
-
-			// after the first unfair phase, make decision only based on unfairness, m_slowest_core, m_philanthropic_core.
-			/*
-			if (m_consecutive_unfair_counter == 0) {
-				if (unfairness > Config.th_unfairness) {
-					throttle_up(m_slowest_core);
-					throttle_down(m_philanthropic_core);
-					m_philanthropic_core_old = m_philanthropic_core;
-					unfairness_old = unfairness;
-					m_consecutive_unfair_counter = m_consecutive_unfair_counter + 1;
-					m_consecutive_fair_counter = 0;
-
-				}
-				else 
-					m_consecutive_fair_counter = m_consecutive_fair_counter + 1;
-				return;
-			}
-			*/
-			double unfairness_delta = unfairness_old - unfairness;
-			if (unfairness > Config.th_unfairness)
-			{
-
-				throttle_up();
-				throttle_down();
-
-				/*
-				if (unfairness_delta > 0) {
-					throttle_up(m_slowest_core);
-                    throttle_down(m_philanthropic_core_old);
-				} else {
-					throttle_up(m_slowest_core);
-					throttle_up(m_philanthropic_core_old);
-					//throttle_node[m_philanthropic_core_old] = "0";
-					find_phil_core ();  // call again in case m_philanthropic_core = m_philanthropic_core_old
-                    throttle_down(m_philanthropic_core);
-				}
-				*/
-
-				/*
-				// previous decision is good.
-				if (unfairness_delta >= Config.th_unfairness_delta)
-                {
-					throttle_up(m_slowest_core);
-                    throttle_down(m_philanthropic_core_old);
-                }
-				// previous decision is not good enough.
-                else if (unfairness_delta > 0 && unfairness_delta < Config.th_unfairness_delta)
-				{
-					throttle_up(m_slowest_core);
-                    throttle_down(m_philanthropic_core);
-				}
-				// previous decision is wrong and must be reverted.
-				else
-				{
-					throttle_up(m_slowest_core);
-					throttle_up(m_philanthropic_core_old);
-					throttle_node[m_philanthropic_core_old] = "0";
-					find_phil_core ();  // call again in case m_philanthropic_core = m_philanthropic_core_old
-                    throttle_down(m_philanthropic_core);	
-				}
-				*/
-				m_consecutive_unfair_counter = m_consecutive_unfair_counter + 1;
-				Console.WriteLine ("Unfair Phase: {0}", m_consecutive_unfair_counter);
-				Simulator.stats.consec_fair.Add (m_consecutive_fair_counter);
-				m_consecutive_fair_counter = 0;
-				
-			}
-			else
-			{
-				if (m_consecutive_fair_counter > Config.th_consecutive_fair)
-				{
-					throttle_all_up ();
-					//throttle_reset ();
-				}
-				m_consecutive_fair_counter = m_consecutive_fair_counter + 1;
-				Simulator.stats.consec_unfair.Add (m_consecutive_unfair_counter);
-				Console.WriteLine ("Fair Phase: {0}", m_consecutive_fair_counter);
-				m_consecutive_unfair_counter = 0;
-			}
-			unfairness_old = unfairness;
-			m_philanthropic_core_old = m_philanthropic_core;
-
-			for (int i = 0; i < Config.N; i++) {
-				Simulator.stats.mshrs_credit [i].Add (Controller_QoSThrottle.mshr_quota [i]);
-			}
-        }
-		
+    
+		// sort from low stc to high stc
 		public void rank_by_stc ()
 		{
 			for (int i = 0; i < Config.N; i++) {
-				Simulator.stats.app_rank [i].EndPeriod ();
-				app_index [i] = (ulong)i;
+				app_index_stc [i] = (ulong)i;
 				app_stc [i] = Simulator.stats.noc_stc[i].LastPeriodValue;
 			}
-			Array.Sort (app_stc, app_index);
-			//throttle_node = Config.throttle_node.Split(',');
-			//for (int i = 0; i < Config.throt_app_count; i++) { 
-			//	throttle_node[app_index [i]] = "0";
-			//}
-
+			Array.Sort (app_stc, app_index_stc);
 		}
+		
+		public class myReverseSort : IComparer  {
+			int IComparer.Compare( Object x, Object y )  {
+				double v1 = (double) x;
+				double v2 = (double) y;
+				if (v1 < v2) return 1;
+				if (v1 > v2) return -1;
+				else return 0;
+			}
+		
+		}
+
+		// sort from low to high slowdown
+		public void rank_by_sd ()
+		{
+			for (int i = 0; i < Config.N; i++) {
+				app_index_sd [i] = (ulong)i;
+				app_sd [i] = Simulator.stats.estimated_slowdown [i].LastPeriodValue;
+			}
+			IComparer revSort =  new myReverseSort ();
+			Array.Sort (app_sd, app_index_sd, revSort);
+		}
+
+		public void mark_unthrottled ()
+		{
+			int unthrottled=0;
+			rank_by_sd ();
+			for (int i = 0; i < Config.N && unthrottled < Config.opt_app_count; i++) { 
+				throttle_node[app_index_sd[i]] = "0";
+				unthrottled ++;
+			}
+		}
+		
+		
+		
 
 		public void ranking_app_global_1 ()
 		{
@@ -573,9 +447,6 @@ namespace ICSimulator
 			}
 		}
 
-
-
-
 		public override void setInjPool(int node, IPrioPktPool pool)
 		{
 			m_injPools[node] = pool;
@@ -603,25 +474,12 @@ namespace ICSimulator
 				return true;
 		}
 
-		/*
-		public bool globalSlowdown ()
-		{
-			bool need_slowdown_qos = false;
-			for (int i = 0; i < Config.N; i++) {
-				double estimated_slowdown;
-				ulong penalty_cycle = (ulong)Simulator.stats.non_overlap_penalty_period [i].Count;
-				estimated_slowdown = (double)Config.slowdown_epoch / (Config.slowdown_epoch - penalty_cycle);
-				need_slowdown_qos = need_slowdown_qos | (estimated_slowdown >= Config.target_slowdown [i]);
-			}
-			return need_slowdown_qos;
-		}
-		*/
-
 
 		public override void doStep()
 		{
 			// track the nonoverlapped penalty
-			double estimated_slowdown_period, estimated_slowdown, stc;
+			double estimated_slowdown_period, estimated_slowdown;
+			double stc;
 			double mpki_max = 0;
 			double mpki_sum=0;
 			int high_mpki_app = 0; 
@@ -662,7 +520,6 @@ namespace ICSimulator
 						else
 							throw new Exception("MPKI error!");
 					}
-				
 					mpki_sum+=MPKI[i];
 					most_mem_inten[i] = false;  // TBD
 					if (MPKI[i] > mpki_max) 
@@ -677,18 +534,22 @@ namespace ICSimulator
 
 					// compute noc stall time criticality
 					// use L1miss in denominator. So L1miss will be affected by the throttling mechanism, however, MPKI won't
-					stc = estimated_slowdown / L1misses[i];
+					if (L1misses[i]-prev_L1misses[i] > 0)
+						stc = estimated_slowdown / (L1misses[i]-prev_L1misses[i]);
+					else {
+						stc = double.MaxValue;
+					}
 					if (stc < min_stc) {
 						m_least_stc = i;
 						min_stc = stc;
 					}
-
+				
 
 					#if DEBUG
 					Console.WriteLine ("at time {0,-10}: Core {1,-5} Slowdow {2, -5:0.00} MPKI {3, -6:0.00} STC {4, -5:0.0000}",
  						Simulator.CurrentRound, i, estimated_slowdown, MPKI[i], stc);
 					#endif
-
+					prev_L1misses[i]=L1misses[i];
 					Simulator.stats.mpki_bysrc[i].Add(MPKI[i]);
 					Simulator.stats.estimated_slowdown_period [i].Add (estimated_slowdown_period);
 					Simulator.stats.estimated_slowdown [i].Add (estimated_slowdown);
@@ -700,6 +561,7 @@ namespace ICSimulator
 					Simulator.stats.non_overlap_penalty_period [i].EndPeriod ();
 					Simulator.stats.causeIntf [i].EndPeriod ();
 					Simulator.stats.noc_stc[i].EndPeriod();
+					Simulator.stats.app_rank [i].EndPeriod ();				
 				} // end for
 				unfairness = Simulator.stats.estimated_slowdown[m_slowest_core].LastPeriodValue -
 					 Simulator.stats.estimated_slowdown[m_fastest_core].LastPeriodValue;
