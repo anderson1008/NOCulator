@@ -676,7 +676,8 @@ namespace ICSimulator
 					else app_type[i] = APP_TYPE.LATENCY_SEN;
 
 					// compute noc stall time criticality
-					stc = estimated_slowdown / MPKI[i];
+					// use L1miss in denominator. So L1miss will be affected by the throttling mechanism, however, MPKI won't
+					stc = estimated_slowdown / L1misses[i];
 					if (stc < min_stc) {
 						m_least_stc = i;
 						min_stc = stc;

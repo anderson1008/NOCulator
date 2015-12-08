@@ -205,14 +205,25 @@ namespace ICSimulator
         /// <summary> Record number of stalls caused by this request while it's the oldest in the inst window </summary>
         public double backStallsCaused;
 
+
         public Request(int requesterID, ulong address, bool write)
         {
             this._requesterID = requesterID;
             this._address = address;
             this._write = write;
             this._creationTime = Simulator.CurrentRound;
+        }
+
+		public Request(int requesterID, ulong address, bool write, ulong interference)
+        {
+            this._requesterID = requesterID;
+            this._address = address;
+            this._write = write;
+            this._creationTime = Simulator.CurrentRound;
 			//this._issueTimeIntf = (ulong)Simulator.stats.non_overlap_penalty[requesterID].Count;
-			this._interferenceCycle = 0;
+			this._interferenceCycle = interference;
+			if (interference != 0)
+				Console.WriteLine("Req Th_Itf is {0}", interference);
         }
 
         public override string ToString()

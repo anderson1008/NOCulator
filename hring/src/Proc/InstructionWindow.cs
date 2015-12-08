@@ -354,7 +354,7 @@ namespace ICSimulator {
 					// Do NOT have to consider throttleCycle, since queueIntfCycle already includes the amount of throttled cycles
 					ulong interference_cycle = interferenceCycle + (ulong)queueIntfCycle;
 					if (interference_cycle != 0 ) {
-						requests [i].interferenceCycle = interference_cycle;
+						requests [i].interferenceCycle = requests [i].interferenceCycle + interference_cycle;
 						Simulator.stats.serialization_latency [m_cpu.ID].Add (serializationLatency);
 						Simulator.stats.queue_delay [m_cpu.ID].Add (queueCycle);
 						#if DEBUG

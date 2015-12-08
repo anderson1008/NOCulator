@@ -59,6 +59,7 @@ namespace ICSimulator
         public ulong outstandingReqsNetworkCycle;
         public ulong outstandingReqsMemory = 0;
         public ulong outstandingReqsMemoryCycle;
+		public ulong throttleCycle = 0;
 
         ulong alone_t;
 
@@ -161,86 +162,87 @@ namespace ICSimulator
         {
             if (p.cb != null) 
 			{
+				// TODO may need to accumulated
 				p.txn.interferenceCycle = p.intfCycle;  // The interference cycle of a txn is determined by that of the response packet.
 				p.cb();
 			}
         }
 
-        void doStats(ulong retired)
-        {
+        void doStats (ulong retired)
+		{
 			
-            Simulator.stats.every_insns_persrc[m_ID].Add(retired);
-            if(m_idle)
-                Simulator.stats.idle_cycles[m_ID].Add();
+			Simulator.stats.every_insns_persrc [m_ID].Add (retired);
+			if (m_idle)
+				Simulator.stats.idle_cycles [m_ID].Add ();
 
-            if (Simulator.Warming)
-            {
-                Simulator.stats.warming_insns_persrc[m_ID].Add(retired);
-                return;
-            }
+			if (Simulator.Warming) {
+				Simulator.stats.warming_insns_persrc [m_ID].Add (retired);
+				return;
+			}
 
-            if(!m_stats_active) return;
+			if (!m_stats_active)
+				return;
 
-            Simulator.stats.mshrs.Add(mshrs_free);
-            Simulator.stats.mshrs_persrc[m_ID].Add(mshrs_free);
+			Simulator.stats.mshrs.Add (mshrs_free);
+			Simulator.stats.mshrs_persrc [m_ID].Add (mshrs_free);
 
-            m_active_ret += retired;
+			m_active_ret += retired;
 
-            if (alone_t == ulong.MaxValue)
-                alone_t = m_ins.oldestT;
-            ulong alone_cyc = m_ins.oldestT - alone_t;
-            alone_t = m_ins.oldestT;
+			if (alone_t == ulong.MaxValue)
+				alone_t = m_ins.oldestT;
+			ulong alone_cyc = m_ins.oldestT - alone_t;
+			alone_t = m_ins.oldestT;
 
-            Simulator.stats.insns_persrc[m_ID].Add(retired);
-        	Simulator.stats.insns_persrc_period[m_ID].Add(retired);
+			Simulator.stats.insns_persrc [m_ID].Add (retired);
+			Simulator.stats.insns_persrc_period [m_ID].Add (retired);
 			Simulator.stats.insns_persrc_ewma [m_ID].Add (retired);
-            Simulator.stats.active_cycles[m_ID].Add();
-            Simulator.stats.active_cycles_alone[m_ID].Add(alone_cyc);
+			Simulator.stats.active_cycles [m_ID].Add ();
+			Simulator.stats.active_cycles_alone [m_ID].Add (alone_cyc);
 
-            Simulator.network._cycle_insns += retired;
+			Simulator.network._cycle_insns += retired;
 
-            if (Simulator.CurrentRound % (ulong)100000 == 0)// && Simulator.CurrentRound != 0)
-            {
-				Console.WriteLine("Processor {0}: {1} ({2} outstanding)",
-                                  m_ID, m_ins.totalInstructionsRetired,
-                                  m_ins.outstandingReqs);
+			if (Simulator.CurrentRound % (ulong)100000 == 0) {// && Simulator.CurrentRound != 0)
+				Console.WriteLine ("Processor {0}: {1} ({2} outstanding)",
+					m_ID, m_ins.totalInstructionsRetired,
+					m_ins.outstandingReqs);
 #if DEBUG
-                Console.WriteLine("-- outstanding:");
-                foreach (MSHR m in m_mshrs)
-                {
-                    if (m.block != null) Console.Write(" {0:X}", m.block);
-                }
-                Console.WriteLine();
+				Console.WriteLine ("-- outstanding:");
+				foreach (MSHR m in m_mshrs) {
+					if (m.block != null)
+						Console.Write (" {0:X}", m.block);
+				}
+				Console.WriteLine ();
 #endif
-            }
+			}
 
-            bool windowFull = m_ins.isFull();
-            bool nextIsMem = (m_trace.type == Trace.Type.Rd || m_trace.type == Trace.Type.Wr);
-            bool noFreeMSHRs = true;
-            for (int i = 0; i < m_mshrs.Length; i++)
-            {
-                if (!m_mshrs[i].valid)
-                    noFreeMSHRs = false;
-            }
+			bool windowFull = m_ins.isFull ();
+			bool nextIsMem = (m_trace.type == Trace.Type.Rd || m_trace.type == Trace.Type.Wr);
+			bool noFreeMSHRs = true;
+			for (int i = 0; i < m_mshrs.Length; i++) {
+				if (!m_mshrs [i].valid)
+					noFreeMSHRs = false;
+			}
             
 			// use up credit
 			bool stallThrottle = false;
 			if (Config.throttle_enable)
-				stallThrottle=!windowFull && ((Config.mshrs - mshrs_free) > Controller_QoSThrottle.mshr_quota [m_ID]) && nextIsMem;
+				stallThrottle = !windowFull && ((Config.mshrs - mshrs_free) > Controller_QoSThrottle.mshr_quota [m_ID]) && nextIsMem;
 
-            // any stall: either (i) window is full, or (ii) window is not full
-            // but next insn (LD / ST) can't be issued
+			// any stall: either (i) window is full, or (ii) window is not full
+			// but next insn (LD / ST) can't be issued
 			stall = windowFull || (nextIsMem && noFreeMSHRs) || stallThrottle;
 
-            // MSHR stall: window not full, next insn is memory, but we have no free MSHRs
-            bool stallMem = !windowFull && (nextIsMem && noFreeMSHRs);
+			// MSHR stall: window not full, next insn is memory, but we have no free MSHRs
+			bool stallMem = !windowFull && (nextIsMem && noFreeMSHRs);
 
-            if (stall)
-                Simulator.stats.cpu_stall[m_ID].Add();
-            if (stallMem)
-                Simulator.stats.cpu_stall_mem[m_ID].Add();
-			if (stallThrottle)
-				Simulator.stats.cpu_stall_throttle [m_ID].Add();
+			if (stall)
+				Simulator.stats.cpu_stall [m_ID].Add ();
+			if (stallMem)
+				Simulator.stats.cpu_stall_mem [m_ID].Add ();
+			if (stallThrottle) {
+				Simulator.stats.cpu_stall_throttle [m_ID].Add ();
+				throttleCycle ++;
+			}
 
         }
 
@@ -286,20 +288,21 @@ namespace ICSimulator
             return m_trace_valid;
         }
 
-        bool canIssueMSHR(ulong addr)
-        {
-            ulong block = addr >> Config.cache_block;
+        bool canIssueMSHR (ulong addr)
+		{
+			ulong block = addr >> Config.cache_block;
 
-            for (int i = 0; i < m_mshrs.Length; i++)
-                if (m_mshrs[i].block == block)
-                    return true;
+			for (int i = 0; i < m_mshrs.Length; i++)
+				if (m_mshrs [i].block == block)
+					return true;
 
 			// Without throttling, an mshr entry can be issued as long as there is an available entry.
 			// In the case of throttling, we need to check credit.
-			if (!Config.throttle_enable)
+			if (!Config.throttle_enable) {
 				return mshrs_free > 0;
-			else
-				return (mshrs_free > 0)&&((Config.mshrs - mshrs_free)<= Controller_QoSThrottle.mshr_quota [m_ID]);
+			} else {
+				return mshrs_free > 0 && ((Config.mshrs - mshrs_free) <= Controller_QoSThrottle.mshr_quota [m_ID]);
+			}
         }
 
 		// called when completing a LD/ST request
@@ -436,7 +439,8 @@ namespace ICSimulator
 					bool isWrite = m_trace.type == Trace.Type.Wr;
 					bool inWindow = m_ins.contains(addr, isWrite);
 
-					Request req = inWindow ? null : new Request(m_ID, addr, isWrite);
+					Request req = inWindow ? null : new Request(m_ID, addr, isWrite, throttleCycle);
+					throttleCycle = 0;
 					m_ins.fetch(req, addr, isWrite, inWindow);
 
 					if (!inWindow)
