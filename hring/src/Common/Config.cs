@@ -116,21 +116,21 @@ namespace ICSimulator
 		public static double slowdown_epoch = 10000;
 
 		// Slowdown-aware Throttling
-		public static bool throttle_enable = true;
+		public static bool throttle_enable = false;
 		public static double sweep_th_rate = 0; 		// static throttle rate, intial value of dynamic throttle rate
 		// specify which node to throttle when using static throttle controller
 		public static string throttle_node = "1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1";
 		//public static string throttle_node = "1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1";
 		//public static double ref_ipc = 1;
 		//public static double[] target_slowdown = new double[16] {1.2, 1.5, 1.5, 1.5, 1.2, 1.5, 1.5, 1.5, 1.2, 1.5, 1.5, 1.5, 1.2, 1.5, 1.5, 1.5};
-		public static double throt_min = 0.3;  // share with Sigcomm paper
+		public static double throt_min = 0.5;  // share with Sigcomm paper
 		public static double throt_max = 0.9;	// share with Sigcomm paper
         public static double th_unfairness = 0.25; 
         public static int th_consecutive_fair = 5;
         public static double th_unfairness_delta = 0.1;
 		public static int throt_app_count = 4;
 		public static int opt_app_count = 4;
-		public static int consec_throt_max = 20; // maximum number of consecutive phases for throttled down. it is bounded by (total number of throttled stages * (N - opt_app_count))
+		public static int consec_throt_max = 15; // maximum number of consecutive phases for throttled down. it is bounded by (total number of throttled stages * (N - opt_app_count))
 
 
 		public static ulong STC_batchPeriod = 1000;

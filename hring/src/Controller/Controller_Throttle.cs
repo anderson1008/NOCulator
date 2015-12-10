@@ -282,7 +282,7 @@ namespace ICSimulator
 				Console.WriteLine ("Fair Phase: {0}", m_consecutive_fair_counter);
 				m_consecutive_unfair_counter = 0;
 			}
-			if (m_consecutive_unfair_counter == Config.consec_throt_max || (throttled != -1 && throttled < Config.throt_app_count))
+			if (m_consecutive_unfair_counter >= Config.consec_throt_max || (throttled != -1 && throttled < Config.throt_app_count))
 				throttle_reset ();
 			for (int i = 0; i < Config.N; i++)
 				Simulator.stats.mshrs_credit [i].Add (Controller_QoSThrottle.mshr_quota [i]);
