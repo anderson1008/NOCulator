@@ -73,8 +73,14 @@ namespace ICSimulator
 		double[] app_sd = new double[Config.N];
 		ulong[] app_index_stc = new ulong[Config.N];
 		ulong[] app_index_sd = new ulong[Config.N];
-
-
+		
+		enum OPT_STATE {
+			IDLE,
+			PERFORMANCE_OPT,
+			FAIR_OPT
+		};
+		
+		OPT_STATE [] m_opt_state = new OPT_STATE[Config.N];
 		double unfairness = 0;
 		double unfairness_old = 0;
 		private bool[] pre_throt = new bool[Config.N];
@@ -112,6 +118,7 @@ namespace ICSimulator
 				app_type [i] = APP_TYPE.LATENCY_SEN;
 				most_mem_inten [i] = false;
 				pre_throt  [i] = false;
+				m_opt_state [i] = OPT_STATE.PERFORMANCE_OPT;
 			}
 			enable_qos = false;
 			max_rank = 0;
@@ -121,20 +128,7 @@ namespace ICSimulator
 			m_consecutive_unfair_counter = 0;
 		}
         
-        public void find_phil_core ()
-		{
-			ulong dist_slowest_old = ulong.MaxValue;
-			ulong dist_slowest;
-			// pick a nearest node from m_phil_core_candidate
-			foreach (ulong i in m_phil_core_candidate) {
-				dist_slowest = Simulator.distance (m_slowest_core, (int)i); // absolute distances from the slowest core
-				if (dist_slowest < dist_slowest_old && String.Compare(throttle_node[(int)i],"1")==0) {
-					m_philanthropic_core = (int)i;
-					dist_slowest_old = dist_slowest;
-				}
-			}
-			m_phil_core_candidate.Clear();
-		}
+ 
 		
         public void throttle_up (int node)
 		{
@@ -332,120 +326,70 @@ namespace ICSimulator
 			}
 		}
 		
-		
-		
-
-		public void ranking_app_global_1 ()
+		public void OptimizePerformance ()
 		{
-			double[] app_slowdown = new double[Config.N];
-			Console.WriteLine ("{0,-5}{1,-20}{2,-5}", "APP", "TYPE", "Slowdown");
-			for (int i = 0; i < Config.N; i++) {
-				Simulator.stats.app_rank [i].EndPeriod ();
-				app_index [i] = (ulong)i;
-				//app_slowdown [i] = Simulator.stats.etimated_slowdown [i].ExpWhtMvAvg();
-				app_slowdown [i] = Simulator.stats.estimated_slowdown [i].Count;
-				Console.WriteLine ("{0,-5}{1,-20}{2,-10:0.00}", i, app_type [i].ToString (), app_slowdown [i]);
-			}
-
-			Array.Sort (app_slowdown, app_index);
+			MarkNoThrottle();			
 			
-			//m_fastest_core = (int) app_index[0];
-
-			double delta_sd = Config.slowdown_delta;
-			ulong app_rank_mem = 0;
-			ulong app_rank_non_mem = 0;
-			double base_non_mem_sd = 0;
-			double base_mem_sd = 0;
-			double non_mem_count = 0;
-			double mem_count = 0;
-			for (int i = 0; i < Config.N; i++) { // remember, you are dealing with sorted array.
-				if (app_type [app_index [i]] == APP_TYPE.LATENCY_SEN) {
-					if (non_mem_count == 0)
-						base_non_mem_sd = app_slowdown [i];
-
-					if (app_slowdown [i] > (1 + (app_rank_non_mem + 1) * delta_sd) * base_non_mem_sd)
-						app_rank_non_mem++;
-					app_rank [app_index [i]] = app_rank_non_mem;
-					non_mem_count++;
-
-				} else if (app_type [app_index [i]] == APP_TYPE.THROUGHPUT_SEN) {
-					if (mem_count == 0) {
-						base_mem_sd = app_slowdown [i];
-						m_fastest_core = (int)app_index [i]; // fastest throughput sensitive app
-					}
-					
-
-					if (app_slowdown[i] > (1+(app_rank_mem+1)*delta_sd)*base_mem_sd)
-						app_rank_mem ++;
-					app_rank[app_index [i]] = app_rank_mem;
-					m_slowest_core = (int) app_index [i]; // will only keep the core id in the last iteration (slowest core). This core will be throttled down.
-
-					if (app_rank_mem == 0) {
-						m_phil_core_candidate.Add(app_index[i]);
-					}
-
-					mem_count ++;
-
+			int throttled=0;
+			
+			for (int i = 0; i < Config.N && throttled < Config.throt_app_count; i++) { 
+				int pick = (int) app_index_stc[i];
+				if (ThrottleDown (pick)) {
+					pre_throt[pick] = true;
+					throttled++;
+					Console.WriteLine ("Throttle Down Core {0} to {1}", pick, mshr_quota[pick]);
 				}
 			}
+			
+			if (throttled < Config.throt_app_count)
+				throttle_reset();			
 
-			max_rank_non_mem = app_rank_non_mem;
-			max_rank_mem = app_rank_mem;
-			enable_qos_non_mem = (max_rank_non_mem > Config.enable_qos_non_mem_threshold) ? true : false;
-			enable_qos_mem = (max_rank_mem > Config.enable_qos_mem_threshold) ? true : false;
-			if (enable_qos_non_mem) Console.WriteLine("Enable qos_non_mem at {0}", Simulator.CurrentRound);
-			if (enable_qos_mem) Console.WriteLine("Enable qos_mem at {0}", Simulator.CurrentRound);
+
 		}
-
-
-		public void ranking_app_global ()
+		
+		public void MarkNoThrottle () 
 		{
-			ulong[] app_index = new ulong[Config.N]; // construct a one-dimensional array, indicating the application ID
-			double[] app_slowdown = new double[Config.N];
-			for (int i = 0; i < Config.N; i++) 
+			if (m_opt_state == OPT_STATE.PERFORMANCE_OPT)
 			{
-				Simulator.stats.app_rank [i].EndPeriod();
-				app_index [i] = (ulong)i;
-				app_slowdown [i] = Simulator.stats.estimated_slowdown [i].ExpWhtMvAvg();
-			}
-
-			Array.Sort (app_slowdown, app_index);
-
-			if ((app_slowdown[Config.N-1]-app_slowdown[0]) / app_slowdown[0]  > 0.10) {
-				enable_qos = true;
-				//Console.WriteLine("Enable qos at {0}", Simulator.CurrentRound);
-			}
-			else enable_qos = false;
-
-			for (int i = 0; i < Config.N; i++)
-			{
-				int temp_reverse_rank = Array.IndexOf (app_index, (ulong)i);
-				//app_rank [i] = (ulong)((temp_reverse_rank+Config.N-1) % Config.N);
-				app_rank [i] = (ulong)temp_reverse_rank;
-
-				//Simulator.stats.app_rank [i].Add(app_rank [i]);
-
-			}
-		}
-
-		public void adjust_app_ranking ()
-		{
-			ulong adjust_rank = 0;
-			for (int i = 0; i < Config.N; i++)
-			{
-				if (most_mem_inten[i] == true)
-				{
-					adjust_rank = app_rank[i];
-					break;
+				for (int i = 0; i < Config.N; i++){
+					if (mshr_quota[i] - 1 <= Config.throt_min*Config.mshrs) {
+						Console.WriteLine ("Reach minimum MSHR, mark core {0} UNTHROTTLE", i);
+						throttle_node[i] = "0";
+					}
+					else if (unfairness - unfairness_old > 0 && pre_throt[i] == true) // previous decision is wrong
+					{
+						Console.WriteLine ("Previous decision is wrong, mark core {0} UNTHROTTLE", i);
+						throttle_node[i] = "0"; // unthrottled core
+					}
+					pre_throt[i] = false;	// reset pre_throt here
 				}
 			}
-
-			for (int i = 0; i < Config.N; i++)
+			else if (m_opt_state == OPT_STATE.FAIR_OPT)
 			{
-				if (app_rank[i] < adjust_rank) app_rank[i] = app_rank[i] + 1;
-				else if (app_rank[i] == app_rank [i]) app_rank [i] = 0;
+
 			}
+
 		}
+
+		public bool ThrottleDown (int node)
+		{
+			bool throttled = false;
+			if (mshr_quota [node] == Config.mshrs && String.Compare(throttle_node[node],"1")==0)
+			{
+				mshr_quota [node] = (int)(Config.mshrs * 0.7);
+				throttled = true;
+			}			
+			else if (mshr_quota[node] > Config.throt_min*Config.mshrs && mshr_quota [node] != Config.mshrs && String.Compare(throttle_node[pick],"1")==0)
+			{		
+				mshr_quota [node] = mshr_quota [node] - 1;
+				throttled = true;
+			}
+			return throttled;
+		}
+	
+
+	
+
 
 		public override void setInjPool(int node, IPrioPktPool pool)
 		{
