@@ -59,13 +59,16 @@ namespace ICSimulator
 		public static bool enable_qos, enable_qos_mem, enable_qos_non_mem;
 		public static ulong max_rank, max_rank_mem, max_rank_non_mem;
 		public static int [] mshr_quota = new int[Config.N];
+		public int [] mshr_best_sol = new int[Config.N];
+		public int [] bad_decision_counter = new int[Config.N];
 		public bool [] rst_quota = new bool[Config.N];
 		private int m_slowest_core;
         private int m_fastest_core;
 		private int m_epoch_counter;
+		private int m_opt_counter;
 
 		private int m_perf_opt_counter, m_fair_opt_counter, m_idle_counter;
-		private double m_currunfairness, m_budget_unfairness;
+		private double m_currunfairness, m_budget_unfairness, m_oldunfairness;
 		private double m_currperf, m_budget_perf, m_oldperf;
 		private string [] throttle_node;	
 		private double m_init_unfairness, m_init_perf;
@@ -111,6 +114,7 @@ namespace ICSimulator
 
 				// assign initial mshr quota
 				mshr_quota [i] = Config.mshrs;
+				mshr_best_sol [i] = Config.mshrs;
 				rst_quota[i] = false;
 
 				m_lastCheckPoint[i] = 0;
@@ -118,6 +122,8 @@ namespace ICSimulator
 				app_type [i] = APP_TYPE.LATENCY_SEN;
 				most_mem_inten [i] = false;
 				pre_throt  [i] = false;
+				bad_decision_counter [i] = 0;
+
 			}
 			m_opt_state = OPT_STATE.PERFORMANCE_OPT;
 
@@ -134,14 +140,127 @@ namespace ICSimulator
 			m_epoch_counter = 0;
 			m_idle_counter = 0;
 			m_oldperf = 0;
+			m_oldunfairness = 0;
+			m_opt_counter = 0;
 		}
  
+		public void ThrottleSTC_v2 ()
+		{
+			double sd_delta, uf_delta;
+			comp_unfairness ();
+			comp_performance ();
+			rank_by_sd (); // use to mark unthrottled core
+			rank_by_stc (); // use to select the throttled core
+			sd_delta = m_currperf - m_oldperf;
+			uf_delta = m_currunfairness - m_oldunfairness;
+			double improvement = Math.Abs(sd_delta + uf_delta);
+			Console.WriteLine ("sd_delta = {0:0.000}", sd_delta);
+			Console.WriteLine ("uf_delta = {0:0.000}", uf_delta);
+			if (m_opt_counter < Config.opt_window) {
+				if (sd_delta > 0 || uf_delta > 0 || improvement < 0.01) {
+					// previous iteration made a bad decision
+					// mark bad decision
+					SetBestSol ();
+					MarkBadDecision ();
+				} else if (sd_delta == 0 && uf_delta == 0) {
+					// for the first iteration and iteration made no change
+
+				} else {
+					AddBestSol ();
+				}
+				ThrottleUp (m_slowest_core);
+				PickNewThrtDwn ();
+				m_opt_counter++;
+				m_oldperf = m_currperf;
+				m_oldunfairness = m_currunfairness;
+				ThrottleFlagReset ();
+			}
+			// use the best solution
+			else if (m_opt_counter == Config.opt_window) {
+				SetBestSol ();
+			}
+		}
+
+		public void MarkUnthrottled_v2 ()
+		{
+			// mark the slowest core and the all core with MPI < MPI_threshold (light apps)
+			throttle_node [m_slowest_core] = "0";
+			for (int i = 0; i < Config.N; i++) {
+				if (curr_L1misses [i] < Config.curr_L1miss_threshold || (mshr_quota[i] - 1 ) < Config.throt_min*Config.mshrs || bad_decision_counter[i] == Config.th_bad_dec_counter) {
+					Console.WriteLine("Core {0} is unthrottable.", i);
+					throttle_node [i] = "0";
+				}
+			}
+		}
+
+		public void MarkBadDecision ()
+		{
+			for (int i = 0; i < Config.N; i++) {
+				if (pre_throt [i] == true) {
+					bad_decision_counter [i]++;
+					Console.WriteLine ("Previous decision sucks. Increase the bad_decision_counter {0} to {1}", i, bad_decision_counter[i]);
+				}
+			}
+		}
+
+		public void ThrottleUp (int pick)
+		{
+			if (mshr_quota [pick] < Config.mshrs) {
+				mshr_quota [pick] = mshr_quota [pick] + 1;
+				Console.WriteLine("Throttle UP core {0} to {1}", pick, mshr_quota[pick]);
+			}
+		}
+		
+		public void ThrottleFlagReset ()
+		{
+			throttle_node = Config.throttle_node.Split(',');
+		}
+
+		public void ThrottleReset ()
+		{
+			m_opt_counter = 0;
+			for (int i = 0; i < Config.N; i++)
+				bad_decision_counter[i] = 0;
+		}
+
+		public bool PickNewThrtDwn ()
+		{
+			MarkUnthrottled_v2();
+			for (int i = 0; i < Config.N; i++) 
+				pre_throt  [i] = false;
+			while (true) // until pick one.			
+				for (int i = 0; i < Config.N; i++) {
+					if (CoidToss (i) == false) continue; 
+	 				int pick = (int)app_index_stc [i]; 
+					if (ThrottleDown (pick)) { 
+						pre_throt[pick] = true;
+						Console.WriteLine ("Throttle Down Core {0} to {1}", pick, mshr_quota[pick]);
+						return true;
+					}
+				}
+		}
+
+		public void SetBestSol ()
+		{
+			Console.WriteLine("Use the best solution so far.");
+			for (int i = 0; i < Config.N; i++)
+				if (m_slowest_core != i)
+					mshr_quota[i] = mshr_best_sol[i];
+		}
+
+		public void AddBestSol ()
+		{
+			Console.WriteLine("This is the best solution so far.");
+			for (int i = 0; i < Config.N; i++)
+				mshr_best_sol[i] = mshr_quota[i];
+		}
+
 		public void throttle_stc ()
 		{
 			m_currunfairness = Simulator.stats.estimated_slowdown [m_slowest_core].LastPeriodValue;	
 			comp_performance ();
-			rank_by_sd ();
-			rank_by_stc ();
+			rank_by_sd (); // use to mark unthrottled core
+			rank_by_stc (); 
 			if (m_epoch_counter == 0)
 				m_init_perf = m_currperf;
 			if (m_opt_state == OPT_STATE.PERFORMANCE_OPT) {
@@ -201,13 +320,6 @@ namespace ICSimulator
 			
 		}
 
-		public void rollback ()
-		{
-			
-
-
-		}
-
 		public void throttle_reset ()
 		{
 			Console.WriteLine("MSHR is reset");
@@ -223,6 +335,12 @@ namespace ICSimulator
 			for (int i = 0; i < Config.N; i++)
 				m_currperf = m_currperf + Simulator.stats.estimated_slowdown [i].LastPeriodValue;
 			Console.WriteLine("Current Perf is {0:0.000}", m_currperf);
+		}
+
+		public void comp_unfairness ()
+		{
+			m_currunfairness = Simulator.stats.estimated_slowdown [m_slowest_core].LastPeriodValue;	
+			Console.WriteLine("Current Unfairness is {0:0.000}", m_currunfairness);
 		}
 
 		// sort from low stc to high stc
@@ -261,9 +379,8 @@ namespace ICSimulator
 		{
 			int toss_val = Simulator.rand.Next (Config.N);
 			
-			if (i < 0.2 * Config.N && toss_val < 0.8 * Config.N) return true;
-			else if (i < 0.4 * Config.N && toss_val < 0.6 * Config.N) return true;
-			else if (i < 0.6 * Config.N && toss_val < 0.4 * Config.N) return true;
+			if (i < (Config.throt_prob_lv1 * Config.N) && toss_val < ((1-Config.throt_prob_lv1) * Config.N)) return true;
+			else if (i < Config.throt_prob_lv2 * Config.N && toss_val < (1-Config.throt_prob_lv1) * Config.N) return true;
 			//else if (toss_val < 0.2 * Config.N) return true;
 			else return false;
 		}
@@ -393,7 +510,7 @@ namespace ICSimulator
 				{
 					// compute the metrics
 					ulong penalty_cycle = (ulong)Simulator.stats.non_overlap_penalty_period [i].Count;
-					estimated_slowdown_period = (double)(Simulator.CurrentRound-m_lastCheckPoint [i]-Config.warmup_cyc)/((int)Simulator.CurrentRound-Config.warmup_cyc-m_lastCheckPoint [i]-penalty_cycle);
+					//estimated_slowdown_period = (double)(Simulator.CurrentRound-m_lastCheckPoint [i]-Config.warmup_cyc)/((int)Simulator.CurrentRound-Config.warmup_cyc-m_lastCheckPoint [i]-penalty_cycle);
 					estimated_slowdown =  (double)((int)Simulator.CurrentRound-Config.warmup_cyc)/((int)Simulator.CurrentRound-Config.warmup_cyc-Simulator.stats.non_overlap_penalty [i].Count);									
 					sd_sum = sd_sum + estimated_slowdown;
 					m_lastCheckPoint [i] = Simulator.CurrentRound;
@@ -431,8 +548,9 @@ namespace ICSimulator
 
 					// compute noc stall time criticality
 					// use L1miss in denominator. So L1miss will be affected by the throttling mechanism, however, MPKI won't
-					if (L1misses[i]-prev_L1misses[i] > 0)
-						stc = estimated_slowdown / (L1misses[i]-prev_L1misses[i]);
+					curr_L1misses[i] = L1misses[i]-prev_L1misses[i];
+					if (curr_L1misses[i] > 0)
+						stc = estimated_slowdown / curr_L1misses[i];
 					else {
 						stc = double.MaxValue;
 					}
@@ -442,16 +560,19 @@ namespace ICSimulator
 				
 
 					#if DEBUG
-					Console.WriteLine ("at time {0,-10}: Core {1,-5} Slowdow {2, -5:0.00} MPKI {3, -6:0.00} STC {4, -5:0.0000}, MSHR {5, -5}",
-						Simulator.CurrentRound, i, estimated_slowdown, MPKI[i], stc, mshr_quota[i]);
+					Console.WriteLine ("at time {0,-10}: Core {1,-5} Slowdow {2, -5:0.00} L1misses {3, -6:0.00} STC {4, -5:0.0000}, MSHR {5, -5}",
+						Simulator.CurrentRound, i, estimated_slowdown, curr_L1misses[i], stc, mshr_quota[i]);
 					#endif
+
 					prev_L1misses[i]=L1misses[i];
+					Simulator.stats.L1miss_persrc_period [i].Add(curr_L1misses[i]);
 					Simulator.stats.mpki_bysrc[i].Add(MPKI[i]);
-					Simulator.stats.estimated_slowdown_period [i].Add (estimated_slowdown_period);
+					//Simulator.stats.estimated_slowdown_period [i].Add (estimated_slowdown_period);
 					Simulator.stats.estimated_slowdown [i].Add (estimated_slowdown);
 					Simulator.stats.noc_stc[i].Add(stc);
 					Simulator.stats.app_rank [i].Add(app_rank [i]);
-					Simulator.stats.estimated_slowdown_period [i].EndPeriod ();
+					//Simulator.stats.estimated_slowdown_period [i].EndPeriod ();
+					Simulator.stats.L1miss_persrc_period [i].EndPeriod();
 					Simulator.stats.estimated_slowdown [i].EndPeriod ();
 					Simulator.stats.insns_persrc_period [i].EndPeriod ();
 					Simulator.stats.non_overlap_penalty_period [i].EndPeriod ();
@@ -461,7 +582,8 @@ namespace ICSimulator
 				} // end for
 				unfairness = Simulator.stats.estimated_slowdown[m_slowest_core].LastPeriodValue -
 					 Simulator.stats.estimated_slowdown[m_fastest_core].LastPeriodValue;
-				throttle_stc();
+				//throttle_stc();
+				ThrottleSTC_v2 ();
 				Simulator.stats.unfairness.Add(unfairness);
 				Simulator.stats.total_sum_mpki.Add(mpki_sum);
 				

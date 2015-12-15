@@ -13,7 +13,8 @@ namespace ICSimulator
 		public AccumStat false_block, correct_block;
 		public AccumStat priority_inv;
 		public PeriodicAccumStat[] estimated_slowdown;
-		public PeriodicAccumStat[] estimated_slowdown_period;
+		public PeriodicAccumStat[] L1miss_persrc_period;
+		//public PeriodicAccumStat[] estimated_slowdown_period;
 		public PeriodicAccumStat[] noc_stc; // noc-level stall time criticality
 		public PeriodicAccumStat[] app_rank; 
 		public AccumStat [] cpu_stall_throttle;

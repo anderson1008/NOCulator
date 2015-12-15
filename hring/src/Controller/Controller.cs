@@ -135,6 +135,7 @@ namespace ICSimulator
         //If num of flits being injected is needed, use inject_flit_bysrc.
         public ulong[] numInject = new ulong[Config.N];
         public ulong[] L1misses = new ulong[Config.N];
+		public ulong[] curr_L1misses = new ulong[Config.N];
         public ulong[] prev_L1misses = new ulong[Config.N];
 
         // record the number of instructions of the last epoch, use for MPKI
@@ -187,6 +188,7 @@ namespace ICSimulator
             {
                 numInject[i]=0;
 		        L1misses[i]=0;
+				curr_L1misses[i]=0;
 				prev_L1misses[i]=0;
             }
         }

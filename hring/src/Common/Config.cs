@@ -112,14 +112,21 @@ namespace ICSimulator
 		public static double slowdown_delta = 0.1; // slowdown difference between each ranking level
 		public static double enable_qos_non_mem_threshold = 3; // i.e. enable_qos_non_mem_threhold * slowdown_delta
 		public static double enable_qos_mem_threshold = 3;
-		public static double mpki_threshold = 45;
+		
+		public static double mpki_threshold = 30;
+		public static double curr_L1miss_threshold = 30;
 		public static double slowdown_epoch = 10000;
+		public static double throt_min = 0.3;  // share with Sigcomm paper
+		public static int opt_window = 100;
+		public static int th_bad_dec_counter = 3;
+		public static double throt_prob_lv1 = 0.2;
+		public static double throt_prob_lv2 = 0.4;
+		
 
 		// Slowdown-aware Throttling
 		public static bool throttle_enable = true;
 		public static string throttle_node = "1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1";
 		//public static string throttle_node = "1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1";
-		public static double throt_min = 0.3;  // share with Sigcomm paper
 		public static int throt_app_count = 4;
 		public static int unthrot_app_count = 4;
 		public static int opt_perf_bound = 10;
@@ -128,6 +135,7 @@ namespace ICSimulator
 		public static double fair_budget_factor = 0.5;
 		public static double th_init_perf_loss = 0.2;
 		public static double th_init_fair_loss = 0.2;
+
 
 
 		public static double sweep_th_rate = 0; 		// static throttle rate, intial value of dynamic throttle rate
