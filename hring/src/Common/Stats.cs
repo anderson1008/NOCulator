@@ -17,7 +17,7 @@ namespace ICSimulator
 		public PeriodicAccumStat[] noc_stc; // noc-level stall time criticality
 		public PeriodicAccumStat[] app_rank; 
 		public AccumStat [] cpu_stall_throttle;
-		public SampledStat consec_fair, consec_unfair;
+		public AccumStat opt_fair, opt_perf;
 		public LogStat unfairness;
 		public SampledStat[] mshrs_credit, mshrs_util;
 
