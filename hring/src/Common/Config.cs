@@ -114,14 +114,17 @@ namespace ICSimulator
 		public static double enable_qos_mem_threshold = 3;
 		
 		public static double mpki_threshold = 30;
-		public static double curr_L1miss_threshold = 30;
+		public static double curr_L1miss_threshold = 600;
 		public static double slowdown_epoch = 10000;
 		public static double throt_min = 0.3;  // share with Sigcomm paper
 		public static int opt_window = 100;
 		public static int th_bad_dec_counter = 3;
-		public static double throt_prob_lv1 = 0.2;
-		public static double throt_prob_lv2 = 0.4;
+		public static double throt_prob_lv1 = 0.4;
+		public static double throt_prob_lv2 = 0.6;
 		public static double throt_prob_lv3 = 0.8;
+		public static int th_bad_rst_counter = 30;
+		public static int slowest_app_count = 3;
+		public static int throt_down_app_count = 3;
 		
 
 		// Slowdown-aware Throttling

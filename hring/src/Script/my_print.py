@@ -7,10 +7,13 @@ import sys
 import fnmatch
 import matplotlib.pyplot as plt
 	
-def print_est_sd(est_sd):
-    # est_sd is an iterator or array
-    for item in est_sd:
-        plt.plot(item)
+def print_period(stat):
+    # stat is an iterator or array
+    i = 0
+    for item in stat:
+        plt.plot(item, label=str(i))
         plt.legend()
-    plt.show()
-    print "^_^"
+        i = i + 1
+
+
+

@@ -6,6 +6,7 @@ import re
 import fnmatch
 import string
 import my_print
+import matplotlib.pyplot as plt
 
 dir_macpro = "/Users/xiyuexiang/GoogleDrive/NOCulator/hring/src/bin/"
 dir_canpc = "/home/anderson/Desktop/NOCulator/hring/src/bin/"
@@ -35,12 +36,25 @@ def get_insns_persrc (stat):
 
 def get_est_sd (stat):
   est_sd = []
-  searchObj = re.search(r'(?:"estimated_slowdown":\[(.*)],\n"estimated_slowdown_period")',stat,re.DOTALL)
-  searchList = re.finditer(r'(?:\{(.*)\},)',searchObj.group(1))
+  searchObj = re.search(r'(?:"estimated_slowdown":\[(.*)],\n"L1miss_persrc_period")',stat,re.DOTALL)
+  searchList = re.finditer(r'(?:\{(.*)\},*)',searchObj.group(1))
   for item in searchList:
     splitObj = re.split(',',item.group(1))
     sd_per_core = []
-    print splitObj
+    for i in splitObj:
+        if i is '' or i is '0':
+            continue
+        sd_per_core.append(float(i));
+    est_sd = est_sd + [sd_per_core]
+  return est_sd
+
+def get_est_L1miss (stat):
+  est_sd = []
+  searchObj = re.search(r'(?:"L1miss_persrc_period":\[(.*)],\n"noc_stc")',stat,re.DOTALL)
+  searchList = re.finditer(r'(?:\{(.*)\},*)',searchObj.group(1))
+  for item in searchList:
+    splitObj = re.split(',',item.group(1))
+    sd_per_core = []
     for i in splitObj:
         if i is '' or i is '0':
             continue
@@ -112,7 +126,14 @@ act_t_shared = get_active_cycles(stat_shared)
 insns_shared = get_insns_persrc(stat_shared)
 ipc_shared = cmp_ipc (insns_shared, act_t_shared)
 est_sd = get_est_sd(stat_shared)
-my_print.print_est_sd(est_sd)
+l1_miss = get_est_L1miss(stat_shared)
+plt.figure(1)
+plt.subplot(2,1,1)
+my_print.print_period(est_sd)
+plt.subplot(2,1,2)
+my_print.print_period(l1_miss)
+plt.show()
+
 #print est_sd
 
 ws = cmp_ws (ipc_alone, ipc_shared)

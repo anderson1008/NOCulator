@@ -163,7 +163,8 @@ namespace ICSimulator
 				} 
 				else 
 					AddBestSol (); // previous iteration made a wise decision
-				ThrottleUp (m_slowest_core);
+				//ThrottleUp (m_slowest_core);
+				ThrottleUpBySDRank ();
 				PickNewThrtDwn ();
 				m_opt_counter++;
 				m_oldperf = m_currperf;
@@ -174,14 +175,21 @@ namespace ICSimulator
 			else if (m_opt_counter == Config.opt_window) {
 				SetBestSol ();
 			}
+			if (m_opt_counter % Config.th_bad_rst_counter == 0){
+				ThrottleCounterReset();
+			}
+
+			// just log the mshr quota
+			for (int i = 0; i < Config.N; i++)
+				Simulator.stats.mshrs_credit [i].Add (Controller_QoSThrottle.mshr_quota [i]);
+			
 		}
 
 		public void MarkUnthrottled_v2 ()
 		{
 			// mark the slowest core and the all core with MPI < MPI_threshold (light apps)
-			throttle_node [m_slowest_core] = "0";
 			for (int i = 0; i < Config.N; i++) {
-				if (curr_L1misses [i] < Config.curr_L1miss_threshold || (mshr_quota[i] - 1 ) < Config.throt_min*Config.mshrs || bad_decision_counter[i] == Config.th_bad_dec_counter) {
+				if (curr_L1misses [i] < Config.curr_L1miss_threshold || (mshr_quota[i] - 1 ) < Config.throt_min*Config.mshrs || bad_decision_counter[i] >= Config.th_bad_dec_counter) {
 					Console.WriteLine("Core {0} is unthrottable.", i);
 					throttle_node [i] = "0";
 				}
@@ -198,11 +206,26 @@ namespace ICSimulator
 			}
 		}
 
+
+		public void ThrottleUpBySDRank ()
+		{
+			int unthrottled = -1;
+			int pick = -1;
+			for (int i = 0; i < Config.N && unthrottled < Config.slowest_app_count-1; i++) { 
+				pick = (int)app_index_sd[i];
+				throttle_node[pick] = "0";
+				Console.WriteLine("Core {0} is protected and marked unthrottable.", pick);
+				unthrottled ++;
+				ThrottleUp(pick);
+			}
+
+		}
+
 		public void ThrottleUp (int pick)
 		{
 			if (mshr_quota [pick] < Config.mshrs) {
 				mshr_quota [pick] = mshr_quota [pick] + 1;
-				Console.WriteLine("Throttle UP core {0} to {1}", pick, mshr_quota[pick]);
+				Console.WriteLine("Core {0} is throttled UP to {1} because it is too slow.", pick, mshr_quota[pick]);			
 			}
 		}
 		
@@ -211,37 +234,36 @@ namespace ICSimulator
 			throttle_node = Config.throttle_node.Split(',');
 		}
 
-		public void ThrottleReset ()
+		public void ThrottleCounterReset ()
 		{
-			m_opt_counter = 0;
+			Console.WriteLine("Reset bad decision counter");
 			for (int i = 0; i < Config.N; i++)
 				bad_decision_counter[i] = 0;
 		}
 
-		public bool PickNewThrtDwn ()
+
+		public void PickNewThrtDwn ()
 		{
+			int throttled = -1;
 			MarkUnthrottled_v2();
 			for (int i = 0; i < Config.N; i++) 
 				pre_throt [i] = false;
-			//while (true) // until pick one.			
-			for (int i = 0; i < Config.N; i++) {
+			for (int i = 0; i < Config.N && throttled < Config.throt_down_app_count-1; i++) {
 				if (CoidToss (i) == false) continue; 
  				int pick = (int)app_index_stc [i]; 
 				if (ThrottleDown (pick)) { 
 					pre_throt[pick] = true;
+					throttled ++;
 					Console.WriteLine ("Throttle Down Core {0} to {1}", pick, mshr_quota[pick]);
-					return true;
 				}
 			}
-			return false;
 		}
 
 		public void SetBestSol ()
 		{
 			Console.WriteLine("Use the best solution so far.");
 			for (int i = 0; i < Config.N; i++)
-				if (m_slowest_core != i)
-					mshr_quota[i] = mshr_best_sol[i];
+				mshr_quota[i] = mshr_best_sol[i];
 		}
 
 		public void AddBestSol ()
@@ -443,7 +465,7 @@ namespace ICSimulator
 		public bool ThrottleDown (int node)
 		{
 			bool throttled = false;
-			if (mshr_quota [node] == Config.mshrs && String.Compare(throttle_node[node],"1")==0)
+			if (mshr_quota [node] >= Config.mshrs * 0.7 && String.Compare(throttle_node[node],"1")==0)
 			{
 				mshr_quota [node] = (int)(Config.mshrs * 0.7);
 				throttled = true;

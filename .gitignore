@@ -4,3 +4,7 @@
 /result/*
 /hring/src/bin/*
 /minbd/*
+*.pyc
+Makefile*
+*.py~
+/Mono/*
