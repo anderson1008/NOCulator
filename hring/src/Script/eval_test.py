@@ -5,6 +5,7 @@ import os
 import re
 import fnmatch
 import string
+import my_print
 
 dir_macpro = "/Users/xiyuexiang/GoogleDrive/NOCulator/hring/src/bin/"
 dir_canpc = "/home/anderson/Desktop/NOCulator/hring/src/bin/"
@@ -31,6 +32,21 @@ def get_insns_persrc (stat):
   splitObj = re.split('\W+',searchObj.group(1))
   insns_persrc = splitObj
   return insns_persrc
+
+def get_est_sd (stat):
+  est_sd = []
+  searchObj = re.search(r'(?:"estimated_slowdown":\[(.*)],\n"estimated_slowdown_period")',stat,re.DOTALL)
+  searchList = re.finditer(r'(?:\{(.*)\},)',searchObj.group(1))
+  for item in searchList:
+    splitObj = re.split(',',item.group(1))
+    sd_per_core = []
+    print splitObj
+    for i in splitObj:
+        if i is '' or i is '0':
+            continue
+        sd_per_core.append(float(i));
+    est_sd = est_sd + [sd_per_core]
+  return est_sd
 
 def cmp_ipc (insns_persrc, active_cycle):
   ipc = []
@@ -82,6 +98,7 @@ def cmp_uf (ipc_alone, ipc_share):
   return unfairness
 
 
+
 machine = input('which machine (1-canpc, 2-macpro): ')
 if machine is 1:
   work_dir = dir_canpc
@@ -94,14 +111,17 @@ stat_shared = get_stat (test_file_name)
 act_t_shared = get_active_cycles(stat_shared)
 insns_shared = get_insns_persrc(stat_shared)
 ipc_shared = cmp_ipc (insns_shared, act_t_shared)
+est_sd = get_est_sd(stat_shared)
+my_print.print_est_sd(est_sd)
+#print est_sd
 
 ws = cmp_ws (ipc_alone, ipc_shared)
 hs = cmp_hs (ipc_alone, ipc_shared)
 uf = cmp_uf (ipc_alone, ipc_shared)
 
-print "Weighted Speedup = " + str("%.3f" % ws)
-print "Harmonic Speedup = " + str("%.3f" % hs)
-print "Unfairness = " + str("%.3f" % uf)
+#print "Weighted Speedup = " + str("%.3f" % ws)
+#print "Harmonic Speedup = " + str("%.3f" % hs)
+#print "Unfairness = " + str("%.3f" % uf)
 			
 
 	

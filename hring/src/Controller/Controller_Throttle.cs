@@ -153,21 +153,16 @@ namespace ICSimulator
 			rank_by_stc (); // use to select the throttled core
 			sd_delta = m_currperf - m_oldperf;
 			uf_delta = m_currunfairness - m_oldunfairness;
-			double improvement = Math.Abs(sd_delta + uf_delta);
 			Console.WriteLine ("sd_delta = {0:0.000}", sd_delta);
 			Console.WriteLine ("uf_delta = {0:0.000}", uf_delta);
 			if (m_opt_counter < Config.opt_window) {
-				if (sd_delta > 0 || uf_delta > 0 || improvement < 0.01) {
+				if (sd_delta > 0 || uf_delta > 0) {
 					// previous iteration made a bad decision
-					// mark bad decision
 					SetBestSol ();
 					MarkBadDecision ();
-				} else if (sd_delta == 0 && uf_delta == 0) {
-					// for the first iteration and iteration made no change
-
-				} else {
-					AddBestSol ();
-				}
+				} 
+				else 
+					AddBestSol (); // previous iteration made a wise decision
 				ThrottleUp (m_slowest_core);
 				PickNewThrtDwn ();
 				m_opt_counter++;
@@ -227,17 +222,18 @@ namespace ICSimulator
 		{
 			MarkUnthrottled_v2();
 			for (int i = 0; i < Config.N; i++) 
-				pre_throt  [i] = false;
-			while (true) // until pick one.			
-				for (int i = 0; i < Config.N; i++) {
-					if (CoidToss (i) == false) continue; 
-	 				int pick = (int)app_index_stc [i]; 
-					if (ThrottleDown (pick)) { 
-						pre_throt[pick] = true;
-						Console.WriteLine ("Throttle Down Core {0} to {1}", pick, mshr_quota[pick]);
-						return true;
-					}
+				pre_throt [i] = false;
+			//while (true) // until pick one.			
+			for (int i = 0; i < Config.N; i++) {
+				if (CoidToss (i) == false) continue; 
+ 				int pick = (int)app_index_stc [i]; 
+				if (ThrottleDown (pick)) { 
+					pre_throt[pick] = true;
+					Console.WriteLine ("Throttle Down Core {0} to {1}", pick, mshr_quota[pick]);
+					return true;
 				}
+			}
+			return false;
 		}
 
 		public void SetBestSol ()
@@ -380,8 +376,8 @@ namespace ICSimulator
 			int toss_val = Simulator.rand.Next (Config.N);
 			
 			if (i < (Config.throt_prob_lv1 * Config.N) && toss_val < ((1-Config.throt_prob_lv1) * Config.N)) return true;
-			else if (i < Config.throt_prob_lv2 * Config.N && toss_val < (1-Config.throt_prob_lv1) * Config.N) return true;
-			//else if (toss_val < 0.2 * Config.N) return true;
+			else if (i < Config.throt_prob_lv2 * Config.N && toss_val < (1-Config.throt_prob_lv2) * Config.N) return true;
+			else if (toss_val < (1-Config.throt_prob_lv3) * Config.N) return true;
 			else return false;
 		}
 

@@ -121,6 +121,7 @@ namespace ICSimulator
 		public static int th_bad_dec_counter = 3;
 		public static double throt_prob_lv1 = 0.2;
 		public static double throt_prob_lv2 = 0.4;
+		public static double throt_prob_lv3 = 0.8;
 		
 
 		// Slowdown-aware Throttling
