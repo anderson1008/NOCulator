@@ -68,8 +68,8 @@ namespace ICSimulator
 		private int m_opt_counter;
 
 		private int m_perf_opt_counter, m_fair_opt_counter, m_idle_counter;
-		private double m_currunfairness, m_budget_unfairness, m_oldunfairness;
-		private double m_currperf, m_budget_perf, m_oldperf;
+		private double m_currunfairness, m_oldunfairness;
+		private double m_currperf, m_oldperf;
 		private string [] throttle_node;	
 		private double m_init_unfairness, m_init_perf;
 		double[] app_stc = new double[Config.N]; // Sorted.	
@@ -84,7 +84,6 @@ namespace ICSimulator
 		};
 		
 		OPT_STATE m_opt_state;
-		double unfairness = 0;
 		double unfairness_old = 0;
 		private bool[] pre_throt = new bool[Config.N];
 
@@ -133,8 +132,6 @@ namespace ICSimulator
             m_fastest_core = 0;
 			m_perf_opt_counter = 0;
 			m_fair_opt_counter = 0;
-			m_budget_unfairness = double.MaxValue;
-			m_budget_perf = 0;
 			m_init_unfairness = 0;
 			m_init_perf = 0;
 			m_epoch_counter = 0;
@@ -163,12 +160,9 @@ namespace ICSimulator
 				} 
 				else 
 					AddBestSol (); // previous iteration made a wise decision
-				//ThrottleUp (m_slowest_core);
 				ThrottleUpBySDRank ();
 				PickNewThrtDwn ();
-				m_opt_counter++;
-				m_oldperf = m_currperf;
-				m_oldunfairness = m_currunfairness;
+				m_opt_counter++;			
 				ThrottleFlagReset ();
 			}
 			// use the best solution
@@ -178,7 +172,8 @@ namespace ICSimulator
 			if (m_opt_counter % Config.th_bad_rst_counter == 0){
 				ThrottleCounterReset();
 			}
-
+			m_oldperf = m_currperf;
+			m_oldunfairness = m_currunfairness;
 			// just log the mshr quota
 			for (int i = 0; i < Config.N; i++)
 				Simulator.stats.mshrs_credit [i].Add (Controller_QoSThrottle.mshr_quota [i]);
@@ -189,7 +184,7 @@ namespace ICSimulator
 		{
 			// mark the slowest core and the all core with MPI < MPI_threshold (light apps)
 			for (int i = 0; i < Config.N; i++) {
-				if (curr_L1misses [i] < Config.curr_L1miss_threshold || (mshr_quota[i] - 1 ) < Config.throt_min*Config.mshrs || bad_decision_counter[i] >= Config.th_bad_dec_counter) {
+				if ((mshr_quota[i] - 1 ) < Config.throt_min*Config.mshrs || bad_decision_counter[i] >= Config.th_bad_dec_counter) {
 					Console.WriteLine("Core {0} is unthrottable.", i);
 					throttle_node [i] = "0";
 				}
@@ -211,12 +206,19 @@ namespace ICSimulator
 		{
 			int unthrottled = -1;
 			int pick = -1;
-			for (int i = 0; i < Config.N && unthrottled < Config.slowest_app_count-1; i++) { 
-				pick = (int)app_index_sd[i];
-				throttle_node[pick] = "0";
-				Console.WriteLine("Core {0} is protected and marked unthrottable.", pick);
-				unthrottled ++;
-				ThrottleUp(pick);
+			for (int i = 0; i < Config.N && unthrottled < Config.slowest_app_count - 1; i++) { 
+				pick = (int)app_index_sd [i];
+				throttle_node [pick] = "0";
+				Console.WriteLine ("Core {0} is SLOW and marked unthrottable.", pick);
+				unthrottled++;
+				ThrottleUp (pick);
+			}
+			for (int i = 0; i < Config.N; i++) {
+				if (curr_L1misses [i] < Config.curr_L1miss_threshold) {
+					throttle_node [i] = "0";
+					Console.WriteLine ("Core {0} is LIGHT and marked unthrottable.", i);
+					ThrottleUp (i);
+				}
 			}
 
 		}

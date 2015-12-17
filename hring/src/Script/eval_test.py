@@ -132,7 +132,7 @@ plt.subplot(2,1,1)
 my_print.print_period(est_sd)
 plt.subplot(2,1,2)
 my_print.print_period(l1_miss)
-plt.show()
+plt.show() # enable to show the plot
 
 #print est_sd
 
@@ -140,9 +140,9 @@ ws = cmp_ws (ipc_alone, ipc_shared)
 hs = cmp_hs (ipc_alone, ipc_shared)
 uf = cmp_uf (ipc_alone, ipc_shared)
 
-#print "Weighted Speedup = " + str("%.3f" % ws)
-#print "Harmonic Speedup = " + str("%.3f" % hs)
-#print "Unfairness = " + str("%.3f" % uf)
+print "Weighted Speedup = " + str("%.3f" % ws)
+print "Harmonic Speedup = " + str("%.3f" % hs)
+print "Unfairness = " + str("%.3f" % uf)
 			
 
 	

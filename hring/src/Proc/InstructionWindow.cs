@@ -236,8 +236,9 @@ namespace ICSimulator {
 				#endif
 				*/
 			}
+			
 
-			if (max_intf < ulong.MaxValue) {
+			if (max_intf < ulong.MaxValue && m_cpu.stats_active) {
 				// Trial 1: average over i instructions
 				//Simulator.stats.non_overlap_penalty [node].Add ((float)max_intf/i);
 				//Simulator.stats.non_overlap_penalty_period [node].Add ((float)max_intf/i);
