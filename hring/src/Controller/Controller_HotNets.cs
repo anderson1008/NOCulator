@@ -91,7 +91,6 @@ namespace ICSimulator
         HotNetsThrottlePool[] m_injPools = new HotNetsThrottlePool[Config.N];
         AveragingWindow avg_netutil, avg_ipc;
         AveragingWindow[] avg_qlen;
-        double m_lastIPC = 0.0;
         double m_target;
         double m_rate;
         bool[] m_throttled = new bool[Config.N];

@@ -8,7 +8,6 @@ namespace ICSimulator
     {
     	Flit m_injectSlot_CW;
     	Flit m_injectSlot_CCW;
-    	RC_Coord rc_coord;
 		Queue<Flit>[] ejectBuffer;
 		int starveCounter;
     	public Router_Node(Coord myCoord)
@@ -29,7 +28,6 @@ namespace ICSimulator
         	linkIn = new Link[2];
         	m_injectSlot_CW = null;
         	m_injectSlot_CCW = null;
-        	rc_coord = RC_c;
 			ejectBuffer = new Queue<Flit> [2];
 			for (int i = 0; i < 2; i++)
 				ejectBuffer[i] = new Queue<Flit>();

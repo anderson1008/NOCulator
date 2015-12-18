@@ -340,7 +340,6 @@ namespace ICSimulator {
 			if (isEmpty()) throw new Exception("Instruction Window is empty!");
 			ulong address = txn.req_addr;
 			ulong interferenceCycle = (ulong) txn.interferenceCycle;
-			ulong throttleCycle = txn.throttleCycle;
 			ulong queueCycle = txn.queue_latency;
 			ulong serializationLatency = txn.serialization_latency;
 			int queueIntfCycle = (int)(queueCycle - serializationLatency);

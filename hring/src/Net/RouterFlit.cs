@@ -404,7 +404,7 @@ namespace ICSimulator
 			ulong f1_batch_dist, f2_batch_dist;
 			ulong current_batch = (Simulator.CurrentRound / Config.STC_batchPeriod) % Config.STC_batchCount;
 
-			int c0 = 0, c1 = 0, c2 = 0, c3 = 0, c4 = 0, c5 = 0, c6 = 0, c7 = 0, c8 = 0;
+			int c0 = 0, c1 = 0, c2 = 0, c3 = 0, c4 = 0, c5 = 0, c6 = 0, c7 = 0;
 
 			int max_rank_non_mem = (int) Controller_QoSThrottle.max_rank_non_mem;
 			int max_rank_mem =  (int) Controller_QoSThrottle.max_rank_mem;

@@ -19,7 +19,6 @@ namespace ICSimulator
 		public PeriodicAccumStat[] app_rank; 
 		public AccumStat [] cpu_stall_throttle;
 		public AccumStat opt_fair, opt_perf;
-		public LogStat unfairness;
 		public SampledStat[] mshrs_credit, mshrs_util;
 
 		public SampledStat netutil;

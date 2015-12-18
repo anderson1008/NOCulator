@@ -141,7 +141,6 @@ namespace ICSimulator
 		public static double th_init_fair_loss = 0.2;
 
 
-
 		public static double sweep_th_rate = 0; 		// static throttle rate, intial value of dynamic throttle rate
 		// specify which node to throttle when using static throttle controller
 		public static double throt_max = 0.9;	// share with Sigcomm paper
