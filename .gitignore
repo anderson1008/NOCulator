@@ -1,4 +1,6 @@
 /hring/src/bin/*
+!/hring/src/bin/workload_list
+!/hring/src/bin/config_qos.txt
 /mono/*
 /hring/src/results/*
 /result/*
