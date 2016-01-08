@@ -2,7 +2,7 @@
 /mono/*
 /hring/src/results/*
 /result/*
-/hring/src/bin/*
+*.out
 /minbd/*
 *.pyc
 Makefile*
