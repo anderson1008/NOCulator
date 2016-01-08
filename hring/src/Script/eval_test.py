@@ -114,7 +114,8 @@ def cmp_uf (ipc_alone, ipc_share):
 
 
 
-machine = input('which machine (1-canpc, 2-macpro): ')
+#machine = input('which machine (1-canpc, 2-macpro): ')
+machine = 2
 if machine is 1:
   work_dir = dir_canpc
 elif machine is 2:

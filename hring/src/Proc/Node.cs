@@ -226,14 +226,14 @@ namespace ICSimulator
 			if (f.packet.nrOfArrivedFlits == 1)
 			{
 				// Record the inteference cycle of flits.
-				f.packet.intfCycle = f.intfCycle;
+				f.packet.intfCycle = f.intfCycle;  // the interference cycle of head flit
 				f.packet.first_flit_arrival = Simulator.CurrentRound;
 			}
 
 			if (f.packet.nrOfArrivedFlits == f.packet.nrOfFlits)
 			{
 				// Compute the inteference cycle of a pacekt.
-				int intfCycle = (int)f.packet.intfCycle + ((int)Simulator.CurrentRound - (int)f.packet.first_flit_arrival - f.packet.nrOfFlits + 1);
+				int intfCycle = (int)f.packet.intfCycle + ((int)Simulator.CurrentRound - (int)f.packet.first_flit_arrival - f.packet.nrOfFlits + 1); // assume the flits of will arrive consecutively without interference. In case of control packet, the portion inside of parenthesis is 0.
 				if (f.packet.intfCycle > 0 && f.packet.requesterID != m_cpu.ID)
 				{
 					f.packet.intfCycle = intfCycle;

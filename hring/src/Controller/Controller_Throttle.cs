@@ -283,28 +283,22 @@ namespace ICSimulator
 			Console.WriteLine ("sd_delta = {0:0.000}", sd_delta);
 			Console.WriteLine ("uf_delta = {0:0.000}", uf_delta);
 
-			if (m_opt_counter < Config.opt_window) {
-				if (sd_delta > 0 || uf_delta > 0) {
-					// previous iteration made a bad decision
-					SetBestSol ();
-					MarkBadDecision ();
-				} 
-				else 
-					AddBestSol (); // previous iteration made a wise decision
-				ThrottleUpBySDRank ();
-				PickNewThrtDwn ();
-				m_opt_counter++;			
-				ThrottleFlagReset ();
-			}
-			// use the best solution
-			else if (m_opt_counter == Config.opt_window)
+			if (sd_delta > 0 || uf_delta > 0) {
+				// previous iteration made a bad decision
 				SetBestSol ();
-			
+				MarkBadDecision ();
+			} 
+			else 
+				AddBestSol (); // previous iteration made a wise decision
+			ThrottleUpBySDRank ();
+			PickNewThrtDwn ();
+			m_opt_counter++;			
+			ThrottleFlagReset ();
+		
 
 			if (m_opt_counter % Config.th_bad_rst_counter == 0)
 				ThrottleCounterReset();
 			
-
 			m_oldperf = m_currperf;
 			m_oldunfairness = m_currunfairness;
 			
@@ -339,7 +333,7 @@ namespace ICSimulator
 		{
 			int unthrottled = -1;
 			int pick = -1;
-			for (int i = 0; i < Config.N && unthrottled < Config.slowest_app_count - 1; i++) { 
+			for (int i = 0; i < Config.N && unthrottled < Config.thrt_up_slow_app - 1; i++) { 
 				pick = (int)m_index_sd [i];
 				throttle_node [pick] = "0";
 				Console.WriteLine ("Core {0} is SLOW and marked unthrottable.", pick);
@@ -347,9 +341,10 @@ namespace ICSimulator
 				ThrottleUp (pick);
 			}
 			for (int i = 0; i < Config.N; i++) {
-				if (curr_L1misses [i] < Config.curr_L1miss_threshold) {
+				double miss_rate = curr_L1misses [i] / Config.slowdown_epoch;
+				if (miss_rate < Config.curr_L1miss_threshold) {
 					throttle_node [i] = "0";
-					Console.WriteLine ("Core {0} is LIGHT and marked unthrottable.", i);
+					Console.WriteLine ("Core {0} miss rate is {1} which is LIGHT and marked unthrottable.", i, miss_rate);
 					ThrottleUp (i);
 				}
 			}
@@ -362,7 +357,7 @@ namespace ICSimulator
 			MarkUnthrottled_v2();
 			for (int i = 0; i < Config.N; i++) 
 				pre_throt [i] = false;
-			for (int i = 0; i < Config.N && throttled < Config.throt_down_app_count-1; i++) {
+			for (int i = 0; i < Config.N && throttled < Config.thrt_down_stc_app-1; i++) {
 				if (CoidToss (i) == false) continue; 
  				int pick = (int)m_index_stc [i]; 
 				if (ThrottleDown (pick)) { 
@@ -428,8 +423,10 @@ namespace ICSimulator
 		public void ThrottleUp (int pick)
 		{
 			if (mshr_quota [pick] < Config.mshrs) {
-				mshr_quota [pick] = mshr_quota [pick] + 1;
-				Console.WriteLine("Core {0} is throttled UP to {1} because it is too slow.", pick, mshr_quota[pick]);			
+				//mshr_quota [pick] = mshr_quota [pick] + 1;
+				mshr_quota [pick] = Config.mshrs;
+				mshr_best_sol[pick] = mshr_quota[pick];
+				//Console.WriteLine("Core {0} is throttled UP to {1} because it is too slow.", pick, mshr_quota[pick]);			
 			}
 		}
 

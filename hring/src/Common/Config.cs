@@ -114,7 +114,8 @@ namespace ICSimulator
 		public static double enable_qos_mem_threshold = 3;
 		public static double mpki_threshold = 30;
 
-		public static double curr_L1miss_threshold = 600;
+		public static bool throttle_enable = true;
+		public static double curr_L1miss_threshold = 0.06;
 		public static double slowdown_epoch = 10000; // may sweep
 		public static double throt_min = 0.3;  // share with Sigcomm paper
 		public static int opt_window = 50;
@@ -123,12 +124,12 @@ namespace ICSimulator
 		public static double throt_prob_lv2 = 0.6;
 		public static double throt_prob_lv3 = 0.8;
 		public static int th_bad_rst_counter = 25; //may sweep
-		public static int slowest_app_count = 3; // may sweep
-		public static int throt_down_app_count = 3; // may sweep
+		public static int thrt_up_slow_app = 3; // may sweep
+		public static int thrt_down_stc_app = 3; // may sweep
 		
 
 		// Slowdown-aware Throttling
-		public static bool throttle_enable = true;
+		
 		public static string throttle_node = "1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1";
 		//public static string throttle_node = "1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1";
 		public static int throt_app_count = 4;
