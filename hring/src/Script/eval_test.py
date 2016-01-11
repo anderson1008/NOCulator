@@ -8,9 +8,7 @@ import string
 import my_print
 import matplotlib.pyplot as plt
 
-dir_macpro = "/Users/xiyuexiang/GoogleDrive/NOCulator/hring/src/bin/"
-dir_canpc = "/home/anderson/Desktop/NOCulator/hring/src/bin/"
-
+dir_macpro = "/Users/xiyuexiang/Desktop/SweepEpoch/"
 
 #ipc_alone = [2.02, 1.85, 1.91, 2.51, 2.02, 1.85, 1.91, 2.51, 2.02, 1.85, 1.91, 2.51, 2.02, 1.85, 1.91, 2.51] # heter_app 1
 ipc_alone = [2.08, 2.16, 1.77, 1.91, 2.08, 2.16, 1.77, 1.91, 2.08, 2.16, 1.77, 1.91, 2.08, 2.16, 1.77, 1.91] # mix_app 2 in 16 node
@@ -134,7 +132,7 @@ plt.subplot(2,1,1)
 my_print.print_period(est_sd)
 plt.subplot(2,1,2)
 my_print.print_period(l1_miss)
-plt.show() # enable to show the plot
+#plt.show() # enable to show the plot
 
 #print est_sd
 

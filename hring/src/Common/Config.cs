@@ -124,8 +124,8 @@ namespace ICSimulator
 		public static double throt_prob_lv2 = 0.6;
 		public static double throt_prob_lv3 = 0.8;
 		public static int th_bad_rst_counter = 25; //may sweep
-		public static int thrt_up_slow_app = 3; // may sweep
-		public static int thrt_down_stc_app = 3; // may sweep
+		public static int thrt_up_slow_app = 4; // Parameter: Greater value improves fairness at the cost of lower performance improvement margin.
+		public static int thrt_down_stc_app = 4; // Parameter: greater value improve fairness at the cost of performance degradation
 		
 
 		// Slowdown-aware Throttling
