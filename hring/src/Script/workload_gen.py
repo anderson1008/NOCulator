@@ -5,7 +5,7 @@ import random
 import os
 
 number_of_workload = 30
-nodes = 16
+nodes = 64
 workload_high_mem_intsty = []
 ipc_high_mem_intsty = []
 workload_mid_mem_intsty = []
@@ -68,10 +68,10 @@ def file_sel ():
   global file_ipc
   if nodes == 16 :
     filename = filename + '_4x4'
-    file_ipc = filename + '_ipc_4x4'
+    file_ipc = filename + '_ipc'
   elif nodes == 64 :
     filename = filename + '_8x8'
-    file_ipc = filename + '_ipc_8x8'
+    file_ipc = filename + '_ipc'
   else:
     raise Exception ("network size is not defined")
 # end file_sel()
@@ -92,7 +92,7 @@ def work_gen_homo (app_array, app_ipc_array):
   ipc_out = file_open (file_ipc)
   
   #specify the dir of trace files
-  workload_out.write("/Users/Anderson/blesstraces C:/Users/xiyuex/Documents /Users/xiyuexiang/Documents")
+  workload_out.write("/Users/Anderson/Documents/blesstraces C:/Users/xiyuex/Documents/blesstraces /Users/xiyuexiang/Documents/blesstraces")
   workload_index = 0
   app_count = len(app_array)
 
@@ -133,7 +133,7 @@ def work_gen_hetero ():
     workload_out = file_open (filename)
     ipc_out = file_open (file_ipc)
     #specify the dir of trace files
-    workload_out.write("/Users/Anderson/blesstraces C:/Users/xiyuex/Documents /Users/xiyuexiang/Documents")
+    workload_out.write("/Users/Anderson/Documents/blesstraces C:/Users/xiyuex/Documents/blesstraces /Users/xiyuexiang/Documents/blesstraces")
     workload_index = 0
     high_mem_count = len(workload_high_mem_intsty)
     mid_mem_count = len(workload_mid_mem_intsty)

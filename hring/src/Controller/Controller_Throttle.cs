@@ -184,11 +184,7 @@ namespace ICSimulator
 					m_fastest_core = i;
 					min_sd = m_est_sd[i];
 				}
-			
-				#if DEBUG
-				Console.WriteLine ("at time {0,-10}: Core {1,-5} Slowdow {2, -5:0.00} L1misses {3, -6:0.00} STC {4, -5:0.0000}, MSHR {5, -5}",
-					Simulator.CurrentRound, i, m_est_sd[i], curr_L1misses[i], m_stc[i], mshr_quota[i]);
-				#endif					
+				
 			} // end for
 
 		}
@@ -238,6 +234,11 @@ namespace ICSimulator
 					//m_stc [i] = m_est_sd[i] / MPKI[i];
 				else 
 					m_stc [i] = double.MaxValue;
+
+				#if DEBUG
+				Console.WriteLine ("at time {0,-10}: Core {1,-5} Slowdow {2, -5:0.00} L1misses {3, -6:0.00} STC {4, -5:0.0000}, MSHR {5, -5}",
+					Simulator.CurrentRound, i, m_est_sd[i], curr_L1misses[i], m_stc[i], mshr_quota[i]);
+				#endif	
 			}
 		}
 

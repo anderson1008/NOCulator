@@ -68,10 +68,10 @@ def file_sel ():
   global file_ipc
   if nodes == 16 :
     filename = filename + '_4x4'
-    file_ipc = filename + '_ipc_4x4'
+    file_ipc = filename + '_ipc'
   elif nodes == 64 :
     filename = filename + '_8x8'
-    file_ipc = filename + '_ipc_8x8'
+    file_ipc = filename + '_ipc'
   else:
     raise Exception ("network size is not defined")
 # end file_sel()

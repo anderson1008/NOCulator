@@ -1,0 +1,108 @@
+Xiyues-MBP-2.attlocal.net
+config <= ./config_qos.txt
+network_nrX <= 8
+network_nrY <= 8
+finish <= cycle 1000000
+warmup_cyc <= 100000
+slowdown_epoch <= 50000
+topology <= Mesh
+router.algorithm <= DR_AFC
+afc_force <= true
+afc_force_buffered <= true
+afc_buf_per_vnet <= 4
+afc_vnets <= 8
+router.dataPacketSize <= 4
+router.maxPacketSize <= 4
+router.addrPacketSize <= 1
+coherent_cache_size <= 16
+coherent_cache_assoc <= 2
+sh_cache_size <= 21
+sh_cache_assoc <= 4
+sh_cache_perfect <= true
+cache_block <= 5
+idealnet <= false
+router.linkLatency <= 2
+edge_loop <= false
+controller <= THROTTLE_QOS
+mshrs <= 16
+shcache_buf <= 16
+output <= ./results/8x8/baseline/sim_1.out
+throttle_enable <= false
+init Controller_QoSThrottle
+cpu 0 filename '483.xalancbmk.bin.gz'
+cpu 1 filename '445.gobmk.bin.gz'
+cpu 2 filename '433.milc.bin.gz'
+cpu 3 filename '453.povray.bin.gz'
+cpu 4 filename '483.xalancbmk.bin.gz'
+cpu 5 filename '445.gobmk.bin.gz'
+cpu 6 filename '433.milc.bin.gz'
+cpu 7 filename '453.povray.bin.gz'
+cpu 8 filename '483.xalancbmk.bin.gz'
+cpu 9 filename '445.gobmk.bin.gz'
+cpu 10 filename '433.milc.bin.gz'
+cpu 11 filename '453.povray.bin.gz'
+cpu 12 filename '483.xalancbmk.bin.gz'
+cpu 13 filename '445.gobmk.bin.gz'
+cpu 14 filename '433.milc.bin.gz'
+cpu 15 filename '453.povray.bin.gz'
+cpu 16 filename '483.xalancbmk.bin.gz'
+cpu 17 filename '445.gobmk.bin.gz'
+cpu 18 filename '433.milc.bin.gz'
+cpu 19 filename '453.povray.bin.gz'
+cpu 20 filename '483.xalancbmk.bin.gz'
+cpu 21 filename '445.gobmk.bin.gz'
+cpu 22 filename '433.milc.bin.gz'
+cpu 23 filename '453.povray.bin.gz'
+cpu 24 filename '483.xalancbmk.bin.gz'
+cpu 25 filename '445.gobmk.bin.gz'
+cpu 26 filename '433.milc.bin.gz'
+cpu 27 filename '453.povray.bin.gz'
+cpu 28 filename '483.xalancbmk.bin.gz'
+cpu 29 filename '445.gobmk.bin.gz'
+cpu 30 filename '433.milc.bin.gz'
+cpu 31 filename '453.povray.bin.gz'
+cpu 32 filename '483.xalancbmk.bin.gz'
+cpu 33 filename '445.gobmk.bin.gz'
+cpu 34 filename '433.milc.bin.gz'
+cpu 35 filename '453.povray.bin.gz'
+cpu 36 filename '483.xalancbmk.bin.gz'
+cpu 37 filename '445.gobmk.bin.gz'
+cpu 38 filename '433.milc.bin.gz'
+cpu 39 filename '453.povray.bin.gz'
+cpu 40 filename '483.xalancbmk.bin.gz'
+cpu 41 filename '445.gobmk.bin.gz'
+cpu 42 filename '433.milc.bin.gz'
+cpu 43 filename '453.povray.bin.gz'
+cpu 44 filename '483.xalancbmk.bin.gz'
+cpu 45 filename '445.gobmk.bin.gz'
+cpu 46 filename '433.milc.bin.gz'
+cpu 47 filename '453.povray.bin.gz'
+cpu 48 filename '483.xalancbmk.bin.gz'
+cpu 49 filename '445.gobmk.bin.gz'
+cpu 50 filename '433.milc.bin.gz'
+cpu 51 filename '453.povray.bin.gz'
+cpu 52 filename '483.xalancbmk.bin.gz'
+cpu 53 filename '445.gobmk.bin.gz'
+cpu 54 filename '433.milc.bin.gz'
+cpu 55 filename '453.povray.bin.gz'
+cpu 56 filename '483.xalancbmk.bin.gz'
+cpu 57 filename '445.gobmk.bin.gz'
+cpu 58 filename '433.milc.bin.gz'
+cpu 59 filename '453.povray.bin.gz'
+cpu 60 filename '483.xalancbmk.bin.gz'
+cpu 61 filename '445.gobmk.bin.gz'
+cpu 62 filename '433.milc.bin.gz'
+cpu 63 filename '453.povray.bin.gz'
+Proc/Node.cs : MC locations:0
+Initialized BATCH_MemoryScheduler
+Ranking Scheme: MAX_TOT_RANKING
+WithinBatch Priority: MARKED_RANK_FR_FCFS
+BatchingCap: 5
+Initialized FULL_BATCH_MemoryScheduler
+bank	0	0
+bank	1	0
+bank	2	0
+bank	3	0
+
+cycle 0: 0 flits injected, 0 flits arrived, avg total latency 0
+TimeStamp = 1/10/2016 5:53:24 PM
