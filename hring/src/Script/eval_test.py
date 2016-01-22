@@ -8,8 +8,6 @@ import string
 import my_print
 import matplotlib.pyplot as plt
 
-dir_macpro = "/Users/xiyuexiang/Desktop/SweepEpoch/"
-
 #ipc_alone = [2.02, 1.85, 1.91, 2.51, 2.02, 1.85, 1.91, 2.51, 2.02, 1.85, 1.91, 2.51, 2.02, 1.85, 1.91, 2.51] # heter_app 1
 ipc_alone = [2.08, 2.16, 1.77, 1.91, 2.08, 2.16, 1.77, 1.91, 2.08, 2.16, 1.77, 1.91, 2.08, 2.16, 1.77, 1.91] # mix_app 2 in 16 node
 
@@ -112,15 +110,9 @@ def cmp_uf (ipc_alone, ipc_share):
 
 
 
-#machine = input('which machine (1-canpc, 2-macpro): ')
-machine = 2
-if machine is 1:
-  work_dir = dir_canpc
-elif machine is 2:
-  work_dir = dir_macpro
-
-input_file = input('please input file_shared name: ' )
-test_file_name = work_dir + str(input_file)
+work_dir = str(input('Please input your work dir: '))
+input_file = str(input('Please input the file name (*.out): ' ))
+test_file_name = work_dir + "/" + input_file
 stat_shared = get_stat (test_file_name)
 act_t_shared = get_active_cycles(stat_shared)
 insns_shared = get_insns_persrc(stat_shared)

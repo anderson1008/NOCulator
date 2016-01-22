@@ -5,7 +5,7 @@ import random
 import os
 
 number_of_workload = 30
-nodes = 16
+nodes = 64
 workload_high_mem_intsty = []
 ipc_high_mem_intsty = []
 workload_mid_mem_intsty = []
@@ -92,7 +92,7 @@ def work_gen_homo (app_array, app_ipc_array):
   ipc_out = file_open (file_ipc)
   
   #specify the dir of trace files
-  workload_out.write("/Users/Anderson/blesstraces C:/Users/xiyuex/Documents /Users/xiyuexiang/Documents")
+  workload_out.write("/Users/Anderson/Documents/blesstraces C:/Users/xiyuex/Documents/blesstraces /Users/xiyuexiang/Documents/blesstraces")
   workload_index = 0
   app_count = len(app_array)
 
@@ -133,7 +133,7 @@ def work_gen_hetero ():
     workload_out = file_open (filename)
     ipc_out = file_open (file_ipc)
     #specify the dir of trace files
-    workload_out.write("/Users/Anderson/blesstraces C:/Users/xiyuex/Documents /Users/xiyuexiang/Documents")
+    workload_out.write("/Users/Anderson/Documents/blesstraces C:/Users/xiyuex/Documents/blesstraces /Users/xiyuexiang/Documents/blesstraces")
     workload_index = 0
     high_mem_count = len(workload_high_mem_intsty)
     mid_mem_count = len(workload_mid_mem_intsty)

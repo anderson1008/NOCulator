@@ -64,6 +64,7 @@ namespace ICSimulator
 
 		private double [] m_est_sd = new double[Config.N];
 		private double [] m_stc = new double[Config.N];
+		private double [] m_stc_unsort = new double[Config.N];
 		private ulong[] m_index_stc = new ulong[Config.N];
 		private ulong[] m_index_sd = new ulong[Config.N];
 
@@ -109,7 +110,7 @@ namespace ICSimulator
 				throttle_node [i] = "1";
 				m_est_sd [i] = 1;
 				m_stc [i] = 0;
-
+				m_stc_unsort[i] = 0;
 
 				// assign initial mshr quota
 				mshr_quota [i] = Config.mshrs;
@@ -152,6 +153,8 @@ namespace ICSimulator
 
 				ComputeSTC ();
 
+				doStat();
+
 				RankBySTC (); // use to mark unthrottled core
 
 				RankBySD (); // use to select the throttled core
@@ -159,7 +162,6 @@ namespace ICSimulator
 				//throttle_stc();
 				ThrottleSTC ();
 
-				doStat();
 				
 
 			} // end if
@@ -234,11 +236,8 @@ namespace ICSimulator
 					//m_stc [i] = m_est_sd[i] / MPKI[i];
 				else 
 					m_stc [i] = double.MaxValue;
+				m_stc_unsort [i] = m_stc [i];
 
-				#if DEBUG
-				Console.WriteLine ("at time {0,-10}: Core {1,-5} Slowdow {2, -5:0.00} L1misses {3, -6:0.00} STC {4, -5:0.0000}, MSHR {5, -5}",
-					Simulator.CurrentRound, i, m_est_sd[i], curr_L1misses[i], m_stc[i], mshr_quota[i]);
-				#endif	
 			}
 		}
 
@@ -274,17 +273,26 @@ namespace ICSimulator
 			Array.Sort (m_est_sd, m_index_sd, revSort);
 		}
 
-		public void ThrottleSTC ()
-		{
-			double sd_delta, uf_delta;
 
-		
+		public bool badDecision ()
+		{
+			// return true for bad, otherwise good
+			double sd_delta, uf_delta;
+	
 			sd_delta = m_currperf - m_oldperf;
 			uf_delta = m_currunfairness - m_oldunfairness;
 			Console.WriteLine ("sd_delta = {0:0.000}", sd_delta);
 			Console.WriteLine ("uf_delta = {0:0.000}", uf_delta);
 
-			if (sd_delta > 0 || uf_delta > 0) {
+			if (sd_delta / Config.N + uf_delta <= 0) return false; // the average of slowdown reduction of each core outweight the degradation of unfairness; Or simply both of them are improved.
+			else return true;
+
+		}
+
+		public void ThrottleSTC ()
+		{
+
+			if (badDecision()) {
 				// previous iteration made a bad decision
 				SetBestSol ();
 				MarkBadDecision ();
@@ -435,6 +443,12 @@ namespace ICSimulator
 		{
 			for (int i = 0; i < Config.N; i++) 
 			{
+				double miss_rate = curr_L1misses[i]/Config.slowdown_epoch;;
+				#if DEBUG
+				Console.WriteLine ("at time {0,-10}: Core {1,-5} Slowdow {2, -5:0.00} L1misses {3, -6:0.00} STC {4, -5:0.0000}, L1MPC {5,-5:0.0000}, MSHR {6, -5}",
+					Simulator.CurrentRound, i, m_est_sd[i], curr_L1misses[i], m_stc[i], miss_rate, mshr_quota[i]);
+				#endif	
+
 				Simulator.stats.L1miss_persrc_period [i].Add(curr_L1misses[i]);
 				Simulator.stats.mpki_bysrc[i].Add(MPKI[i]);
 				Simulator.stats.estimated_slowdown [i].Add (m_est_sd[i]);
