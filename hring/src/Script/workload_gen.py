@@ -4,8 +4,8 @@ import sys
 import random
 import os
 
-number_of_workload = 30
-nodes = 64
+number_of_workload = 100
+nodes = int(raw_input ("Number of nodes: "))
 workload_high_mem_intsty = []
 ipc_high_mem_intsty = []
 workload_mid_mem_intsty = []
@@ -92,7 +92,7 @@ def work_gen_homo (app_array, app_ipc_array):
   ipc_out = file_open (file_ipc)
   
   #specify the dir of trace files
-  workload_out.write("/Users/Anderson/Documents/blesstraces C:/Users/xiyuex/Documents/blesstraces /Users/xiyuexiang/Documents/blesstraces")
+  workload_out.write("/Users/Anderson/blesstraces C:/Users/xiyuex/Documents/blesstraces /Users/xiyuexiang/Documents/blesstraces")
   workload_index = 0
   app_count = len(app_array)
 
@@ -126,14 +126,13 @@ def work_gen_homo (app_array, app_ipc_array):
   ipc_out.close()
 # end work_gen()
 
-
 # begin work_gen_hetero()
 def work_gen_hetero ():
     file_sel ()
     workload_out = file_open (filename)
     ipc_out = file_open (file_ipc)
     #specify the dir of trace files
-    workload_out.write("/Users/Anderson/Documents/blesstraces C:/Users/xiyuex/Documents/blesstraces /Users/xiyuexiang/Documents/blesstraces")
+    workload_out.write("/Users/Anderson/blesstraces C:/Users/xiyuex/Documents/blesstraces /Users/xiyuexiang/Documents/blesstraces")
     workload_index = 0
     high_mem_count = len(workload_high_mem_intsty)
     mid_mem_count = len(workload_mid_mem_intsty)
@@ -165,6 +164,44 @@ def work_gen_hetero ():
     ipc_out.close()
 # end work_gen_hetero()
 
+# begin work_gen_random()
+def work_gen_random ():
+    file_sel ()
+    workload_out = file_open (filename)
+    ipc_out = file_open (file_ipc)
+    #specify the dir of trace files
+    workload_out.write("/Users/Anderson/blesstraces C:/Users/xiyuex/Documents/blesstraces /Users/xiyuexiang/Documents/blesstraces")
+    workload_index = 0
+    app_count = len(spec_workload)
+
+    while (workload_index < number_of_workload):
+      i = random.randint(0, app_count-1)
+      j = random.randint(0, app_count-1)
+      k = random.randint(0, app_count-1)
+      m = random.randint(0, app_count-1)
+
+      # randomly select 4 apps and retry if an app has been chosen
+      while (j == i):
+        j = random.randint(0, app_count-1)
+      while (k == j or k == i):
+        k = random.randint(0, app_count-1)
+      while (m == k or m == j or m == i):
+        m = random.randint(0, app_count-1)
+      
+      # shuffle the apps and generate entry by entry
+      workload = '\n'
+      ipc = '\n'
+      for x in range (0, nodes/4):
+        workload = workload + spec_workload [i] + spec_workload [j] + spec_workload [k] + spec_workload [m]
+        ipc = ipc + spec_ipc [i] + spec_ipc [j] + spec_ipc [k] + spec_ipc [m]
+
+      workload_out.write(workload)
+      ipc_out.write(ipc)
+      workload_index = workload_index + 1
+        
+    workload_out.close()
+    ipc_out.close()
+# end work_gen_random()
 
 
 # start main procedure
@@ -191,12 +228,14 @@ for i,j,k in zip (spec_ipc, spec_workload, spec_mpki):
 #print workload_high_mem_intsty
 
 # generate workload
-filename = 'homo_mem'
-work_gen_homo (workload_high_mem_intsty, ipc_high_mem_intsty)
+#filename = 'homo_mem'
+#work_gen_homo (workload_high_mem_intsty, ipc_high_mem_intsty)
 #filename = 'homo_non_mem'
 #work_gen_homo (filename, workload_low_mem_intsty, ipc_low_mem_intsty, nodes)
-filename = 'hetero'
-work_gen_hetero ()
+#filename = 'hetero'
+#work_gen_hetero ()
+filename = 'random'
+work_gen_random()
 
 print "^_^"
 # end main procedure

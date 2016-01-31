@@ -23,10 +23,10 @@ edge_loop = false
 
 controller = THROTTLE_QOS
 
-finish = cycle 3000000
+finish = cycle 10000
 //warmup_cyc = 100000
 //warmup_cyc = 500000
-slowdown_epoch = 10000
+slowdown_epoch = 1000
 
 
 //finish = app

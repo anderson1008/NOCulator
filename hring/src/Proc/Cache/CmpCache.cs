@@ -984,7 +984,7 @@ namespace ICSimulator
             for (int i = 0; i < m_N; i++)
                 if (state.owners.is_set(i) && i != node)
                 {
-					bool critical = (c2c == i) ? true : false;
+					bool critical = (c2c == i) ? true : false; // send invalidation to all other sharers
 					CmpCache_Pkt invl_pkt = add_ctl_pkt(txn, sh_slice, i, false, 14, critical);
                     invl_pkt.delay = m_shdelay;
 					

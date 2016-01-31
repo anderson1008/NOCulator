@@ -345,7 +345,7 @@ namespace ICSimulator
 			for (int i = 0; i < Config.N && unthrottled < Config.thrt_up_slow_app - 1; i++) { 
 				pick = (int)m_index_sd [i];
 				throttle_node [pick] = "0";
-				Console.WriteLine ("Core {0} is SLOW and marked unthrottable.", pick);
+				Console.WriteLine ("Core {0} is SLOW and cannot be throttled down.", pick);
 				unthrottled++;
 				ThrottleUp (pick);
 			}
@@ -353,7 +353,7 @@ namespace ICSimulator
 				double miss_rate = curr_L1misses [i] / Config.slowdown_epoch;
 				if (miss_rate < Config.curr_L1miss_threshold) {
 					throttle_node [i] = "0";
-					Console.WriteLine ("Core {0} miss rate is {1} which is LIGHT and marked unthrottable.", i, miss_rate);
+					Console.WriteLine ("Core {0} miss rate is {1} which is LIGHT and cannot be throttled down.", i, miss_rate);
 					ThrottleUp (i);
 				}
 			}
@@ -367,12 +367,13 @@ namespace ICSimulator
 			for (int i = 0; i < Config.N; i++) 
 				pre_throt [i] = false;
 			for (int i = 0; i < Config.N && throttled < Config.thrt_down_stc_app-1; i++) {
-				if (CoidToss (i) == false) continue; 
+				if (CoidToss (i) == false || pre_throt[i] == true) continue; // check pre_throt to make sure no application is throttled twice
  				int pick = (int)m_index_stc [i]; 
 				if (ThrottleDown (pick)) { 
 					pre_throt[pick] = true;
 					throttled ++;
 					Console.WriteLine ("Throttle Down Core {0} to {1}", pick, mshr_quota[pick]);
+					Simulator.stats.throttle_down_profile[pick].Add();
 				}
 			}
 		}
@@ -383,7 +384,7 @@ namespace ICSimulator
 			
 			if (i < (Config.throt_prob_lv1 * Config.N) && toss_val < ((1-Config.throt_prob_lv1) * Config.N)) return true;
 			else if (i < Config.throt_prob_lv2 * Config.N && toss_val < (1-Config.throt_prob_lv2) * Config.N) return true;
-			else if (toss_val < (1-Config.throt_prob_lv3) * Config.N) return true;
+			//else if (toss_val < (1-Config.throt_prob_lv3) * Config.N) return true;
 			else return false;
 		}
 
@@ -435,7 +436,7 @@ namespace ICSimulator
 				//mshr_quota [pick] = mshr_quota [pick] + 1;
 				mshr_quota [pick] = Config.mshrs;
 				mshr_best_sol[pick] = mshr_quota[pick];
-				//Console.WriteLine("Core {0} is throttled UP to {1} because it is too slow.", pick, mshr_quota[pick]);			
+				Console.WriteLine("Core {0} is throttled UP to {1}.", pick, mshr_quota[pick]);			
 			}
 		}
 

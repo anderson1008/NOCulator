@@ -40,6 +40,12 @@ def get_ipc_alone (file_name, line_number):
     line.remove('')
     return line
 
+def get_non_overlap_penalty (stat):
+  searchObj = re.search(r'(?:"non_overlap_penalty":\[(.*?)])',stat)
+  splitObj = re.split('\W+',searchObj.group(1))
+  non_overlap_penalty = splitObj
+  return non_overlap_penalty
+
 def cmp_ipc (insns_persrc, active_cycle):
   ipc = []
   for i,j in zip (insns_persrc, active_cycle):
@@ -55,7 +61,9 @@ def cmp_ws (ipc_alone, ipc_share):
   for i,j in zip (ipc_alone, ipc_share):
     if float(i) == 0:
       raise Exception ("ipc_alone is 0")
-    ws = ws + j/float(i)
+    new_ws = j/float(i)
+    #print new_ws
+    ws = ws + new_ws
   return ws
 
 #compute harmonic speedup
@@ -101,16 +109,24 @@ def get_ipc_share (stat_shared):
   act_t_shared = get_active_cycles(stat_shared)
   insns_shared = get_insns_persrc(stat_shared)
   ipc_shared = cmp_ipc (insns_shared, act_t_shared)
+  #print ipc_shared
   return ipc_shared
 
 # compute metrics
+# use this if ipc_alone is the ipc_ref
 def cmp_metric (ipc_alone, ipc_share):
   ws = cmp_ws (ipc_alone, ipc_share)
   hs = cmp_hs (ipc_alone, ipc_share)
   uf = cmp_uf (ipc_alone, ipc_share)
   return (ws, hs, uf)
 
-
+# use this if ipc_alone is ipc_baseline
+def cmp_metric_bs (ipc_alone, ipc_share_baseline, ipc_share_design):
+  ws = cmp_ws (ipc_share_baseline, ipc_share_design)
+  hs = cmp_ws (ipc_share_baseline, ipc_share_design)
+  uf_design = cmp_uf (ipc_alone,ipc_share_design)
+  uf_baseline = cmp_uf (ipc_alone, ipc_share_baseline)
+  return (ws, hs, uf_design, uf_baseline)
 
 
 
