@@ -88,7 +88,7 @@ namespace ICSimulator
 		private double m_currperf, m_oldperf;
 		private string [] throttle_node = new string[Config.N];	// to enable/disable the throttling mechanism 
 		private double m_init_unfairness, m_init_perf;
-	
+		private bool m_throttle_enable;
 		
 		enum OPT_STATE {
 			IDLE,
@@ -136,6 +136,7 @@ namespace ICSimulator
 			m_oldperf = 0;
 			m_oldunfairness = 0;
 			m_opt_counter = 0;
+			m_throttle_enable = Config.throttle_enable;
 		}
 
 		public override void doStep()
@@ -162,8 +163,6 @@ namespace ICSimulator
 				//throttle_stc();
 				ThrottleSTC ();
 
-				
-
 			} // end if
 		}	
 		
@@ -188,6 +187,10 @@ namespace ICSimulator
 				}
 				
 			} // end for
+
+			// determine wether or not enable throttling down app. However, throttling app is totally fine.
+			if (max_sd - min_sd > Config.th_unfairness) m_throttle_enable = true;
+			else m_throttle_enable = false;
 
 		}
 
@@ -366,15 +369,16 @@ namespace ICSimulator
 			MarkUnthrottled_v2();
 			for (int i = 0; i < Config.N; i++) 
 				pre_throt [i] = false;
-			for (int i = 0; i < Config.N && throttled < Config.thrt_down_stc_app-1; i++) {
-				if (CoidToss (i) == false || pre_throt[i] == true) continue; // check pre_throt to make sure no application is throttled twice
- 				int pick = (int)m_index_stc [i]; 
-				if (ThrottleDown (pick)) { 
-					pre_throt[pick] = true;
-					throttled ++;
-					Console.WriteLine ("Throttle Down Core {0} to {1}", pick, mshr_quota[pick]);
-					Simulator.stats.throttle_down_profile[pick].Add();
-				}
+				for (int i = 0; i < Config.N && throttled < Config.thrt_down_stc_app-1; i++) {
+					if (m_throttle_enable == false) break;
+					if (CoidToss (i) == false || pre_throt[i] == true) continue; // check pre_throt to make sure no application is throttled twice
+	 				int pick = (int)m_index_stc [i]; 
+					if (ThrottleDown (pick)) { 
+						pre_throt[pick] = true;
+						throttled ++;
+						Console.WriteLine ("Throttle Down Core {0} to {1}", pick, mshr_quota[pick]);
+						Simulator.stats.throttle_down_profile[pick].Add();
+					}
 			}
 		}
 		
@@ -449,7 +453,8 @@ namespace ICSimulator
 				Console.WriteLine ("at time {0,-10}: Core {1,-5} Slowdow {2, -5:0.00} L1misses {3, -6:0.00} STC {4, -5:0.0000}, L1MPC {5,-5:0.0000}, MSHR {6, -5}",
 					Simulator.CurrentRound, i, m_est_sd[i], curr_L1misses[i], m_stc[i], miss_rate, mshr_quota[i]);
 				#endif	
-
+				
+				Simulator.stats.app_stall_per_epoch.Add(Simulator.stats.non_overlap_penalty_period[i].Count);
 				Simulator.stats.L1miss_persrc_period [i].Add(curr_L1misses[i]);
 				Simulator.stats.mpki_bysrc[i].Add(MPKI[i]);
 				Simulator.stats.estimated_slowdown [i].Add (m_est_sd[i]);

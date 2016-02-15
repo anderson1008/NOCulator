@@ -7,7 +7,7 @@ import sys
 import fnmatch
 import matplotlib.pyplot as plt
 
-raw_data_dir = '/home/anderson/Desktop/results/profile/8x8/'
+raw_data_dir = '/Users/xiyuexiang/Desktop/L1_32K_MSHR_32_VC4x4/results/alone/4x4/'
 MEM_INTEN_THESHLD = 45
 
 spec_workload = ["400.perlbench.bin.gz ","401.bzip2.bin.gz ","403.gcc.bin.gz ","429.mcf.bin.gz ","433.milc.bin.gz ","435.gromacs.bin.gz ","436.cactusADM.bin.gz ",\
@@ -39,12 +39,15 @@ for app_index in range (1, 27):
   mpki_sum = 0
   ipc_sum = 0
   app = spec_workload [app_index-1].strip()
+  #app="sim_" + str(app_index) + ".out"
   fo_out_0.write('\n')
   fo_out_0.write('----------------------- '+app+' ------------------------')
   fo_out_0.write('\n' + 'MSHRs'.ljust(8) + 'IPC'.ljust(10) + 'MPKI'.ljust(10))
   if not os.path.exists(raw_data_dir + app):
     raise Exception ("dir" + raw_data_dir + app + "not found")
   file_count = 0
+
+  ####### Sweep MSHR 1-16  ###############
   for sim_index in range (1,17):
     file_name = raw_data_dir + app + "/sim_" + str(sim_index) + '.out'
     if not os.path.exists(file_name):
@@ -78,7 +81,7 @@ for app_index in range (1, 27):
 
     fo_out_0.write('\n')
     fo_out_0.write(str(mshr).ljust(8) + ipc_str.ljust(10) + str(mpki).ljust(10))
-
+    ########### End of Sweep MSHR #######
   fo_out_1.write('\n')
   fo_out_1.write(str(app_index).ljust(5) + app.strip('.bin.gz').ljust(15) + str("%.3f" % (ipc_sum / file_count)).ljust(10) + str("%.3f" % (mpki_sum / file_count)).ljust(10))
   fo_out_1.write('\n')

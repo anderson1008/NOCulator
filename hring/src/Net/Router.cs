@@ -431,6 +431,7 @@ namespace ICSimulator
             ulong total_latency = Simulator.CurrentRound - f.packet.creationTime;
             ulong inj_latency = total_latency - net_latency;
 
+			Simulator.stats.flit_intf.Add(f.intfCycle);
             Simulator.stats.flit_inj_latency.Add(inj_latency);
             Simulator.stats.flit_net_latency.Add(net_latency);
             Simulator.stats.flit_total_latency.Add(total_latency);
@@ -503,6 +504,7 @@ namespace ICSimulator
             ulong net_latency = Simulator.CurrentRound - p.injectionTime;
             ulong total_latency = Simulator.CurrentRound - p.creationTime;
 
+			Simulator.stats.packet_intf.Add(p.intfCycle);
             Simulator.stats.net_latency.Add(net_latency);
             Simulator.stats.total_latency.Add(total_latency);
             Simulator.stats.net_latency_bysrc[p.src.ID].Add(net_latency);

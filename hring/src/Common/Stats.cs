@@ -10,6 +10,7 @@ namespace ICSimulator
     {
 		// By Xiyue: for coherent packet profiling
 		//public SampledStat[] avg_slowdown_error;
+		public SampledStat flit_intf, packet_intf, request_intf, app_stall_per_epoch;
 		public AccumStat false_block, correct_block;
 		public AccumStat priority_inv;
 		public PeriodicAccumStat[] estimated_slowdown;

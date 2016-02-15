@@ -12,10 +12,11 @@ import get
 #NUM_SIM = 20
 
 # Uni MacPro
-PATH_WORKLOAD = "/Users/xiyuexiang/Desktop/FinalEval/workload_list/hetero_4x4_ipc"
-PATH_DESIGN = "/Users/xiyuexiang/Desktop/FinalEval/results/hetero/4x4/design/"
-PATH_BASELINE = "/Users/xiyuexiang/Desktop/FinalEval/results/hetero/4x4/baseline/"
-NUM_SIM = 20 
+ROOT_DIR = "/Users/xiyuexiang/Desktop/FinalEval/"
+PATH_WORKLOAD = ROOT_DIR + "workload_list/homo_mem_4x4_ipc"
+PATH_DESIGN = ROOT_DIR + "results/homo/4x4/design/"
+PATH_BASELINE = ROOT_DIR + "results/homo/4x4/baseline/"
+NUM_SIM = 30 
 
 NODE = 16
 ACTIVE_CYCLE = 900000
@@ -37,7 +38,6 @@ for index in range (1, NUM_SIM+1):
   hs_norm = hs_norm + hs_design/NODE
   uf_norm = uf_norm + float(uf_design)/uf_baseline
   # comment this if use reference IPC as ipc_alone
-
 
   # enable the code below to use reference IPC as ipc_alone
   #(ws_design, hs_design, uf_design) = get.cmp_metric (ipc_alone, ipc_share_design)

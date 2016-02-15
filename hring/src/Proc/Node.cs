@@ -237,7 +237,7 @@ namespace ICSimulator
 				if (f.packet.intfCycle > 0 && f.packet.requesterID != m_cpu.ID)
 				{
 					f.packet.intfCycle = intfCycle;
-					Interference intf_entry =  new Interference (f.packet);
+					Interference intf_entry =  new Interference (f.packet);  // create an entry in the inherit table
 					m_intfArray.Add(intf_entry);
 				}
 				receivePacket(f.packet);

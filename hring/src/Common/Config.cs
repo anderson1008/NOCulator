@@ -120,6 +120,7 @@ namespace ICSimulator
 		public static double throt_min = 0.3;  // share with Sigcomm paper
 		public static int opt_window = 50;
 		public static int th_bad_dec_counter = 3; // may sweep
+		public static double th_unfairness = 0.3;
 		public static double throt_prob_lv1 = 0.4;
 		public static double throt_prob_lv2 = 0.6;
 		public static double throt_prob_lv3 = 0.8;

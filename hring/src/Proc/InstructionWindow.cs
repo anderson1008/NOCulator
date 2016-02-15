@@ -242,7 +242,7 @@ namespace ICSimulator {
 				// Trial 1: average over i instructions
 				//Simulator.stats.non_overlap_penalty [node].Add ((float)max_intf/i);
 				//Simulator.stats.non_overlap_penalty_period [node].Add ((float)max_intf/i);
-
+				Simulator.stats.request_intf.Add(max_intf);
 				Simulator.stats.non_overlap_penalty [node].Add (max_intf);
 				Simulator.stats.non_overlap_penalty_period [node].Add (max_intf);
 

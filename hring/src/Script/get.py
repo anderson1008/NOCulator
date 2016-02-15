@@ -75,10 +75,10 @@ def cmp_hs (ipc_alone, ipc_share):
     if j == 0:
       raise Exception ("ipc_share is 0")
     temp = temp + float(i)/j
-  if temp == 0:
-    raise Exception ("temp in cmp_hs() is 0")
-  hs = len (ipc_share) / temp
-  return hs
+  #if temp == 0:
+  #  raise Exception ("temp in cmp_hs() is 0")
+  #hs = len (ipc_share) / temp
+  return temp
 
 #compute the actual slowdown
 def cmp_real_sd (ipc_alone, ipc_share):
@@ -123,7 +123,7 @@ def cmp_metric (ipc_alone, ipc_share):
 # use this if ipc_alone is ipc_baseline
 def cmp_metric_bs (ipc_alone, ipc_share_baseline, ipc_share_design):
   ws = cmp_ws (ipc_share_baseline, ipc_share_design)
-  hs = cmp_ws (ipc_share_baseline, ipc_share_design)
+  hs = cmp_hs (ipc_share_baseline, ipc_share_design)
   uf_design = cmp_uf (ipc_alone,ipc_share_design)
   uf_baseline = cmp_uf (ipc_alone, ipc_share_baseline)
   return (ws, hs, uf_design, uf_baseline)

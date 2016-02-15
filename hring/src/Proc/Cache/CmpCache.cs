@@ -289,6 +289,7 @@ namespace ICSimulator
             return best;
         }
 
+		// construct the cache
         public CmpCache()
         {
             m_N = Config.N;

@@ -468,8 +468,7 @@ namespace ICSimulator
 									if (requesters [req].flit.packet.critical)
 									{
 										//requesters [req].flit.packet.txn.interferenceCycle++;
-										requesters [req].flit.intfCycle++;
-										
+										requesters [req].flit.intfCycle++;		
 									}
 									causeIntf++;
 									//top.flit.packet.txn.causeIntf ++;

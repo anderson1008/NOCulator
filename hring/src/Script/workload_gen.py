@@ -4,8 +4,8 @@ import sys
 import random
 import os
 
-number_of_workload = 100
-nodes = int(raw_input ("Number of nodes: "))
+number_of_workload = 30
+nodes = int(raw_input ("Number of nodes (16 or 64): "))
 workload_high_mem_intsty = []
 ipc_high_mem_intsty = []
 workload_mid_mem_intsty = []
@@ -17,23 +17,23 @@ spec_mpki = []
 file_name = []
 file_ipc = []
 
-spec_workload = [\
+spec_workload = [
 "400.perlbench.bin.gz ","401.bzip2.bin.gz ","403.gcc.bin.gz ","429.mcf.bin.gz ","433.milc.bin.gz ","435.gromacs.bin.gz ","436.cactusADM.bin.gz ",\
 "437.leslie3d.bin.gz ","444.namd.bin.gz ","445.gobmk.bin.gz ","447.dealII.bin.gz ","450.soplex.bin.gz ","453.povray.bin.gz ","454.calculix.bin.gz ",\
 "456.hmmer.bin.gz ","458.sjeng.bin.gz ","459.GemsFDTD.bin.gz ","462.libquantum.bin.gz ","464.h264ref.bin.gz ","465.tonto.bin.gz ","470.lbm.bin.gz ",\
 "471.omnetpp.bin.gz ","473.astar.bin.gz ","481.wrf.bin.gz ","482.sphinx3.bin.gz ","483.xalancbmk.bin.gz "]
 
 spec_ipc_4x4 = [
-"2.17 ", "2.13 ", "1.83 ", "2.08 ", "2.16 ", "1.87 ", "1.38 ", \
-"2.75 ", "2.36 ", "2.33 ", "1.91 ", "1.77 ", "1.88 ", "1.71 ", \
-"1.60 ", "2.18 ", "1.33 ", "2.73 ", "1.73 ", "1.85 ", "1.91 ", \
-"2.65 ", "2.04 ", "2.92 ", "2.51 ", "2.02 "]
+"2.13 ", "2.11 ", "1.83 ", "1.97 ", "2.16 ", "1.87 ", "1.38 ", \
+"2.94 ", "2.37 ", "2.21 ", "1.92 ", "1.81 ", "1.88 ", "1.71 ", \
+"1.60 ", "2.25 ", "1.33 ", "2.99 ", "1.67 ", "1.84 ", "1.91 ", \
+"2.68 ", "2.04 ", "2.86 ", "2.57 ", "2.10 "]
 
 spec_mpki_4x4 = [
-"0.40", "6.12", "4.32", "92.90", "57.06", "7.87", "11.08", \
-"67.19", "5.33", "5.19", "5.36", "39.43", "5.90", "1.79", \
-"9.71", "3.60", "111.23", "50.02", "24.72", "2.22", "54.04", \
-"52.89", "10.84", "1.43", "26.60", "17.49" ]
+"0.41", "3.82", "9.99", "106.76", "57.02", "7.94", "11.16", \
+"67.12", "10.76", "2.99", "0.80", "40.76", "9.68", "1.03", \
+"10.02", "1.95", "120.69", "50.00", "1.81", "3.47", "56.24", \
+"35.63", "10.58", "1.93", "26.73", "19.19" ]
 
 spec_ipc_8x8 = [
 "2.09 ", "2.06 ", "1.70 ", "1.30 ", "1.73 ", "1.73 ", "1.25 ", \
@@ -210,30 +210,30 @@ def work_gen_random ():
 
 ref_sel()
 for i,j,k in zip (spec_ipc, spec_workload, spec_mpki):
-  if float(k) <= 10:
+  if float(k) <= 5:
     workload_low_mem_intsty = workload_low_mem_intsty + [j]
     ipc_low_mem_intsty = ipc_low_mem_intsty + [i]
-  elif float(k) <= 30 and float (k) > 10:
+  elif float(k) <= 15 and float (k) > 5:
     workload_mid_mem_intsty = workload_mid_mem_intsty + [j]
     ipc_mid_mem_intsty = ipc_mid_mem_intsty + [i]
   else:
     workload_high_mem_intsty = workload_high_mem_intsty + [j]
     ipc_high_mem_intsty = ipc_high_mem_intsty + [i]
 
-#print "Low Memory Intensity Apps: "
-#print workload_low_mem_intsty
-#print "Mid Memory Intensity Apps: "
-#print workload_mid_mem_intsty
-#print "High Memory Intensity Apps: "
-#print workload_high_mem_intsty
+print "Low Memory Intensity Apps: "
+print workload_low_mem_intsty
+print "Mid Memory Intensity Apps: "
+print workload_mid_mem_intsty
+print "High Memory Intensity Apps: "
+print workload_high_mem_intsty
 
 # generate workload
-#filename = 'homo_mem'
-#work_gen_homo (workload_high_mem_intsty, ipc_high_mem_intsty)
+filename = 'homo'
+work_gen_homo (workload_high_mem_intsty, ipc_high_mem_intsty)
 #filename = 'homo_non_mem'
 #work_gen_homo (filename, workload_low_mem_intsty, ipc_low_mem_intsty, nodes)
-#filename = 'hetero'
-#work_gen_hetero ()
+filename = 'hetero'
+work_gen_hetero ()
 filename = 'random'
 work_gen_random()
 
