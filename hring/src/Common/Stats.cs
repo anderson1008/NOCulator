@@ -22,7 +22,7 @@ namespace ICSimulator
 		public AccumStat [] cpu_stall_throttle;
 		public AccumStat opt_fair, opt_perf;
 		public SampledStat[] mshrs_credit, mshrs_util;
-
+		public SampledStat inherit_table_size;
 		public SampledStat netutil;
 
 		// AFC -- buffer power

@@ -423,9 +423,6 @@ namespace ICSimulator
 
         protected void statsEjectFlit(Flit f)
         {
-            //if (f.packet.src.ID == 3) Console.WriteLine("eject flit: packet {0}, seq {1}",
-            //        f.packet.ID, f.flitNr);
-
             // per-flit latency stats
             ulong net_latency = Simulator.CurrentRound - f.injectionTime;
             ulong total_latency = Simulator.CurrentRound - f.packet.creationTime;

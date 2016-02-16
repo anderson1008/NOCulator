@@ -92,7 +92,7 @@ def work_gen_homo (app_array, app_ipc_array):
   ipc_out = file_open (file_ipc)
   
   #specify the dir of trace files
-  workload_out.write("/Users/Anderson/blesstraces C:/Users/xiyuex/Documents/blesstraces /Users/xiyuexiang/Documents/blesstraces")
+  workload_out.write("/Users/Anderson/Documents/blesstraces C:/Users/xiyuex/Documents/blesstraces /Users/xiyuexiang/Documents/blesstraces")
   workload_index = 0
   app_count = len(app_array)
 
@@ -132,7 +132,7 @@ def work_gen_hetero ():
     workload_out = file_open (filename)
     ipc_out = file_open (file_ipc)
     #specify the dir of trace files
-    workload_out.write("/Users/Anderson/blesstraces C:/Users/xiyuex/Documents/blesstraces /Users/xiyuexiang/Documents/blesstraces")
+    workload_out.write("/Users/Anderson/Documents/blesstraces C:/Users/xiyuex/Documents/blesstraces /Users/xiyuexiang/Documents/blesstraces")
     workload_index = 0
     high_mem_count = len(workload_high_mem_intsty)
     mid_mem_count = len(workload_mid_mem_intsty)
@@ -170,7 +170,7 @@ def work_gen_random ():
     workload_out = file_open (filename)
     ipc_out = file_open (file_ipc)
     #specify the dir of trace files
-    workload_out.write("/Users/Anderson/blesstraces C:/Users/xiyuex/Documents/blesstraces /Users/xiyuexiang/Documents/blesstraces")
+    workload_out.write("/Users/Anderson/Documents/blesstraces C:/Users/xiyuex/Documents/blesstraces /Users/xiyuexiang/Documents/blesstraces")
     workload_index = 0
     app_count = len(spec_workload)
 
@@ -210,10 +210,10 @@ def work_gen_random ():
 
 ref_sel()
 for i,j,k in zip (spec_ipc, spec_workload, spec_mpki):
-  if float(k) <= 5:
+  if float(k) <= 20:
     workload_low_mem_intsty = workload_low_mem_intsty + [j]
     ipc_low_mem_intsty = ipc_low_mem_intsty + [i]
-  elif float(k) <= 15 and float (k) > 5:
+  elif float(k) <= 35 and float (k) > 20:
     workload_mid_mem_intsty = workload_mid_mem_intsty + [j]
     ipc_mid_mem_intsty = ipc_mid_mem_intsty + [i]
   else:

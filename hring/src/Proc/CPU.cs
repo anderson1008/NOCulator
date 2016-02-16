@@ -162,8 +162,9 @@ namespace ICSimulator
         {
             if (p.cb != null) 
 			{
-				// TODO may need to accumulated
-				p.txn.interferenceCycle = p.intfCycle;  // The interference cycle of a txn is determined by that of the response packet.
+			    // The interference cycle of a txn is determined by that of the response packet.
+				// The delay is overrided by the packet returing to the requester.
+				p.txn.interferenceCycle = p.intfCycle; 
 				p.cb();
 			}
         }
@@ -366,7 +367,7 @@ namespace ICSimulator
 		{
 			qos_stat_delegate QOS_delegate = delegate (CmpCache_Txn txn) { computePenalty(txn, write); };
 
-			Simulator.network.cache.access(m_ID, addr, write, m_stats_active, 
+			Simulator.network.cache.access(m_ID, addr, mshr, write, m_stats_active, 
 				delegate() { reqDone(addr, mshr, write); }, QOS_delegate);
         }
 
@@ -425,6 +426,8 @@ namespace ICSimulator
 				switch (m_trace.type) {
 				case Trace.Type.Rd:
 				case Trace.Type.Wr:
+
+					// if no mshr available when the next is a memory instruction, break out of loop here
 					if (nMem == 0 || !canIssueMSHR (m_trace.address)) {
 						done = true;
 						break;

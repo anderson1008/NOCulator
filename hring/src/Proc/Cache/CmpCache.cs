@@ -234,6 +234,7 @@ namespace ICSimulator
 		public CPU.qos_stat_delegate qos_cb;
 
 		// by Xiyue
+		public int mshr;
 		public ulong minimalCycle;
 		public int interferenceCycle;
 		public ulong throttleCycle;
@@ -359,7 +360,7 @@ namespace ICSimulator
 		}
 
 
-		public void access(int node, ulong addr, bool write, bool stats_active, 
+		public void access(int node, ulong addr, int mshr, bool write, bool stats_active, 
 			Simulator.Ready cb, CPU.qos_stat_delegate qos_cb)
         {
 	
@@ -461,13 +462,13 @@ namespace ICSimulator
             else if (!prv_hit && sh_hit) // CASE 2: not in prv cache, but in sh cache
             {	
 				// by Xiyue: share cache access.
-				L2_access (node, addr, sh_slice, write,  state, cb, qos_cb,
+				L2_access (node, mshr, addr, sh_slice, write,  state, cb, qos_cb,
 					stats_active, L1hit, L1upgr, L1ev, L1wb,
 					L2access, L2hit, L2ev, L2wb, c2c, 0);
             }
             else if (!prv_hit && !sh_hit) // CASE 3: not in prv or shared cache
             {
-				Mem_access (node, addr,  sh_slice, write, state, cb, qos_cb,
+				Mem_access (node, mshr, addr,  sh_slice, write, state, cb, qos_cb,
 					stats_active, L1hit, L1upgr, L1ev, L1wb,
 					L2access, L2hit, L2ev, L2wb, c2c, 0);
             }
@@ -521,7 +522,7 @@ namespace ICSimulator
 			PKT12: releast_pkt (node -> sh_slice) if state is not Modified.
 		*/
 
-		void L2_access (int node, ulong addr, int sh_slice, bool write,  CmpCache_State state, Simulator.Ready cb, CPU.qos_stat_delegate qos_cb,
+		void L2_access (int node, int mshr, ulong addr, int sh_slice, bool write,  CmpCache_State state, Simulator.Ready cb, CPU.qos_stat_delegate qos_cb,
 			bool stats_active, bool L1hit, bool L1upgr, bool L1ev, bool L1wb,
 			bool L2access, bool L2hit, bool L2ev, bool L2wb, bool c2c, ulong throttleCycle)
 		{
@@ -534,7 +535,7 @@ namespace ICSimulator
 					#if DEBUG
 					Console.WriteLine ("RETRY to issue Req_addr = {1}, Node = {2} time = {0}", Simulator.CurrentRound, addr, node);
 					#endif
-					L2_access (node, addr, sh_slice, write,  state, cb, qos_cb,
+					L2_access (node, mshr, addr, sh_slice, write,  state, cb, qos_cb,
 						stats_active, L1hit, L1upgr, L1ev, L1wb,
 						L2access, L2hit, L2ev, L2wb, c2c, throttleCycle + 1);
 				}, Simulator.CurrentRound + 1);	
@@ -553,6 +554,7 @@ namespace ICSimulator
 				txn.qos_cb = qos_cb;
 				txn.req_addr = addr;
 				txn.cb = cb;
+				txn.mshr = mshr;
 
 				// update functional shared state
 				if (!m_sh_perfect)
@@ -738,7 +740,7 @@ namespace ICSimulator
 
 
 
-		void Mem_access (int node, ulong addr, int sh_slice, bool write, CmpCache_State state, Simulator.Ready cb,  CPU.qos_stat_delegate qos_cb,
+		void Mem_access (int node, int mshr, ulong addr, int sh_slice, bool write, CmpCache_State state, Simulator.Ready cb,  CPU.qos_stat_delegate qos_cb,
 			bool stats_active, bool L1hit, bool L1upgr, bool L1ev, bool L1wb, bool L2access, bool L2hit, bool L2ev, bool L2wb, bool c2c, ulong throttleCycle)
 		{
 			
@@ -747,7 +749,7 @@ namespace ICSimulator
 
 			if (Simulator.controller.tryInject (node) == false && Config.throttle_enable == true && (node != sh_slice)) {
 				Simulator.Defer (delegate() {
-					Mem_access (node, addr, sh_slice, write, state, cb, qos_cb,
+					Mem_access (node, mshr, addr, sh_slice, write, state, cb, qos_cb,
 						stats_active, L1hit, L1upgr, L1ev, L1wb,
 						L2access, L2hit, L2ev, L2wb, c2c, throttleCycle + 1);
 				}, Simulator.CurrentRound + 1);
@@ -766,7 +768,7 @@ namespace ICSimulator
 				txn.cb = cb;
 				txn.qos_cb = qos_cb;
 				txn.req_addr = addr;
-
+				txn.mshr = mshr;
 
 				/*
 				L2access = true;

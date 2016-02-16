@@ -114,19 +114,18 @@ namespace ICSimulator
 		public static double enable_qos_mem_threshold = 3;
 		public static double mpki_threshold = 30;
 
-		public static bool throttle_enable = true;
-		public static double curr_L1miss_threshold = 0.06; // an app can be throttled only if L1 miss > curr_L1miss_threshlod; Greater value will preserve performance (i.e., less applciation will be throughput sensitive), but give less improvement on fairness
+		public static bool throttle_enable = false;
+		public static double curr_L1miss_threshold = 0.04; // an app can be throttled only if L1 miss > curr_L1miss_threshlod; Greater value will preserve performance (i.e., less applciation will be throughput sensitive), but give less improvement on fairness
 		public static double slowdown_epoch = 10000; // may sweep
 		public static double throt_min = 0.3;  // share with Sigcomm paper
-		public static int opt_window = 50;
 		public static int th_bad_dec_counter = 3; // may sweep
-		public static double th_unfairness = 0.3;
+		public static double th_unfairness = 0.2; // may sweep
 		public static double throt_prob_lv1 = 0.4;
 		public static double throt_prob_lv2 = 0.6;
 		public static double throt_prob_lv3 = 0.8;
 		public static int th_bad_rst_counter = 50; //may sweep
-		public static int thrt_up_slow_app = 4; // Parameter: Greater value improves fairness at the cost of lower performance improvement margin.
-		public static int thrt_down_stc_app = 4; // Parameter: greater value improve fairness at the cost of performance degradation
+		public static int thrt_up_slow_app = 16; // Parameter: Greater value improves fairness at the cost of lower performance improvement margin.
+		public static int thrt_down_stc_app = 16; // Parameter: greater value improve fairness at the cost of performance degradation
 		
 
 		// Slowdown-aware Throttling

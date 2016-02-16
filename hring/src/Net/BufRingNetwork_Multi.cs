@@ -506,9 +506,9 @@ namespace ICSimulator
                 else {
                     //BufRingMultiNetwork_IRI_GlobalPort i = _downstreamL as BufRingMultiNetwork_IRI_GlobalPort;
 #if DEBUG
-                    Console.WriteLine("GL block at IRI {0} flit {1}.{2} cycle {3} downstream is IRI {4}",
-                            _coord, f.packet.ID, f.flitNr, Simulator.CurrentRound,
-                            (i != null) ? i._iri._coord.ToString() : "(nic)");
+//                    Console.WriteLine("GL block at IRI {0} flit {1}.{2} cycle {3} downstream is IRI {4}",
+//                           _coord, f.packet.ID, f.flitNr, Simulator.CurrentRound,
+//                            (i != null) ? i._iri._coord.ToString() : "(nic)");
 #endif
                 }
             }
