@@ -5,7 +5,7 @@ import os
 import re
 import fnmatch
 import string
-
+from math import log, exp
 
 def get_stat (file_name):
   result_file = open (file_name, 'r')
@@ -58,11 +58,13 @@ def cmp_ws (ipc_alone, ipc_share):
   if len(ipc_alone) != len(ipc_share):
     raise Exception ("not enough ipc element")
   ws = 0
+  print ipc_alone
+  print ipc_share
   for i,j in zip (ipc_alone, ipc_share):
     if float(i) == 0:
       raise Exception ("ipc_alone is 0")
     new_ws = j/float(i)
-    #print new_ws
+    print new_ws
     ws = ws + new_ws
   return ws
 
@@ -75,10 +77,10 @@ def cmp_hs (ipc_alone, ipc_share):
     if j == 0:
       raise Exception ("ipc_share is 0")
     temp = temp + float(i)/j
-  #if temp == 0:
-  #  raise Exception ("temp in cmp_hs() is 0")
-  #hs = len (ipc_share) / temp
-  return temp
+  if temp == 0:
+    raise Exception ("temp in cmp_hs() is 0")
+  hs = len (ipc_share) / temp
+  return hs 
 
 #compute the actual slowdown
 def cmp_real_sd (ipc_alone, ipc_share):
@@ -128,7 +130,11 @@ def cmp_metric_bs (ipc_alone, ipc_share_baseline, ipc_share_design):
   uf_baseline = cmp_uf (ipc_alone, ipc_share_baseline)
   return (ws, hs, uf_design, uf_baseline)
 
-
+# compute the geometric average
+def cmp_geo_avg (data_set):
+  # error rate has to be an array or list
+  new_data_set = [log(x) for x in data_set]
+  return exp(sum (new_data_set)/len(new_data_set))
 
 
 
