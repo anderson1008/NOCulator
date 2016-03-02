@@ -3,7 +3,7 @@
 import sys
 import os
 
-workload_dir = "./workload_list/"
+workload_dir = "../workload_list/"
 workload = "single_8x8"
 out_dir_root = "./results/profile/8x8/"
 
@@ -21,9 +21,9 @@ for app_index in range(1, 27, 1):
     os.makedirs(out_dir)
     print "Dir " + out_dir + " is created."
 # sweep the mshr from 1 to 16
-  for mshr in range(1, 17):
+  for mshr in range(16, 17):
     out_file = "sim_" + str(mshr) + ".out"
-    command_line = "mono ./sim.exe -config ./config_qos.txt -output " + out_dir + out_file + " -workload " + workload_dir + workload + ' ' + str (app_index) + ' -mshrs ' + str(mshr)
+    command_line = "mono /home/xiyue/sim.exe -config ./config_qos.txt -output " + out_dir + out_file + " -workload " + workload_dir + workload + ' ' + str (app_index) + ' -mshrs ' + str(mshr) + ' -throttle_enable false'
     #print command_line
     os.system (command_line)
 

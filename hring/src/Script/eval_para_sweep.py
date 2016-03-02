@@ -26,10 +26,10 @@ from matplotlib.ticker import FuncFormatter
 
 
 # target dir
-NUM_WORKLOAD = 10 
+NUM_WORKLOAD = 5 
 num_value = 0
-target_dir = "/Users/xiyuexiang/Desktop/SweepThrtUp/results/homo/4x4/design/"
-workload_dir = "/Users/xiyuexiang/GoogleDrive/NOCulator/hring/src/bin/workload_list/homo_4x4_ipc"
+target_dir = "/home/xiyue/4x4/SweepAll/results/homo/4x4/design/"
+workload_dir = "/home/xiyue/workload_list/homo_4x4_ipc"
 ws_plt = []
 hs_plt = []
 uf_plt = []
@@ -68,6 +68,8 @@ for dir in os.listdir (target_dir):
 print "number of value : " + str (num_value)
 print "total files: " + str (total_num)
 print ws_plt
+print hs_plt
+print uf_plt
 plt.figure(1)
 plt.subplot(3,1,1)
 plt.plot (para_value_plt, ws_plt, 'co')

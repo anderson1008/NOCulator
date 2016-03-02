@@ -7,7 +7,7 @@ import sys
 import fnmatch
 import matplotlib.pyplot as plt
 
-raw_data_dir = '/Users/xiyuexiang/Desktop/L1_32K_MSHR_32_VC4x4/results/alone/4x4/'
+raw_data_dir = '/home/xiyue/profile/results/profile/8x8/'
 MEM_INTEN_THESHLD = 45
 
 spec_workload = ["400.perlbench.bin.gz ","401.bzip2.bin.gz ","403.gcc.bin.gz ","429.mcf.bin.gz ","433.milc.bin.gz ","435.gromacs.bin.gz ","436.cactusADM.bin.gz ",\
@@ -48,14 +48,14 @@ for app_index in range (1, 27):
   file_count = 0
 
   ####### Sweep MSHR 1-16  ###############
-  for sim_index in range (1,17):
+  for sim_index in range (16,17):
     file_name = raw_data_dir + app + "/sim_" + str(sim_index) + '.out'
     if not os.path.exists(file_name):
       raise Exception ("file " + file_name + " not found") 
     fo_in = open(file_name, "r")
     file_count = file_count + 1
     content = fo_in.read();
-
+    
     searchObj = re.search(r'"mpki_bysrc":\[\n(?:\{"avg":.*?\},\n){31}(\{"avg":.*?\},)', content)
     searchObj = re.search(r'(?:\{"avg":([\w.]+),)', searchObj.group(1))
     mpki = "%.3f" % float(searchObj.group(1))
@@ -87,15 +87,15 @@ for app_index in range (1, 27):
   fo_out_1.write('\n')
 	
   
-  if mpki_sum / file_count > MEM_INTEN_THESHLD:
-    plt.figure(1)
-    plt.subplot(2,1,1)
-    plt.plot(mshr_plt, ipc_plt, label=app.strip('.bin.gz'))
-    plt.legend()
-    plt.subplot(2,1,2)
-    plt.plot(mshr_plt, mpki_plt, label=app.strip('.bin.gz'))
-    plt.legend()
+  #if mpki_sum / file_count > MEM_INTEN_THESHLD:
+    #plt.figure(1)
+    #plt.subplot(2,1,1)
+    #plt.plot(mshr_plt, ipc_plt, label=app.strip('.bin.gz'))
+    #plt.legend()
+    #plt.subplot(2,1,2)
+    #plt.plot(mshr_plt, mpki_plt, label=app.strip('.bin.gz'))
+    #plt.legend()
 fo_out_0.close()
 fo_out_1.close()
-plt.show()
+#plt.show()
 print "^_^"

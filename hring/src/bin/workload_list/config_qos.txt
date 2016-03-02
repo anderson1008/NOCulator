@@ -1,7 +1,7 @@
 // for evaluation of 4x4 network
 
-network_nrX = 4
-network_nrY = 4
+network_nrX = 8
+network_nrY = 8
 //finish = app
 //insns = 1000000
 //trace_wraparound = true
@@ -12,11 +12,13 @@ slowdown_epoch = 100000
 
 curr_L1miss_threshold = 0.06
 th_bad_dec_counter = 3
-th_unfairness = 0.001
+th_unfairness = 0.2
 th_bad_rst_counter = 10
-thrt_up_slow_app = 4
-thrt_down_stc_app = 4
-throt_min = 0.1
+thrt_up_slow_app = 16
+thrt_down_stc_app = 16
+throttle_enable = true
+throt_down_stage1 = 0.5
+throt_min = 0.4
 
 topology = Mesh
 router.algorithm = DR_AFC 

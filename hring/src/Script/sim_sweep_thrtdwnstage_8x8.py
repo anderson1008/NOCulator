@@ -6,9 +6,9 @@ import os
 workload_dir = "/home/xiyue/workload_list/"
 workload = "homo_8x8"
 
-sweep_interval = 0.01
+sweep_interval = 0.1
 
-for i in range (1, 7, 1):
+for i in range (3, 8):
   parameter = str(sweep_interval * i)
   out_dir_design = "./results/homo/8x8/design/"
   out_dir_design = out_dir_design + parameter + "/"
@@ -17,6 +17,6 @@ for i in range (1, 7, 1):
 
   for sim_index in range(1, 11, 1):
     out_file = "sim_" + str(sim_index) + ".out"
-    command_line = "mono /home/xiyue/sim.exe -config ../config_qos.txt -output " + out_dir_design + out_file + " -workload " + workload_dir + workload + ' ' + str(sim_index)+ " -throttle_enable true -curr_L1miss_threshold " + parameter
+    command_line = "mono /home/xiyue/sim.exe -config ../config_qos.txt -output " + out_dir_design + out_file + " -workload " + workload_dir + workload + ' ' + str(sim_index)+ " -throttle_enable true -throt_down_stage1 " + parameter
     os.system (command_line)
     

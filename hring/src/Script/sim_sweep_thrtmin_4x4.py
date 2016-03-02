@@ -3,14 +3,14 @@
 import sys
 import os
 
-workload_dir = "/home/xiyue/workload_list/"
-workload = "homo_8x8"
+workload_dir = "../workload_list/"
+workload = "homo_4x4"
 
 sweep_interval = 0.05
 
 for i in range (2, 9):
   parameter = str(sweep_interval * i)
-  out_dir_design = "./results/homo/8x8/design/"
+  out_dir_design = "./results/homo/4x4/design/"
   out_dir_design = out_dir_design + parameter + "/"
   if not os.path.exists(out_dir_design):
     os.makedirs(out_dir_design)

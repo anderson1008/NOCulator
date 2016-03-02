@@ -24,28 +24,28 @@ spec_workload = [
 "471.omnetpp.bin.gz ","473.astar.bin.gz ","481.wrf.bin.gz ","482.sphinx3.bin.gz ","483.xalancbmk.bin.gz "]
 
 spec_ipc_4x4 = [
-"2.13 ", "2.11 ", "1.83 ", "1.97 ", "2.16 ", "1.87 ", "1.38 ", \
-"2.94 ", "2.37 ", "2.21 ", "1.92 ", "1.81 ", "1.88 ", "1.71 ", \
-"1.60 ", "2.25 ", "1.33 ", "2.99 ", "1.67 ", "1.84 ", "1.91 ", \
-"2.68 ", "2.04 ", "2.86 ", "2.57 ", "2.10 "]
+"2.05 ", "2.07 ", "1.83 ", "1.83 ", "2.52 ", "1.87 ", "1.36 ", \
+"2.78 ", "2.43 ", "2.17 ", "1.87 ", "2.07 ", "1.88 ", "1.76 ", \
+"1.61 ", "2.27 ", "1.33 ", "2.99 ", "1.71 ", "1.85 ", "1.90 ", \
+"2.76 ", "2.04 ", "2.76 ", "2.53 ", "2.19 "]
 
 spec_mpki_4x4 = [
-"0.41", "3.82", "9.99", "106.76", "57.02", "7.94", "11.16", \
-"67.12", "10.76", "2.99", "0.80", "40.76", "9.68", "1.03", \
-"10.02", "1.95", "120.69", "50.00", "1.81", "3.47", "56.24", \
-"35.63", "10.58", "1.93", "26.73", "19.19" ]
+"0.12", "17.20", "1.36", "129.95", "51.17", "6.73", "36.72", \
+"69.91", "1.06", "2.25", "1.18", "48.31", "2.91", "0.30", \
+"7.91", "1.11", "105.45", "50.00", "5.47", "2.33", "54.56", \
+"5.47", "10.60", "1.06", "27.90", "25.71" ]
 
 spec_ipc_8x8 = [
-"2.09 ", "2.06 ", "1.70 ", "1.30 ", "1.73 ", "1.73 ", "1.25 ", \
-"1.88 ", "2.07 ", "2.04 ", "1.68 ", "1.47 ", "1.71 ", "1.61 ", \
-"1.43 ", "2.00 ", "0.93 ", "2.00 ", "1.65 ", "1.71 ", "1.43 ", \
-"2.00 ", "1.86 ", "2.94 ", "2.04 ", "1.78 "]
+"2.09 ", "2.02 ", "1.83 ", "1.76 ", "2.24 ", "1.87 ", "1.34 ", \
+"2.36 ", "2.42 ", "2.18 ", "1.88 ", "1.97 ", "1.88 ", "1.77 ", \
+"1.60 ", "2.26 ", "1.32 ", "2.32 ", "1.69 ", "1.85 ", "1.88 ", \
+"2.68 ", "2.03 ", "2.75 ", "2.34 ", "2.04 "]
 
 spec_mpki_8x8 = [
-"1.36", "28.86", "19.02", "100.46", "57.30", "9.39", "14.97", \
-"67.48", "22.72", "12.48", "14.44", "40.33", "20.95", "3.42", \
-"21.20", "6.71", "117.62", "50.13", "57.45", "4.41", "56.49", \
-"18.39", "12.00", "0.95", "28.61", "30.33"]
+"0.12", "17.85", "1.36", "128.95", "54.33", "6.71", "40.02", \
+"67.66", "1.01", "2.29", "1.01", "46.49", "2.91", "0.30", \
+"7.88", "1.11", "106.18", "50.00", "5.52", "2.26", "54.50", \
+"8.24", "10.60", "1.06", "27.85", "24.92"]
 
 
 # Determine the reference
@@ -92,7 +92,7 @@ def work_gen_homo (app_array, app_ipc_array):
   ipc_out = file_open (file_ipc)
   
   #specify the dir of trace files
-  workload_out.write("/Users/Anderson/blesstraces C:/Users/xiyuex/Documents/blesstraces /Users/xiyuexiang/Documents/blesstraces")
+  workload_out.write("/Users/Anderson/Documents/blesstraces  C:/Users/xiyuex/Documents/blesstraces /Users/xiyuexiang/Documents/blesstraces /safari/dromedary/kevincha/traces/blesstraces")
   workload_index = 0
   app_count = len(app_array)
 
@@ -132,7 +132,7 @@ def work_gen_hetero ():
     workload_out = file_open (filename)
     ipc_out = file_open (file_ipc)
     #specify the dir of trace files
-    workload_out.write("/Users/Anderson/blesstraces C:/Users/xiyuex/Documents/blesstraces /Users/xiyuexiang/Documents/blesstraces")
+    workload_out.write("/Users/Anderson/Documents/blesstraces  C:/Users/xiyuex/Documents/blesstraces /Users/xiyuexiang/Documents/blesstraces /safari/dromedary/kevincha/traces/blesstraces")
     workload_index = 0
     high_mem_count = len(workload_high_mem_intsty)
     mid_mem_count = len(workload_mid_mem_intsty)
@@ -170,7 +170,7 @@ def work_gen_random ():
     workload_out = file_open (filename)
     ipc_out = file_open (file_ipc)
     #specify the dir of trace files
-    workload_out.write("/Users/Anderson/blesstraces C:/Users/xiyuex/Documents/blesstraces /Users/xiyuexiang/Documents/blesstraces")
+    workload_out.write("/Users/Anderson/Documents/blesstraces  C:/Users/xiyuex/Documents/blesstraces /Users/xiyuexiang/Documents/blesstraces /safari/dromedary/kevincha/traces/blesstraces")
     workload_index = 0
     app_count = len(spec_workload)
 
@@ -213,7 +213,7 @@ for i,j,k in zip (spec_ipc, spec_workload, spec_mpki):
   if float(k) <= 5:
     workload_low_mem_intsty = workload_low_mem_intsty + [j]
     ipc_low_mem_intsty = ipc_low_mem_intsty + [i]
-  elif float(k) <= 15 and float (k) > 5:
+  elif float(k) <= 50 and float (k) > 5:
     workload_mid_mem_intsty = workload_mid_mem_intsty + [j]
     ipc_mid_mem_intsty = ipc_mid_mem_intsty + [i]
   else:

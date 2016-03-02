@@ -159,13 +159,13 @@ namespace ICSimulator
 				ComputeSTC ();
 
 				doStat();
+			
+				RankBySTC (); // use to mark unthrottled core
 
+				RankBySD (); // use to select the throttled core
+		
 				if (Config.throttle_enable) {
 					
-					RankBySTC (); // use to mark unthrottled core
-
-					RankBySD (); // use to select the throttled core
-
 					ThrottleSTC ();
 				}
 
@@ -271,6 +271,8 @@ namespace ICSimulator
 			for (int i = 0; i < Config.N; i++)
 				m_index_stc [i] = (ulong)i;		
 			Array.Sort (m_stc, m_index_stc);
+			for (int i = 0; i < Config.N; i++)
+				app_rank [m_index_stc [i]] = (ulong) i;
 		}
 
 		// sort from low to high slowdown
@@ -467,7 +469,7 @@ namespace ICSimulator
 		public bool ThrottleDown (int node)
 		{
 			bool throttled = false;
-			if (mshr_quota [node] >= Config.mshrs * Config.throt_down_stage1)
+			if (mshr_quota [node] > Config.mshrs * Config.throt_down_stage1)
 			{
 				mshr_quota [node] = (int)(Config.mshrs * Config.throt_down_stage1);
 				throttled = true;
@@ -483,8 +485,8 @@ namespace ICSimulator
 		public void ThrottleUp (int pick)
 		{
 			if (mshr_quota [pick] < Config.mshrs) {
-				mshr_quota [pick] = mshr_quota [pick] + 1;
-				//mshr_quota [pick] = Config.mshrs;
+				//mshr_quota [pick] = mshr_quota [pick] + 1;
+				mshr_quota [pick] = Config.mshrs;
 				mshr_best_sol[pick] = mshr_quota[pick];
 				Console.WriteLine("Throttle UP: Core {0} to {1}.", pick, mshr_quota[pick]);			
 			}

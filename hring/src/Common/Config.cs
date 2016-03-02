@@ -114,10 +114,10 @@ namespace ICSimulator
 		public static double enable_qos_mem_threshold = 3;
 		public static double mpki_threshold = 30;
 
-		public static bool throttle_enable = false;
+		public static bool throttle_enable = true;
 		public static double curr_L1miss_threshold = 0.06; // an app can be throttled only if L1 miss > curr_L1miss_threshlod; Greater value will preserve performance (i.e., less applciation will be throughput sensitive), but give less improvement on fairness
 		public static double slowdown_epoch = 10000; // may sweep
-		public static double throt_min = 0.3;  // share with Sigcomm paper
+		public static double throt_min = 0.1;  // share with Sigcomm paper
 		public static int th_bad_dec_counter = 3; // may sweep
 		public static double th_unfairness = 0.001; // may sweep
 		public static double throt_prob_lv1 = 0.4;

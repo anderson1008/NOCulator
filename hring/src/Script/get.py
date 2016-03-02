@@ -58,13 +58,13 @@ def cmp_ws (ipc_alone, ipc_share):
   if len(ipc_alone) != len(ipc_share):
     raise Exception ("not enough ipc element")
   ws = 0
-  print ipc_alone
-  print ipc_share
+  #print ipc_alone
+  #print ipc_share
   for i,j in zip (ipc_alone, ipc_share):
     if float(i) == 0:
       raise Exception ("ipc_alone is 0")
     new_ws = j/float(i)
-    print new_ws
+   # print new_ws
     ws = ws + new_ws
   return ws
 
@@ -136,6 +136,10 @@ def cmp_geo_avg (data_set):
   new_data_set = [log(x) for x in data_set]
   return exp(sum (new_data_set)/len(new_data_set))
 
+def cmp_geo_avg (error_raw):
+  # error rate has to be an array or list
+  new_error_raw = [log(x) for x in error_raw]
+  return exp(sum (new_error_raw)/len(new_error_raw))
 
 
 

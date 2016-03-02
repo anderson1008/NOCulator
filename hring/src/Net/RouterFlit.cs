@@ -493,14 +493,14 @@ namespace ICSimulator
 
 			int winner =  
 
-				(c0 != 0) ? c0 :  // latency sensitive application first
+				//(c0 != 0) ? c0 :  // latency sensitive application first
 				//(c2 != 0) ? c2 :  // slower application first
 				//(c1 != 0) ? c1 :  // oldest batch first
-			    (c5 != 0) ? c5 :  // slower / slowest application first, but only enable when compare with the fastest applicatoin
+			    //(c5 != 0) ? c5 :  // slower / slowest application first, but only enable when compare with the fastest applicatoin
 	        	//(c7 != 0) ? c7 :  // slowest application first
-				(c6 != 0) ? c6 :  // oldest first
+				//(c6 != 0) ? c6 :  // oldest first
 				//(c8 != 0) ? c8 :  // demote fastest / most memory intensive application
-				//(c2 != 0) ? c2 :  // slower application first
+				(c2 != 0) ? c2 :  // application with greater STC first
 				(c3 != 0) ? c3 : // smallest pkt ID first
 				c4; // smallest flit ID first
 
