@@ -52,6 +52,7 @@ namespace ICSimulator
         {
             Config config = new Config();
 
+			// Read in the configuration
             config.read(args);
 
             rand = new Rand(Config.rand_seed);

@@ -231,7 +231,6 @@ namespace ICSimulator
             }
 			else // By Xiyue: Actual injection into network
             {
-<<<<<<< HEAD
                 Packet p = m_inj_pool.next();
 
 				if (Config.topology == Topology.Mesh_Multi) {
@@ -282,7 +281,7 @@ namespace ICSimulator
 						}*/
 					}
 				}
-                                else if (Config.throttle_enable==True)
+                                else if (Config.throttle_enable==true)
                                 {
 
 

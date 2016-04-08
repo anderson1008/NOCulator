@@ -67,7 +67,6 @@ namespace ICSimulator
 
 		//public PeriodicAccumStat[] actual_slowdown;
 		public AccumStat[] active_cycles;
-		public SampledStat netutil;
 		public SampledStat net_latency, total_latency;
 		public AccumStat synth_queue_limit_drop;
 		public SampledStat flit_inj_latency, flit_net_latency, flit_total_latency;
@@ -118,7 +117,6 @@ namespace ICSimulator
 		public SampledStat[] serialization_latency;
 		public PeriodicAccumStat[] insns_persrc_ewma;
 
-<<<<<<< HEAD
 		public class SubnetProfileStat : PeriodicAccumStat 
 		{	
 
@@ -172,7 +170,6 @@ namespace ICSimulator
 		}
 
 
-=======
 		public class LogStat : StatsObject
 		{
   
@@ -213,7 +210,6 @@ namespace ICSimulator
 		// an AccumStat is a statistic that counts discrete events (flit
 		// deflections, ...) and from which we can extract a rate
 		// (events/time).
->>>>>>> Prioritization
 		public class CacheProfileStat : StatsObject
 		{
 			protected double m_count;
@@ -372,55 +368,7 @@ namespace ICSimulator
 
         public AccumStat flow_open, flow_close, flow_retx;
 
-        //public SampledStat [] flit_head_latency_byapp;
-        //public SampledStat flit_head_latency;
-
-<<<<<<< HEAD
-        // AFC -- buffer power
-        public AccumStat afc_buf_enabled, afc_buf_write, afc_buf_read, afc_xbar;
-        public AccumStat[] afc_buf_enabled_bysrc, afc_buf_write_bysrc, afc_buf_read_bysrc, afc_xbar_bysrc;
-        // AFC -- switching stats
-        public AccumStat afc_switch, afc_switch_bless, afc_switch_buf;
-        public AccumStat[] afc_switch_bysrc, afc_switch_bless_bysrc, afc_switch_buf_bysrc;
-        public AccumStat afc_buffered, afc_bless, afc_gossip;
-        public AccumStat[] afc_buffered_bysrc, afc_bless_bysrc, afc_gossip_bysrc;
-        public SampledStat afc_avg;
-        public SampledStat[] afc_avg_bysrc;
-        public SampledStat afc_buf_occupancy;
-        public SampledStat[] afc_buf_occupancy_bysrc;
-
-        public AccumStat[] afc_vnet;
-		public AccumStat afc_bufferBypass;
-
-        public SampledStat stretch;
-        public SampledStat[] stretch_bysrc, stretch_bydest;
-        //public SampledStat[,] stretch_srcdest;
-        public SampledStat minpath;
-        public SampledStat[] minpath_bysrc;
-        //public SampledStat [] netslow_bysrc;
-
-        //public SampledStat [] fairness_ie, fairness_ic;
-        //public SampledStat [] fairness_slowdown, fairness_texcess;
-        //public SampledStat [] fairness_ie_perpkt, fairness_ic_perpkt;
-
-        //public SampledStat [] injqueue_bysrc;
-        //public SampledStat injqueue;
-
-        public SampledStat[] fairness_ie_starve_perpkt, fairness_ie_defl_perpkt;
-
-        // ---- SCARAB impl
-        public AccumStat drop;
-        public AccumStat[] drop_by_src;
-        public AccumStat nack_unavail;
-        public AccumStat[] nack_unavail_by_src;
-
-        private static List<StatsObject> m_subobjects = new List<StatsObject>();
-=======
-        
->>>>>>> Prioritization
-
-        // energy stats
-        // TODO
+   
 
         public SampledStat[] tier1_unstarve;
 
@@ -711,13 +659,10 @@ namespace ICSimulator
                     fi.SetValue(this, newSampledStatArray2D());
 				else if (t == typeof(CacheProfileStat[]))
 					fi.SetValue(this, newCacheProfileStatArray());
-<<<<<<< HEAD
 				else if (t == typeof(SubnetProfileStat[]))
 					fi.SetValue(this, newSubnetProfileStatArray());
-=======
 				else if (t == typeof(LogStat))
 					fi.SetValue(this, newLogStat());
->>>>>>> Prioritization
 				
             }
         }
