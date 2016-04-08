@@ -1,5 +1,15 @@
 /hring/src/bin/*
+!/hring/src/bin/workload_list
+!/hring/src/bin/config_qos.txt
 /mono/*
 /hring/src/results/*
 *.log
+/result/*
+*.out
 /minbd/*
+*.pyc
+Makefile*
+*.py~
+/Mono/*
+/hring/src/.DS_Store
+.DS_Store

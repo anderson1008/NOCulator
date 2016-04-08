@@ -15,7 +15,7 @@
         public int cacheBlockBits { get { return cacheBlockBV.bits; } }
         public int cacheBlockSize { get { return (int)cacheBlockBV.val; } }
 
-        public ulong cacheMissLatency = 200;
+        public ulong cacheMissLatency = 100;
         public bool ignoreWritebacks = false;
         /*
         public double injectionRate_end = 0.05;

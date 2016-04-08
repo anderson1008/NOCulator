@@ -183,20 +183,39 @@ namespace ICSimulator
 			_block = block; // may not come from request (see above)
 			_src = source;
 			_dest = dest;
+			_intfCycle = 0;
 			if (request != null)
 				request.setCarrier(this);
 			requesterID = -1;
 			initialize(Simulator.CurrentRound, nrOfFlits);
 			this.txn = txn;
 			this.critical = critical;
-			this.slowdown = Simulator.stats.etimated_slowdown [txn.node].LastPeriodValue;
+			this.rank = Controller_QoSThrottle.app_rank[txn.node];
+			this.app_type = Controller_QoSThrottle.app_type[txn.node];
+			this.most_mem_inten = Controller_QoSThrottle.most_mem_inten[txn.node];
+			this.slowdown = Simulator.stats.estimated_slowdown [txn.node].LastPeriodValue; // TODO: by Xiyue: this is equivalent to have N ranking levels.
 		}
 
 		public bool critical;
 		public double slowdown; // slowdown of the associated application
-		public ulong intfCycle = 0;
+		private int _intfCycle;
+		public ulong first_flit_arrival;
+		public ulong rank;
+		public APP_TYPE app_type;
+		public bool most_mem_inten;
 		public CmpCache_Txn txn;
+		public void add_intf () { _intfCycle++; }
+		public int intfCycle
+		{
+			get { return _intfCycle; }
+			set {_intfCycle = value; }
+		}
 		//end Xiyue
+
+
+
+
+
 
         /**
          * Always call this initialization method before using a packet. All flits are also appropriately initialized
@@ -309,7 +328,10 @@ namespace ICSimulator
         public enum State { Normal, Placeholder, Rescuer, Carrier }
         public State state;
         public Coord rescuerCoord;
-		
+
+		// For counting the interference cycle of each flit
+		public int intfCycle = 0;
+
 		//for stats: how many useless cycles the flit is comsuming
 		public ulong timeIntoTheBuffer;
 		public ulong timeSpentInBuffer = 0;
@@ -407,7 +429,7 @@ namespace ICSimulator
         public override string ToString()
         {
             if (packet != null)
-                return String.Format("Flit {0} of packet {1} (state {2})", flitNr, packet, state);
+				return String.Format("Flit {0} of packet {1} {2} (state {3})", flitNr, packet.ID, packet, state);
             else
                 return String.Format("Flit {0} of packet <NONE> (state {1})", flitNr, state);
         }

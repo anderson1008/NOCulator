@@ -91,7 +91,6 @@ namespace ICSimulator
         HotNetsThrottlePool[] m_injPools = new HotNetsThrottlePool[Config.N];
         AveragingWindow avg_netutil, avg_ipc;
         AveragingWindow[] avg_qlen;
-        double m_lastIPC = 0.0;
         double m_target;
         double m_rate;
         bool[] m_throttled = new bool[Config.N];
@@ -241,8 +240,8 @@ namespace ICSimulator
                     m_throttled[i] = false;
 
 #if DEBUG
-                Console.WriteLine("cycle {0} node {1} ipf {2} (avg {3}) throttle {4}",
-                        Simulator.CurrentRound, i, m_ipf[i], avg_ipf, m_throttled[i]);
+                //Console.WriteLine("cycle {0} node {1} ipf {2} (avg {3}) throttle {4}",
+                 //       Simulator.CurrentRound, i, m_ipf[i], avg_ipf, m_throttled[i]);
 #endif
             }
 

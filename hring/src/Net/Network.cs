@@ -83,8 +83,7 @@ namespace ICSimulator
             return true;
         }
 
-
-
+  
         public virtual void setup()
         {
             routers = new Router[Config.N];

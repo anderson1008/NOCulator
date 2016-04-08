@@ -68,7 +68,6 @@ namespace ICSimulator
     public class BufRingNetwork_NIC : IBufRingBackpressure
     {
         BufRingNetwork_Router _router;
-        int _ring, _id;
         IBufRingBackpressure _downstream;
 
         Flit _inject;
@@ -90,8 +89,6 @@ namespace ICSimulator
 
         public BufRingNetwork_NIC(int localring, int id)
         {
-            _ring = localring;
-            _id = id;
             _buf = new Queue<Flit>();
             _credits = Config.bufrings_localbuf;
 

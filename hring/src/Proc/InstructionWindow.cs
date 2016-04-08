@@ -60,6 +60,7 @@ namespace ICSimulator {
             issueT = new ulong[Config.proc.instWindowSize];
             headT = new ulong[Config.proc.instWindowSize];
 
+
             m_match_mask = ~ ( ((ulong)1 << Config.cache_block) - 1 );
 
             for (int i = 0; i < Config.proc.instWindowSize; i++) {
@@ -163,7 +164,7 @@ namespace ICSimulator {
                 requests[next] = r;
                 issueT[next] = Simulator.CurrentRound;
                 headT[next] = Simulator.CurrentRound;
-                if (isReady && r != null) r.service();
+                if (isReady && r != null) r.service();  // service non-memory instruction directly here.
                 //Console.WriteLine("pr{0}: new req in slot {1}: addr {2}, write {3} ready {4}", m_cpu.ID, next, address, isWrite, isReady);
                 next++;
                 if (!isReady) outstandingReqs++;
@@ -177,33 +178,30 @@ namespace ICSimulator {
 
 		public int retire(int node, int n, ulong last_retired) {
             int i = 0;
-			ulong max_intf = 0;
+			ulong max_intf = ulong.MaxValue;
 			ulong max_intf_temp;
 
             while (i < n && load > 0 && ready[oldest])
             {
-				if (requests [oldest] != null) {
+				if (requests [oldest] != null ) {
+					//Console.WriteLine ("COMMIT node = {0}, addr = {1}, intf = {3}, time = {2}", node, requests [oldest].address, Simulator.CurrentRound, requests [oldest].interferenceCycle);
 
 					// using >0 to exclude the local packets, which tend to be accessed at the same cycle as the request is generated.
-					if (requests [oldest].interferenceCycle > 0) {
+					//if (requests [oldest].interferenceCycle > 0 && load == Config.proc.instWindowSize) {
+					if (requests [oldest].interferenceCycle > 0 && m_cpu.stall) {
+
 						#if DEBUG
-						Console.WriteLine ("COMMIT node = {0}, addr = {1}, intf = {3}, time = {2}", node, requests [oldest].address, Simulator.CurrentRound, requests [oldest].interferenceCycle);
+						//Console.WriteLine ("COMMIT node = {0}, addr = {1}, intf = {3}, time = {2}", node, requests [oldest].address, Simulator.CurrentRound, requests [oldest].interferenceCycle);
 						#endif
 						max_intf_temp = requests [oldest].computePenalty (last_retired, max_intf);
+						//max_intf = max_intf + max_intf_temp;
 						max_intf = max_intf_temp;
 					
-					} else {
-						#if DEBUG
-						Console.WriteLine ("COMMIT node = {0}, local addr = {1}, time = {2}, intf = {3}, ", node, requests [oldest].address, Simulator.CurrentRound, requests [oldest].interferenceCycle);
-						#endif
-						requests [oldest].retire ();
-					}
-				} else {
+					} 				
+					requests [oldest].retire ();
+				} 
 
-					#if DEBUG
-					Console.WriteLine ("COMMIT node = {0}, non-memory instruction, time = {1}", node, Simulator.CurrentRound);
-					#endif
-				}
+	
 
                 ulong deadline = headT[oldest] - issueT[oldest];
                 Simulator.stats.deadline.Add(deadline);
@@ -238,14 +236,19 @@ namespace ICSimulator {
 				#endif
 				*/
 			}
+			
 
-			if (max_intf > 0) {
+			if (max_intf < ulong.MaxValue && m_cpu.stats_active) {
+				// Trial 1: average over i instructions
+				//Simulator.stats.non_overlap_penalty [node].Add ((float)max_intf/i);
+				//Simulator.stats.non_overlap_penalty_period [node].Add ((float)max_intf/i);
+				Simulator.stats.request_intf.Add(max_intf);
 				Simulator.stats.non_overlap_penalty [node].Add (max_intf);
 				Simulator.stats.non_overlap_penalty_period [node].Add (max_intf);
 
 				#if DEBUG
-				Console.WriteLine ("ADD intfcyle = {0} to node = {1}, time = {2}", max_intf, node, Simulator.CurrentRound);
-				Console.WriteLine ("REPORT intfcyle = {0} to node = {1}, time = {2}", Simulator.stats.non_overlap_penalty [node].Count, node, Simulator.CurrentRound);
+					//Console.WriteLine ("ADD intfcyle = {0} to node = {1}, time = {2}", max_intf, node, Simulator.CurrentRound);
+					//Console.WriteLine ("REPORT intfcyle = {0} to node = {1}, time = {2}", Simulator.stats.non_overlap_penalty [node].Count, node, Simulator.CurrentRound);
 				#endif
 			}
 
@@ -303,8 +306,13 @@ namespace ICSimulator {
                     // 1. the outstanding req is a write, AND
                     // 2. the completion is a read completion.
                     if (writes[i] && !write) continue;
-							
+
+					//Console.WriteLine ("SetReady node = {0}, addr = {1}, time = {2}", m_cpu.ID, addresses [i], Simulator.CurrentRound);
+
+					// Need to remove interference entry
+
                     requests[i].service();
+
                     ready[i] = true;
                     addresses[i] = NULL_ADDRESS;
                     outstandingReqs--;
@@ -331,8 +339,7 @@ namespace ICSimulator {
 		public void setIntfCycle (bool write, CmpCache_Txn txn){
 			if (isEmpty()) throw new Exception("Instruction Window is empty!");
 			ulong address = txn.req_addr;
-			ulong interferenceCycle = txn.interferenceCycle;
-			ulong throttleCycle = txn.throttleCycle;
+			ulong interferenceCycle = (ulong) txn.interferenceCycle;
 			ulong queueCycle = txn.queue_latency;
 			ulong serializationLatency = txn.serialization_latency;
 			int queueIntfCycle = (int)(queueCycle - serializationLatency);
@@ -347,11 +354,11 @@ namespace ICSimulator {
 					// Do NOT have to consider throttleCycle, since queueIntfCycle already includes the amount of throttled cycles
 					ulong interference_cycle = interferenceCycle + (ulong)queueIntfCycle;
 					if (interference_cycle != 0 ) {
-						requests [i].interferenceCycle = interference_cycle;
+						requests [i].interferenceCycle = requests [i].interferenceCycle + interference_cycle;
 						Simulator.stats.serialization_latency [m_cpu.ID].Add (serializationLatency);
 						Simulator.stats.queue_delay [m_cpu.ID].Add (queueCycle);
 						#if DEBUG
-						Console.WriteLine ("RECEIVE node = {0}, addr = {1}, intf = {2}, time = {3}", m_cpu.ID, addresses [i], requests [i].interferenceCycle, Simulator.CurrentRound);
+						//Console.WriteLine ("RECEIVE node = {0}, addr = {1}, intf = {2}, time = {3}", m_cpu.ID, addresses [i], requests [i].interferenceCycle, Simulator.CurrentRound);
 						#endif
 					}
 

@@ -109,5 +109,11 @@ namespace ICSimulator
 
             return temp;
         }
+
+		public T Peek (int i)
+		{
+			if (i == count) return default(T);
+			return data[i];
+		}
     }
 }

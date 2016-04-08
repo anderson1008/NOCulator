@@ -449,7 +449,13 @@ namespace ICSimulator
 			: base(myCoord)
 		{
 		}
-			
+
+		public static ulong get_app_rank (Flit f)
+		{
+			int i = f.packet.txn.node;
+			return Controller_QoSThrottle.app_rank[i];
+		}
+
 		public static int _rank(Flit f1, Flit f2)
 		{
 			// return -1: f1 win
@@ -459,35 +465,110 @@ namespace ICSimulator
 			if (f1 == null) return 1;
 			if (f2 == null) return -1;
 
-			bool same_app = false;
+			ulong f1_batch_dist, f2_batch_dist;
+			ulong current_batch = (Simulator.CurrentRound / Config.STC_batchPeriod) % Config.STC_batchCount;
 
+			int c0 = 0, c1 = 0, c2 = 0, c3 = 0, c4 = 0, c5 = 0, c6 = 0, c7 = 0;
 
-			int c0 = 0, c1 = 0, c2 = 0, c4 = 0;
+			int max_rank_non_mem = (int) Controller_QoSThrottle.max_rank_non_mem;
+			int max_rank_mem =  (int) Controller_QoSThrottle.max_rank_mem;
+
 			if (f1.packet != null && f2.packet != null)
 			{
-				if (f1.packet.requesterID == f2.packet.requesterID)
-					same_app = true;
-				c4 = f1.packet.batchID.CompareTo (f2.packet.batchID);
-				c0 = -f1.packet.slowdown.CompareTo(f2.packet.slowdown); // if f1.slowdown < f2.slowdown, flit2 win, c0 = 1 (CompareTo return -1, need to negate)
-				c1 = -age(f1).CompareTo(age(f2));
-				c2 = f1.packet.ID.CompareTo(f2.packet.ID);
+				c0 = f1.packet.app_type.CompareTo(f2.packet.app_type);
+				if (f1.packet.app_type == APP_TYPE.LATENCY_SEN && f2.packet.app_type == APP_TYPE.LATENCY_SEN && Controller_QoSThrottle.enable_qos_non_mem)
+				{
+					if (((int)f1.packet.rank == max_rank_non_mem) && (int)f2.packet.rank == 0) c5 = -1;
+					else if (((int)f1.packet.rank == 0) && (int)f2.packet.rank == max_rank_non_mem)  c5 = 1;
+				}
+				else if (f1.packet.app_type == APP_TYPE.THROUGHPUT_SEN && f2.packet.app_type == APP_TYPE.THROUGHPUT_SEN&& Controller_QoSThrottle.enable_qos_mem)
+				{
+					if (((int)f1.packet.rank == max_rank_mem) && (int)f2.packet.rank == 0) c5 = -1;
+					else if (((int)f1.packet.rank == 0) && (int)f2.packet.rank == max_rank_mem)  c5 = 1;
+
+					// geting the current ranking
+					int f1_rank = (int) get_app_rank(f1);  
+					int f2_rank = (int) get_app_rank(f2);
+					c2 = -f1_rank.CompareTo (f2_rank);
+
+					// slowest win
+					if (f1_rank == max_rank_mem && f2_rank != max_rank_mem) c7 = -1;
+					else if (f1_rank != max_rank_mem && f2_rank == max_rank_mem) c7 = 1;
+				}
+				c3 = f1.packet.ID.CompareTo(f2.packet.ID);
+				c4 = f1.flitNr.CompareTo(f2.flitNr);
+				c6 = -age(f1).CompareTo(age(f2));
 			}
 
-			int c3 = f1.flitNr.CompareTo(f2.flitNr);
+			/*
+			int max_rank = (int)Controller_QoSThrottle.max_rank;
 
-			int diff_app_winner = 
-				(c4 != 0) ? c4 :
-				(c0 != 0) ? c0 :
-				(c1 != 0) ? c1 :
-				(c2 != 0) ? c2 :
-				c3;
+			if (f1.packet != null && f2.packet != null)
+			{
+				
+				int f1_critical = (f1.packet.critical) ? 1 : -1;
+				int f2_critical = (f2.packet.critical) ? 1 : -1;
 
-			int same_app_winner = 
-				(c1 != 0) ? c1 :
-				(c2 != 0) ? c2 :
-				c3;
+				// higher rank number means slower.
 
-			return same_app ? same_app_winner : diff_app_winner;
+				if (((int)f1.packet.rank == max_rank) && ((int)f2.packet.rank == 0) && Controller_QoSThrottle.enable_qos) c5 = -1;
+				else if (((int)f1.packet.rank == 0) && ((int)f2.packet.rank == max_rank) && Controller_QoSThrottle.enable_qos) c5 = 1;
+				else c5 = 0;
+
+				int f1_rank = (int) get_app_rank(f1);  // geting the current ranking
+				int f2_rank = (int) get_app_rank(f2);
+
+				if (f1_rank == max_rank && f2_rank != max_rank && Controller_QoSThrottle.enable_qos) c7 = -1;
+				else if (f1_rank != max_rank && f2_rank == max_rank && Controller_QoSThrottle.enable_qos) c7 = 1;
+				else c7 = 0;
+
+				if (((int)f1.packet.rank == 0) && Controller_QoSThrottle.enable_qos) c8 = 1;
+				else if (((int)f2.packet.rank == 0) && Controller_QoSThrottle.enable_qos) c8 = -1;
+				else c8 = 0;
+
+
+				f1_batch_dist =  (ulong)Math.Abs((int)current_batch - (int)f1.packet.batchID) % Config.STC_batchCount;
+				f2_batch_dist =  (ulong)Math.Abs((int)current_batch - (int)f2.packet.batchID) % Config.STC_batchCount;
+
+				//c0 = -f1_critical.CompareTo (f2_critical);
+				c0 = f1.packet.app_type.CompareTo(f2.packet.app_type);
+
+				if (Controller_QoSThrottle.enable_qos) 
+				{
+					c2 = -f1_rank.CompareTo (f2_rank);
+					//c2 = -f1.packet.rank.CompareTo(f2.packet.rank); //  higher rank number win
+				}
+				c1 = -f1_batch_dist.CompareTo (f2_batch_dist);
+				c3 = f1.packet.ID.CompareTo(f2.packet.ID);
+				c4 = f1.flitNr.CompareTo(f2.flitNr);
+				c6 = -age(f1).CompareTo(age(f2));
+			}
+			*/
+			int zerosSeen = 0;
+			foreach (int i in new int[] { c0, c7, c6, c3, c4 })
+			{
+				if (i == 0)
+					zerosSeen++;
+				else
+					break;
+			}
+			Simulator.stats.net_decisionLevel.Add(zerosSeen);
+
+
+			int winner =  
+
+				//(c0 != 0) ? c0 :  // latency sensitive application first
+				//(c2 != 0) ? c2 :  // slower application first
+				//(c1 != 0) ? c1 :  // oldest batch first
+			    //(c5 != 0) ? c5 :  // slower / slowest application first, but only enable when compare with the fastest applicatoin
+	        	//(c7 != 0) ? c7 :  // slowest application first
+				//(c6 != 0) ? c6 :  // oldest first
+				//(c8 != 0) ? c8 :  // demote fastest / most memory intensive application
+				(c2 != 0) ? c2 :  // application with greater STC first
+				(c3 != 0) ? c3 : // smallest pkt ID first
+				c4; // smallest flit ID first
+
+			return winner;
 		}
 
 		public static ulong age(Flit f)
@@ -557,6 +638,11 @@ namespace ICSimulator
             }
 
             int c3 = f1.flitNr.CompareTo(f2.flitNr);
+			/*
+			int f1_critical = (f1.packet.critical) ? 1 : -1;
+			int f2_critical = (f2.packet.critical) ? 1 : -1;
+			int c6 = -f1_critical.CompareTo (f2_critical);
+			*/
 
             int zerosSeen = 0;
             foreach (int i in new int[] { c0, c1, c2, c3 })
@@ -568,6 +654,7 @@ namespace ICSimulator
             }
             Simulator.stats.net_decisionLevel.Add(zerosSeen);
             return
+				//(c6 != 0) ? c6 :
                 (c0 != 0) ? c0 :
                 (c1 != 0) ? c1 :
                 (c2 != 0) ? c2 :

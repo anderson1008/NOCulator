@@ -175,6 +175,7 @@ namespace ICSimulator
 			get { return _interferenceCycle; } 
 			set { _interferenceCycle = value; }
 		}
+		//ulong _issueTimeIntf; // the interference cycle at issue time
 
         public ulong blockAddress { get { return _address >> Config.cache_block; } }
         public ulong address { get { return _address; } }
@@ -204,13 +205,25 @@ namespace ICSimulator
         /// <summary> Record number of stalls caused by this request while it's the oldest in the inst window </summary>
         public double backStallsCaused;
 
+
         public Request(int requesterID, ulong address, bool write)
         {
             this._requesterID = requesterID;
             this._address = address;
             this._write = write;
             this._creationTime = Simulator.CurrentRound;
-			this._interferenceCycle = 0;
+        }
+
+		public Request(int requesterID, ulong address, bool write, ulong interference)
+        {
+            this._requesterID = requesterID;
+            this._address = address;
+            this._write = write;
+            this._creationTime = Simulator.CurrentRound;
+			//this._issueTimeIntf = (ulong)Simulator.stats.non_overlap_penalty[requesterID].Count;
+			this._interferenceCycle = interference;
+			//if (interference != 0)
+			//	Console.WriteLine("Req at {0} is issued with Init intf cycle {1} at TIME = {2}", requesterID, interference, Simulator.CurrentRound);
         }
 
         public override string ToString()
@@ -233,9 +246,14 @@ namespace ICSimulator
 
 		public ulong computePenalty(ulong last_retire, ulong max_intf_cycle){ 
 
-			long slack = (long) (Simulator.CurrentRound - _serviceCycle - 1);
 
-			ulong intf_cycle = 0;
+			// set ready first, and commit in the next cycle
+			long slack = (long) (Simulator.CurrentRound - _serviceCycle - 1);
+			//long slack = (long) (Simulator.CurrentRound - _serviceCycle);
+
+			// using slack to determine what is the position in the ROB when the current insturction is set to ready.
+
+			ulong intf_cycle = ulong.MaxValue;
 			/*
 			if (slack < 0)
 				//intf_cycle = 0; // local L2 access has 0 interference cycle. It will be serviced intermediately upon issuing the request.
@@ -247,21 +265,22 @@ namespace ICSimulator
 			else{
 
 				#if DEBUG
-				Console.WriteLine ("PENALTY: at node {0}, addr = {1}, _intf = {2}, time = {3} ", _requesterID, _address, _interferenceCycle, Simulator.CurrentRound);
+				//Console.WriteLine ("PENALTY: at node {0}, addr = {1}, _intf = {2}, time = {3} ", _requesterID, _address, _interferenceCycle, Simulator.CurrentRound);
 				#endif
 
 				ulong est_serviceCycle_no_intf = _serviceCycle - _interferenceCycle;
 				ulong actual_intf_cycle;
 
+				// goal: estimate when there is no interference, what is the time for retiring the current instruction
 				if (est_serviceCycle_no_intf < last_retire) {
 					actual_intf_cycle = _serviceCycle - last_retire;
-					intf_cycle = Math.Max (max_intf_cycle, actual_intf_cycle);
+					intf_cycle = Math.Min (max_intf_cycle, actual_intf_cycle);
 				}
 				else
-					intf_cycle = Math.Max (max_intf_cycle, _interferenceCycle);
+					intf_cycle = Math.Min (max_intf_cycle, _interferenceCycle);
 				
 				#if DEBUG
-					Console.WriteLine ("PENALTY: at node {0}, _intf = {1}, time = {2} ", _requesterID, intf_cycle, Simulator.CurrentRound);
+					//Console.WriteLine ("PENALTY: at node {0}, _intf = {1}, time = {2} ", _requesterID, intf_cycle, Simulator.CurrentRound);
 				#endif
 			}
 			return intf_cycle;

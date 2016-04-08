@@ -1,0 +1,52 @@
+// for evaluation of 4x4 network
+
+network_nrX = 8
+network_nrY = 8
+//finish = app
+//insns = 1000000
+//trace_wraparound = true
+
+finish = cycle 2100000
+warmup_cyc = 100000
+slowdown_epoch = 100000
+
+curr_L1miss_threshold = 0.06
+th_bad_dec_counter = 3
+th_unfairness = 0.2
+th_bad_rst_counter = 10
+thrt_up_slow_app = 16
+thrt_down_stc_app = 16
+throttle_enable = true
+throt_down_stage1 = 0.5
+throt_min = 0.4
+
+topology = Mesh
+router.algorithm = DR_AFC 
+afc_force = true 
+afc_force_buffered = true 
+afc_buf_per_vnet = 4
+afc_vnets = 8
+router.dataPacketSize = 4 
+router.maxPacketSize = 4 
+router.addrPacketSize = 1
+
+// private cache size = 2^(coherent_cache_size-coherent_cache_assoc-cache_block) entries
+coherent_cache_size = 16
+coherent_cache_assoc = 2
+cache_block = 5
+mshrs = 16
+
+
+sh_cache_size = 21
+sh_cache_assoc = 4
+sh_cache_perfect = true
+
+idealnet = false
+router.linkLatency = 2
+edge_loop = false 
+
+controller = THROTTLE_QOS
+shcache_buf = 16
+
+
+

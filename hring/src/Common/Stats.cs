@@ -9,8 +9,63 @@ namespace ICSimulator
     public class Stats
     {
 		// By Xiyue: for coherent packet profiling
+		//public SampledStat[] avg_slowdown_error;
+		public SampledStat flit_intf, packet_intf, request_intf, app_stall_per_epoch;
+		public AccumStat false_block, correct_block;
+		public AccumStat priority_inv;
+		public PeriodicAccumStat[] estimated_slowdown;
+		public PeriodicAccumStat[] L1miss_persrc_period;
+		//public PeriodicAccumStat[] estimated_slowdown_period;
+		public PeriodicAccumStat[] noc_stc; // noc-level stall time criticality
+		public PeriodicAccumStat[] app_rank;
+		public AccumStat [] throttle_down_profile; 
+		public AccumStat [] cpu_stall_throttle;
+		public AccumStat opt_fair, opt_perf;
+		public SampledStat[] mshrs_credit, mshrs_util;
+		public SampledStat inherit_table_size;
+		public SampledStat netutil;
 
-		// Design related 
+		// AFC -- buffer power
+		public AccumStat afc_buf_enabled, afc_buf_write, afc_buf_read, afc_xbar;
+		public AccumStat[] afc_buf_enabled_bysrc, afc_buf_write_bysrc, afc_buf_read_bysrc, afc_xbar_bysrc;
+		// AFC -- switching stats
+		public AccumStat afc_switch, afc_switch_bless, afc_switch_buf;
+		public AccumStat[] afc_switch_bysrc, afc_switch_bless_bysrc, afc_switch_buf_bysrc;
+		public AccumStat afc_buffered, afc_bless, afc_gossip;
+		public AccumStat[] afc_buffered_bysrc, afc_bless_bysrc, afc_gossip_bysrc;
+		public SampledStat afc_avg;
+		public SampledStat[] afc_avg_bysrc;
+		public SampledStat afc_buf_occupancy;
+		public SampledStat[] afc_buf_occupancy_bysrc;
+
+		public AccumStat[] afc_vnet;
+		public AccumStat afc_bufferBypass;
+
+		public SampledStat stretch;
+		public SampledStat[] stretch_bysrc, stretch_bydest;
+		//public SampledStat[,] stretch_srcdest;
+		public SampledStat minpath;
+		public SampledStat[] minpath_bysrc;
+		//public SampledStat [] netslow_bysrc;
+
+		//public SampledStat [] fairness_ie, fairness_ic;
+		//public SampledStat [] fairness_slowdown, fairness_texcess;
+		//public SampledStat [] fairness_ie_perpkt, fairness_ic_perpkt;
+
+		//public SampledStat [] injqueue_bysrc;
+		//public SampledStat injqueue;
+
+		public SampledStat[] fairness_ie_starve_perpkt, fairness_ie_defl_perpkt;
+
+		// ---- SCARAB impl
+		public AccumStat drop;
+		public AccumStat[] drop_by_src;
+		public AccumStat nack_unavail;
+		public AccumStat[] nack_unavail_by_src;
+
+		private static List<StatsObject> m_subobjects = new List<StatsObject>();
+
+		//public PeriodicAccumStat[] actual_slowdown;
 		public AccumStat[] active_cycles;
 		public SampledStat netutil;
 		public SampledStat net_latency, total_latency;
@@ -63,6 +118,7 @@ namespace ICSimulator
 		public SampledStat[] serialization_latency;
 		public PeriodicAccumStat[] insns_persrc_ewma;
 
+<<<<<<< HEAD
 		public class SubnetProfileStat : PeriodicAccumStat 
 		{	
 
@@ -116,6 +172,48 @@ namespace ICSimulator
 		}
 
 
+=======
+		public class LogStat : StatsObject
+		{
+  
+			private List<double> history = new List<double>();
+			
+	        public override void Reset()
+	        {
+	            history.Clear();
+	        }
+	
+			public void Add(double val)
+	        {
+	            history.Add(val);
+	        }
+
+			public double Peek (int i)
+			{
+				return history[i];
+			}
+	
+	        public override void DumpJSON(TextWriter tw)
+	        {
+				tw.Write (Environment.NewLine);
+	            tw.Write("{");
+				foreach (double i in history)
+					tw.Write ("{0},",Math.Round(i,3));
+				tw.Write("}");
+	        }
+    
+		} 
+		
+		LogStat newLogStat()
+		{
+			LogStat ret = new LogStat();
+			return ret;
+		}
+
+		// an AccumStat is a statistic that counts discrete events (flit
+		// deflections, ...) and from which we can extract a rate
+		// (events/time).
+>>>>>>> Prioritization
 		public class CacheProfileStat : StatsObject
 		{
 			protected double m_count;
@@ -277,6 +375,7 @@ namespace ICSimulator
         //public SampledStat [] flit_head_latency_byapp;
         //public SampledStat flit_head_latency;
 
+<<<<<<< HEAD
         // AFC -- buffer power
         public AccumStat afc_buf_enabled, afc_buf_write, afc_buf_read, afc_xbar;
         public AccumStat[] afc_buf_enabled_bysrc, afc_buf_write_bysrc, afc_buf_read_bysrc, afc_xbar_bysrc;
@@ -316,6 +415,9 @@ namespace ICSimulator
         public AccumStat[] nack_unavail_by_src;
 
         private static List<StatsObject> m_subobjects = new List<StatsObject>();
+=======
+        
+>>>>>>> Prioritization
 
         // energy stats
         // TODO
@@ -609,8 +711,13 @@ namespace ICSimulator
                     fi.SetValue(this, newSampledStatArray2D());
 				else if (t == typeof(CacheProfileStat[]))
 					fi.SetValue(this, newCacheProfileStatArray());
+<<<<<<< HEAD
 				else if (t == typeof(SubnetProfileStat[]))
 					fi.SetValue(this, newSubnetProfileStatArray());
+=======
+				else if (t == typeof(LogStat))
+					fi.SetValue(this, newLogStat());
+>>>>>>> Prioritization
 				
             }
         }
@@ -1072,7 +1179,7 @@ namespace ICSimulator
 
         public override void DumpJSON(TextWriter tw)
         {
-            tw.Write("{{\"avg\":{0},\"min\":{1},\"max\":{2},\"std\":{3},\"count\":{4},\"binmin\":{5},\"binmax\":{6}",
+            tw.Write("\n{{\"avg\":{0},\"min\":{1},\"max\":{2},\"std\":{3},\"count\":{4},\"binmin\":{5},\"binmax\":{6}",
                      Avg, Min, Max, Math.Sqrt(Variance), Count, m_binmin, m_binmax);
 
             if (Config.histogram_bins)
@@ -1152,11 +1259,13 @@ namespace ICSimulator
 
         public override void DumpJSON(TextWriter tw)
         {
-            tw.Write("{0}", m_count);
+            tw.Write("{0}", Math.Round(m_count,3));
         }
 
         public double Count
-		{ get { return m_count; } }
+		{ 
+			get { return m_count; } 
+		}
 
         public double Rate // events per time unit
         { get { return (double)Count / (double)m_endtime; } }
@@ -1181,7 +1290,7 @@ namespace ICSimulator
 		public double LastPeriodValue
 		{
 			get{
-				if (history.Count > 1)
+				if (history.Count >= 1)
 					return history [history.Count - 1];
 				else
 					return 1;
@@ -1225,9 +1334,25 @@ namespace ICSimulator
         {
 			tw.Write (Environment.NewLine);
             tw.Write("{");
+			foreach (double i in history)
+				tw.Write ("{0},",Math.Round(i,3));
+			tw.Write ("{0},",Math.Round(m_count,3));
+
+			/*
             foreach (double i in history)
-                tw.Write("{0},", i);
-            tw.Write("{0}", m_count);
+			{
+				if (i is int || i is ulong)
+					tw.Write ("{0},",i);
+				else if (i is float || i is double)
+                	tw.Write("{0:0.00},", i);
+				else
+					throw new Exception ("Dump type is undefined.");
+			}
+			if (m_count is int || m_count is ulong)
+				tw.Write ("{0},",m_count);
+			else if (m_count is float || m_count is double)
+				tw.Write("{0:0.00}", m_count);
+			*/
 			tw.Write("}");
         }
     }

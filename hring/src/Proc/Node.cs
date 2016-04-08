@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Collections;
 
 namespace ICSimulator
 {
@@ -27,6 +28,49 @@ namespace ICSimulator
       support both private and shared cache designs.
     */
 
+	public class Interference
+	{
+		private CmpCache_Txn _txn;
+		private Request _request;
+		private int _requesterID;
+		private bool valid;
+		private int interference_cycle;
+		private int _mshr;
+
+		public Interference (Packet pkt)
+		{
+			_txn = pkt.txn;
+			_mshr = pkt.txn.mshr;
+			_request = pkt.request;
+			_requesterID = pkt.requesterID;
+			valid = true;
+			interference_cycle = pkt.intfCycle;
+		}
+
+		public Interference ()
+		{
+			_txn = null;
+			_request = null;
+			_requesterID = 0;
+			valid = false;
+			interference_cycle = 0;
+		}
+
+		public bool compare (Packet pkt) 
+		{
+			if (pkt.txn.mshr == _mshr && pkt.requesterID == _requesterID)
+				return true;
+			else
+				return false;
+		}
+
+		public int intfCycle 
+		{
+			get {return interference_cycle;}
+		}
+	}
+
+
     public class Node
     {
         Coord m_coord;
@@ -40,6 +84,8 @@ namespace ICSimulator
         public CPU cpu { get { return m_cpu; } }
         private CPU m_cpu;
         private MemCtlr m_mem;
+		//private ArrayList m_inheritance_table;
+		private Dictionary <string, int> m_inheritance_dict;
 
         private Router m_router;
 
@@ -51,6 +97,28 @@ namespace ICSimulator
         public int RequestQueueLen { get { return m_inj_pool.FlitCount + m_injQueue_flit.Count; } }
 
         RxBufNaive m_rxbuf_naive;
+
+
+		public int get_txn_intf (Packet new_inj_pkt) {
+			int intfCycle = 0;
+			string key = new_inj_pkt.requesterID.ToString() + (new_inj_pkt.txn.mshr + Config.N).ToString();
+			if (m_inheritance_dict.ContainsKey (key)) {
+				intfCycle = m_inheritance_dict [key];
+				m_inheritance_dict.Remove (key);
+			}
+			/*
+			foreach (Interference i in m_inheritance_table)
+			{
+				if (i.compare(new_inj_pkt))
+				{
+					intfCycle = i.intfCycle;
+					m_inheritance_table.Remove(i);
+					return intfCycle; 
+				}
+			}
+			*/
+			return intfCycle;
+		}
 
         public Node(NodeMapping mapping, Coord c)
         {
@@ -75,10 +143,15 @@ namespace ICSimulator
 			for (int i=0; i<Config.sub_net; i++)
 				m_injQueue_multi_flit[i] = new Queue<Flit> ();
             m_local = new Queue<Packet>();
+			//m_inheritance_table =  new ArrayList();
+			m_inheritance_dict = new Dictionary<string, int> ();
 
             m_rxbuf_naive = new RxBufNaive(this,
                     delegate(Flit f) { m_injQueue_evict.Enqueue(f); },
                     delegate(Packet p) { receivePacket(p); });
+
+
+
         }
 
         public void setRouter(Router r)
@@ -158,6 +231,7 @@ namespace ICSimulator
             }
 			else // By Xiyue: Actual injection into network
             {
+<<<<<<< HEAD
                 Packet p = m_inj_pool.next();
 
 				if (Config.topology == Topology.Mesh_Multi) {
@@ -208,6 +282,46 @@ namespace ICSimulator
 						}*/
 					}
 				}
+                                else if (Config.throttle_enable==True)
+                                {
+
+
+                if (p != null)
+                {
+					int intfCycle = get_txn_intf(p);
+                    foreach (Flit f in p.flits)
+					{
+						f.intfCycle = intfCycle;
+                        m_injQueue_flit.Enqueue(f);
+					}
+                }
+
+				if (m_injQueue_evict.Count > 0 && m_router.canInjectFlit(m_injQueue_evict.Peek())) // By Xiyue: ??? What is m_injQueue_evict ?
+                {
+                    Flit f = m_injQueue_evict.Dequeue();
+                    m_router.InjectFlit(f);
+                }
+				else if (m_injQueue_flit.Count > 0 && m_router.canInjectFlit(m_injQueue_flit.Peek())) // By Xiyue: ??? Dif from m_injQueue_evict?
+                {
+                    Flit f = m_injQueue_flit.Dequeue();
+#if PACKETDUMP
+                    if (f.flitNr == 0)
+                        if (m_coord.ID == 0)
+                            Console.WriteLine("start to inject packet {0} at node {1} (cyc {2})",
+                                f.packet, coord, Simulator.CurrentRound);
+#endif
+
+                    m_router.InjectFlit(f);  // by Xiyue: inject into a router
+                    // for Ring based Network, inject two flits if possible
+                    for (int i = 0 ; i < Config.RingInjectTrial - 1; i++)
+						if (m_injQueue_flit.Count > 0 && m_router.canInjectFlit(m_injQueue_flit.Peek()))
+    	                {
+        	            	f = m_injQueue_flit.Dequeue();
+            	        	m_router.InjectFlit(f);
+                	    }
+                }
+
+                                }
 				else
 				{
 
@@ -256,9 +370,32 @@ namespace ICSimulator
 
         void receiveFlit_noBuf(Flit f)
         {
-            f.packet.nrOfArrivedFlits++;
-            if (f.packet.nrOfArrivedFlits == f.packet.nrOfFlits)
-                receivePacket(f.packet);
+			// Register the flit interferece delay
+			// intfCycle gets updates only at the first and last flit of a packet arrival.
+			f.packet.nrOfArrivedFlits++;
+			if (f.packet.nrOfArrivedFlits == 1)
+			{
+				// Record the inteference cycle of flits.
+				f.packet.intfCycle = f.intfCycle;  // the interference cycle of head flit
+				f.packet.first_flit_arrival = Simulator.CurrentRound;
+			}
+
+			if (f.packet.nrOfArrivedFlits == f.packet.nrOfFlits)
+			{
+				// Compute the inteference cycle of a pacekt.
+				f.packet.intfCycle = (int)f.packet.intfCycle + ((int)Simulator.CurrentRound - (int)f.packet.first_flit_arrival - f.packet.nrOfFlits + 1); // assume the flits of will arrive consecutively without interference. In case of control packet, the portion inside of parenthesis is 0.
+				if (f.packet.intfCycle  > 0 && f.packet.requesterID != m_cpu.ID && f.packet.critical == true)
+				{
+					// only log the delay of the packets whose associated request is not generated by the current node
+					// therefore, they will trigger some packets later.
+					string inheritance_key = f.packet.requesterID.ToString() + (f.packet.txn.mshr + Config.N).ToString();
+					m_inheritance_dict.Add(inheritance_key, f.packet.intfCycle);
+					// m_inheritance_table.Add(intf_entry);
+					// profile size of the m_inheritance_table
+					Simulator.stats.inherit_table_size.Add(m_inheritance_dict.Count);
+				}
+				receivePacket(f.packet);
+			}
         }
 
         public void evictFlit(Flit f)
@@ -305,7 +442,7 @@ namespace ICSimulator
                 Simulator.network.nodes[p.dest.ID].m_local.Enqueue(p);
             else // otherwise: enqueue on injection queue
             {
-                m_inj_pool.addPacket(p); //By Xiyue: Actual Injection. But core execution is still a question.
+                m_inj_pool.addPacket(p); //By Xiyue: Actual Injection.
             }
         }
 

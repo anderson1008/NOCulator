@@ -234,8 +234,9 @@ namespace ICSimulator
 		public CPU.qos_stat_delegate qos_cb;
 
 		// by Xiyue
+		public int mshr;
 		public ulong minimalCycle;
-		public ulong interferenceCycle;
+		public int interferenceCycle;
 		public ulong throttleCycle;
 		public ulong causeIntf;
 		public ulong req_addr;
@@ -290,6 +291,7 @@ namespace ICSimulator
             return best;
         }
 
+		// construct the cache
         public CmpCache()
         {
             m_N = Config.N;
@@ -360,7 +362,7 @@ namespace ICSimulator
 		}
 
 
-		public void access(int node, ulong addr, bool write, bool stats_active, 
+		public void access(int node, ulong addr, int mshr, bool write, bool stats_active, 
 			Simulator.Ready cb, CPU.qos_stat_delegate qos_cb)
         {
 	
@@ -462,13 +464,13 @@ namespace ICSimulator
             else if (!prv_hit && sh_hit) // CASE 2: not in prv cache, but in sh cache
             {	
 				// by Xiyue: share cache access.
-				L2_access (node, addr, sh_slice, write,  state, cb, qos_cb,
+				L2_access (node, mshr, addr, sh_slice, write,  state, cb, qos_cb,
 					stats_active, L1hit, L1upgr, L1ev, L1wb,
 					L2access, L2hit, L2ev, L2wb, c2c, 0);
             }
             else if (!prv_hit && !sh_hit) // CASE 3: not in prv or shared cache
             {
-				Mem_access (node, addr,  sh_slice, write, state, cb, qos_cb,
+				Mem_access (node, mshr, addr,  sh_slice, write, state, cb, qos_cb,
 					stats_active, L1hit, L1upgr, L1ev, L1wb,
 					L2access, L2hit, L2ev, L2wb, c2c, 0);
             }
@@ -522,7 +524,7 @@ namespace ICSimulator
 			PKT12: releast_pkt (node -> sh_slice) if state is not Modified.
 		*/
 
-		void L2_access (int node, ulong addr, int sh_slice, bool write,  CmpCache_State state, Simulator.Ready cb, CPU.qos_stat_delegate qos_cb,
+		void L2_access (int node, int mshr, ulong addr, int sh_slice, bool write,  CmpCache_State state, Simulator.Ready cb, CPU.qos_stat_delegate qos_cb,
 			bool stats_active, bool L1hit, bool L1upgr, bool L1ev, bool L1wb,
 			bool L2access, bool L2hit, bool L2ev, bool L2wb, bool c2c, ulong throttleCycle)
 		{
@@ -535,7 +537,7 @@ namespace ICSimulator
 					#if DEBUG
 					Console.WriteLine ("RETRY to issue Req_addr = {1}, Node = {2} time = {0}", Simulator.CurrentRound, addr, node);
 					#endif
-					L2_access (node, addr, sh_slice, write,  state, cb, qos_cb,
+					L2_access (node, mshr, addr, sh_slice, write,  state, cb, qos_cb,
 						stats_active, L1hit, L1upgr, L1ev, L1wb,
 						L2access, L2hit, L2ev, L2wb, c2c, throttleCycle + 1);
 				}, Simulator.CurrentRound + 1);	
@@ -544,7 +546,7 @@ namespace ICSimulator
 			{
 				#if DEBUG
 				//if (throttleCycle != 0)
-				Console.WriteLine ("ISSUE L2 Req_addr = {1}, Node = {2} time = {0}", Simulator.CurrentRound, addr, node);
+				//Console.WriteLine ("ISSUE L2 Req_addr = {1}, Node = {2} time = {0}", Simulator.CurrentRound, addr, node);
 				#endif
 	
 				CmpCache_Txn txn = null;
@@ -554,6 +556,7 @@ namespace ICSimulator
 				txn.qos_cb = qos_cb;
 				txn.req_addr = addr;
 				txn.cb = cb;
+				txn.mshr = mshr;
 
 				// update functional shared state
 				if (!m_sh_perfect)
@@ -739,7 +742,7 @@ namespace ICSimulator
 
 
 
-		void Mem_access (int node, ulong addr, int sh_slice, bool write, CmpCache_State state, Simulator.Ready cb,  CPU.qos_stat_delegate qos_cb,
+		void Mem_access (int node, int mshr, ulong addr, int sh_slice, bool write, CmpCache_State state, Simulator.Ready cb,  CPU.qos_stat_delegate qos_cb,
 			bool stats_active, bool L1hit, bool L1upgr, bool L1ev, bool L1wb, bool L2access, bool L2hit, bool L2ev, bool L2wb, bool c2c, ulong throttleCycle)
 		{
 			
@@ -748,7 +751,7 @@ namespace ICSimulator
 
 			if (Simulator.controller.tryInject (node) == false && Config.throttle_enable == true && (node != sh_slice)) {
 				Simulator.Defer (delegate() {
-					Mem_access (node, addr, sh_slice, write, state, cb, qos_cb,
+					Mem_access (node, mshr, addr, sh_slice, write, state, cb, qos_cb,
 						stats_active, L1hit, L1upgr, L1ev, L1wb,
 						L2access, L2hit, L2ev, L2wb, c2c, throttleCycle + 1);
 				}, Simulator.CurrentRound + 1);
@@ -767,7 +770,7 @@ namespace ICSimulator
 				txn.cb = cb;
 				txn.qos_cb = qos_cb;
 				txn.req_addr = addr;
-
+				txn.mshr = mshr;
 
 				/*
 				L2access = true;
@@ -986,7 +989,7 @@ namespace ICSimulator
             for (int i = 0; i < m_N; i++)
                 if (state.owners.is_set(i) && i != node)
                 {
-					bool critical = (c2c == i) ? true : false;
+					bool critical = (c2c == i) ? true : false; // send invalidation to all other sharers
 					CmpCache_Pkt invl_pkt = add_ctl_pkt(txn, sh_slice, i, false, 14, critical);
                     invl_pkt.delay = m_shdelay;
 					
@@ -1257,6 +1260,37 @@ namespace ICSimulator
             int node = map_addr_mem(requestor, addr);
             Simulator.network.nodes[node].mem.access(req, cb);
         }
+
+
+		void assignVCclasses_qos (CmpCache_Pkt root)
+		{	/*
+			workQ.Enqueue(root);
+			while (workQ.Count > 0)
+			{
+				CmpCache_Pkt pkt = workQ.Dequeue();
+				if (pkt.flits > 1) pkt.vc_class = Math.Max(4, pkt.vc_class); 
+
+				int succ;
+				if (pkt.send)
+				{
+
+				}
+				else
+				{
+					succ = pkt.vc_class;
+				}
+
+				int succ = pkt.send ? pkt.vc_class + 1 : pkt.vc_class;
+				foreach (CmpCache_Pkt s in pkt.wakeup)
+				{
+					int old = s.vc_class;
+					s.vc_class = Math.Max(succ, s.vc_class);
+					if (s.vc_class > old) workQ.Enqueue(s); // By Xiyue ???: Why????
+				}
+			}
+			*/
+		}
+
 
         private Queue<CmpCache_Pkt> workQ = new Queue<CmpCache_Pkt>(); // avoid alloc'ing this for each call
         void assignVCclasses(CmpCache_Pkt root)

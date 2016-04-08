@@ -1,10 +1,23 @@
 #!/usr/bin/python
+<<<<<<< HEAD
 
 import sys
 import os
 import re
 import fnmatch
 import string
+import matplotlib.pyplot as plt
+
+
+	
+def print_period(stat):
+    # use to profile the application running solo.
+    # stat is an iterator or array
+    i = 0
+    for item in stat:
+        plt.plot(item, label=str(i))
+        plt.legend()
+        i = i + 1
 
 def print_double_array (x):
 	for x_i in x:
@@ -202,21 +215,3 @@ def print_final (stat, design):
 	output_str = output_str + '\n'
 	print output_str
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	

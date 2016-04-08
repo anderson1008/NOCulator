@@ -105,6 +105,7 @@ namespace ICSimulator
             BufRingNetworkMulti
     }
 
+
     public class Config : ConfigGroup
     {
         public static ProcessorConfig proc = new ProcessorConfig();
@@ -113,21 +114,51 @@ namespace ICSimulator
 
 		// ----
 		// By Xiyue
-
-		public static double slowdown_epoch = 10000;
-		public static double ref_ipc = 1;
-		public static double[] target_slowdown = new double[16] {1.2, 1.5, 1.5, 1.5, 1.2, 1.5, 1.5, 1.5, 1.2, 1.5, 1.5, 1.5, 1.2, 1.5, 1.5, 1.5};
-		public static double throt_min = 0.5;  // share with Sigcomm paper
-		public static double throt_max = 0.9;	// share with Sigcomm paper
-		public static bool throttle_enable = false;
-		public static double[] default_throttle = new double[16] {0.0, 0.1, 0.1, 0.2, 0.0, 0.1, 0.1, 0.2, 0.0, 0.1, 0.1, 0.2, 0.0, 0.1, 0.1, 0.2};
+		public static bool preempt = false;
 		public static bool slowdown_aware = false;
-		public static ulong STC_batchPeriod = 50;
-		public static ulong STC_batchCount = 1024;
-		//public static double default_throttle = 0.9;
+		public static double preempt_threshold = 8;
+		public static double slowdown_delta = 0.1; // slowdown difference between each ranking level
+		public static double enable_qos_non_mem_threshold = 3; // i.e. enable_qos_non_mem_threhold * slowdown_delta
+		public static double enable_qos_mem_threshold = 3;
+		public static double mpki_threshold = 30;
+
+		public static bool throttle_enable = true;
+		public static double curr_L1miss_threshold = 0.06; // an app can be throttled only if L1 miss > curr_L1miss_threshlod; Greater value will preserve performance (i.e., less applciation will be throughput sensitive), but give less improvement on fairness
+		public static double slowdown_epoch = 10000; // may sweep
+		public static double throt_min = 0.1;  // share with Sigcomm paper
+		public static int th_bad_dec_counter = 3; // may sweep
+		public static double th_unfairness = 0.001; // may sweep
+		public static double throt_prob_lv1 = 0.4;
+		public static double throt_prob_lv2 = 0.6;
+		public static double throt_prob_lv3 = 0.8;
+		public static int th_bad_rst_counter = 10; //may sweep
+		public static int thrt_up_slow_app = 4; // Parameter: Greater value improves fairness at the cost of lower performance improvement margin.
+		public static int thrt_down_stc_app = 4; // Parameter: greater value improve fairness at the cost of performance degradation
+		public static double throt_down_stage1 = 0.5;
+
+		// Slowdown-aware Throttling
+		
+		public static string throttle_node = "1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1";
+		//public static string throttle_node = "1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1";
+		public static int throt_app_count = 4;
+		public static int unthrot_app_count = 4;
+		public static int opt_perf_bound = 10;
+		public static int opt_fair_bound = 10;
+		public static double perf_budget_factor = 0.5;
+		public static double fair_budget_factor = 0.5;
+		public static double th_init_perf_loss = 0.2;
+		public static double th_init_fair_loss = 0.2;
+
+
+		public static double sweep_th_rate = 0; 		// static throttle rate, intial value of dynamic throttle rate
+		// specify which node to throttle when using static throttle controller
+		public static double throt_max = 0.9;	// share with Sigcomm paper
+
+		public static ulong STC_batchPeriod = 1000;
+		public static ulong STC_batchCount = 8;
+		public static double default_throttle = 0.9;
 	
-		//public static double[] default_throttle = new double[16] {0.0, 0.9, 0.9, 0.9, 0.85, 0.9, 0.9, 0.9, 0.85, 0.9, 0.9, 0.9, 0.85, 0.9, 0.9, 0.9};
-		public static double ewmv_factor = 0.3; // weight of old value
+		public static double ewmv_factor = 0.1; // weight of old value
 		public static double thrt_sweep = 0.1;
 
 
@@ -245,12 +276,6 @@ namespace ICSimulator
 
         // ---- Cluster will try to map far node to the same cluster
         public static bool distanceAwareCluster = true;
-
-        // ---- Static Controller
-        // static throttle rate
-        public static double sweep_th_rate = 0;
-        // specify which node to throttle when using static throttle controller
-        public static string throttle_node = "1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1";
 
         // ---- Three level throttling controller
         // # of sampling periods for each applications test.
@@ -619,7 +644,8 @@ namespace ICSimulator
         public void readConfig(string filename)
         {
             Char[] delims = new Char[] { '=' }; //took out ' ' for better listing capabilities
-            StreamReader configReader = File.OpenText(filename);
+
+			StreamReader configReader = File.OpenText(filename);
 
             if (configReader == null)
                 return;

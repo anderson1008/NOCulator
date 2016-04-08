@@ -23,8 +23,7 @@ namespace ICSimulator
 
         InstructionWindow m_ins;
         ulong m_last_retired;
-
-
+		public bool stall;
 
         public struct MSHR
         {
@@ -60,6 +59,7 @@ namespace ICSimulator
         public ulong outstandingReqsNetworkCycle;
         public ulong outstandingReqsMemory = 0;
         public ulong outstandingReqsMemoryCycle;
+		public ulong throttleCycle = 0;
 
         ulong alone_t;
 
@@ -160,77 +160,91 @@ namespace ICSimulator
 		//     2) calling reqDone
         public void receivePacket(CachePacket p) 
         {
-            if (p.cb != null) p.cb();
+            if (p.cb != null) 
+			{
+			    // The interference cycle of a txn is determined by that of the response packet.
+				// The delay is overrided by the packet returing to the requester.
+				p.txn.interferenceCycle = p.intfCycle; 
+				p.cb();
+			}
         }
 
-        void doStats(ulong retired)
-        {
+        void doStats (ulong retired)
+		{
 			
-            Simulator.stats.every_insns_persrc[m_ID].Add(retired);
-            if(m_idle)
-                Simulator.stats.idle_cycles[m_ID].Add();
+			Simulator.stats.every_insns_persrc [m_ID].Add (retired);
+			if (m_idle)
+				Simulator.stats.idle_cycles [m_ID].Add ();
 
-            if (Simulator.Warming)
-            {
-                Simulator.stats.warming_insns_persrc[m_ID].Add(retired);
-                return;
-            }
+			if (Simulator.Warming) {
+				Simulator.stats.warming_insns_persrc [m_ID].Add (retired);
+				return;
+			}
 
-            if(!m_stats_active) return;
+			if (!m_stats_active)
+				return;
 
-            Simulator.stats.mshrs.Add(mshrs_free);
-            Simulator.stats.mshrs_persrc[m_ID].Add(mshrs_free);
+			Simulator.stats.mshrs.Add (mshrs_free);
+			Simulator.stats.mshrs_persrc [m_ID].Add (mshrs_free);
 
-            m_active_ret += retired;
+			m_active_ret += retired;
 
-            if (alone_t == ulong.MaxValue)
-                alone_t = m_ins.oldestT;
-            ulong alone_cyc = m_ins.oldestT - alone_t;
-            alone_t = m_ins.oldestT;
+			if (alone_t == ulong.MaxValue)
+				alone_t = m_ins.oldestT;
+			ulong alone_cyc = m_ins.oldestT - alone_t;
+			alone_t = m_ins.oldestT;
 
-            Simulator.stats.insns_persrc[m_ID].Add(retired);
-        	Simulator.stats.insns_persrc_period[m_ID].Add(retired);
+			Simulator.stats.insns_persrc [m_ID].Add (retired);
+			Simulator.stats.insns_persrc_period [m_ID].Add (retired);
 			Simulator.stats.insns_persrc_ewma [m_ID].Add (retired);
-            Simulator.stats.active_cycles[m_ID].Add();
-            Simulator.stats.active_cycles_alone[m_ID].Add(alone_cyc);
+			Simulator.stats.active_cycles [m_ID].Add ();
+			Simulator.stats.active_cycles_alone [m_ID].Add (alone_cyc);
 
-            Simulator.network._cycle_insns += retired;
+			Simulator.network._cycle_insns += retired;
 
-            if (Simulator.CurrentRound % (ulong)100000 == 0)// && Simulator.CurrentRound != 0)
-            {
-				Console.WriteLine("Processor {0}: {1} ({2} outstanding)",
-                                  m_ID, m_ins.totalInstructionsRetired,
-                                  m_ins.outstandingReqs);
+			if (Simulator.CurrentRound % (ulong)100000 == 0) {// && Simulator.CurrentRound != 0)
+				Console.WriteLine ("Processor {0}: {1} ({2} outstanding)",
+					m_ID, m_ins.totalInstructionsRetired,
+					m_ins.outstandingReqs);
 #if DEBUG
-                Console.WriteLine("-- outstanding:");
-                foreach (MSHR m in m_mshrs)
-                {
-                    if (m.block != null) Console.Write(" {0:X}", m.block);
-                }
-                Console.WriteLine();
+				Console.WriteLine ("-- outstanding:");
+				foreach (MSHR m in m_mshrs) {
+					if (m.block != null)
+						Console.Write (" {0:X}", m.block);
+				}
+				Console.WriteLine ();
 #endif
-            }
+			}
 
-            bool windowFull = m_ins.isFull();
-            bool nextIsMem = (m_trace.type == Trace.Type.Rd || m_trace.type == Trace.Type.Wr);
-            bool noFreeMSHRs = true;
-            for (int i = 0; i < m_mshrs.Length; i++)
-            {
-                if (!m_mshrs[i].valid)
-                    noFreeMSHRs = false;
-            }
+			bool windowFull = m_ins.isFull ();
+			bool nextIsMem = (m_trace.type == Trace.Type.Rd || m_trace.type == Trace.Type.Wr);
+			bool noFreeMSHRs = true;
+			for (int i = 0; i < m_mshrs.Length; i++) {
+				if (!m_mshrs [i].valid)
+					noFreeMSHRs = false;
+			}
             
-            // any stall: either (i) window is full, or (ii) window is not full
-            // but next insn (LD / ST) can't be issued
-            bool stall = windowFull || (nextIsMem && noFreeMSHRs);
+			// use up credit
+			bool stallThrottle = false;
+			if (Config.throttle_enable)
+				stallThrottle = !windowFull && ((Config.mshrs - mshrs_free) > Controller_QoSThrottle.mshr_quota [m_ID]) && nextIsMem;
 
-            // MSHR stall: window not full, next insn is memory, but we have no free MSHRs
-            bool stallMem = !windowFull && (nextIsMem && noFreeMSHRs);
+			// any stall: either (i) window is full, or (ii) window is not full
+			// but next insn (LD / ST) can't be issued
+			stall = windowFull || (nextIsMem && noFreeMSHRs) || stallThrottle;
 
-            if (stall)
-                Simulator.stats.cpu_stall[m_ID].Add();
-            if (stallMem)
-                Simulator.stats.cpu_stall_mem[m_ID].Add();
+			// MSHR stall: window not full, next insn is memory, but we have no free MSHRs
+			bool stallMem = !windowFull && (nextIsMem && noFreeMSHRs);
+
+			if (stall)
+				Simulator.stats.cpu_stall [m_ID].Add ();
+			if (stallMem)
+				Simulator.stats.cpu_stall_mem [m_ID].Add ();
+			if (stallThrottle) {
+				Simulator.stats.cpu_stall_throttle [m_ID].Add ();
+				throttleCycle ++;
+				//Console.WriteLine("Core {0} ThrottleCycle {1} at TIME = {2}", m_ID, throttleCycle, Simulator.CurrentRound);
+			}
 
         }
 
@@ -276,15 +290,21 @@ namespace ICSimulator
             return m_trace_valid;
         }
 
-        bool canIssueMSHR(ulong addr)
-        {
-            ulong block = addr >> Config.cache_block;
+        bool canIssueMSHR (ulong addr)
+		{
+			ulong block = addr >> Config.cache_block;
 
-            for (int i = 0; i < m_mshrs.Length; i++)
-                if (m_mshrs[i].block == block)
-                    return true;
+			for (int i = 0; i < m_mshrs.Length; i++)
+				if (m_mshrs [i].block == block)
+					return true;
 
-            return mshrs_free > 0;
+			// Without throttling, an mshr entry can be issued as long as there is an available entry.
+			// In the case of throttling, we need to check credit.
+			if (!Config.throttle_enable) {
+				return mshrs_free > 0;
+			} else {
+				return mshrs_free > 0 && ((Config.mshrs - mshrs_free) <= Controller_QoSThrottle.mshr_quota [m_ID]);
+			}
         }
 
 		// called when completing a LD/ST request
@@ -293,7 +313,7 @@ namespace ICSimulator
 			m_ins.setReady(addr, write);
 
 			#if DEBUG
-			Console.WriteLine ("DONE at node = {1}, req_addr = {2}, time = {0}", Simulator.CurrentRound, m_ID, addr);
+			//Console.WriteLine ("DONE at node = {1}, req_addr = {2}, time = {0}", Simulator.CurrentRound, m_ID, addr);
 			#endif
 
 			if (!write && m_mshrs[mshr].pending_write)
@@ -347,7 +367,7 @@ namespace ICSimulator
 		{
 			qos_stat_delegate QOS_delegate = delegate (CmpCache_Txn txn) { computePenalty(txn, write); };
 
-			Simulator.network.cache.access(m_ID, addr, write, m_stats_active, 
+			Simulator.network.cache.access(m_ID, addr, mshr, write, m_stats_active, 
 				delegate() { reqDone(addr, mshr, write); }, QOS_delegate);
         }
 
@@ -360,56 +380,55 @@ namespace ICSimulator
 
 		// end Xiyue
 
-		public bool doStep()
+		public bool doStep ()
 		{
-			if (m_trace == null) {return true;}
+			if (m_trace == null) {
+				return true;
+			}
 
 			int syncID;
 
 			ulong retired =
-				(ulong)m_ins.retire(m_ID, Config.proc.instructionsPerCycle, m_last_retired);
+				(ulong)m_ins.retire (m_ID, Config.proc.instructionsPerCycle, m_last_retired);
 
 			if (retired > 0)
 				m_last_retired = Simulator.CurrentRound;
-
+		
 			if (!m_trace_valid)
-				m_trace_valid = advanceTrace(); // doStats needs to see the next record
+				m_trace_valid = advanceTrace (); // doStats needs to see the next record
 
-			doStats(retired); // by Xiyue: periodical slowdown is also logged here.
+			doStats (retired); // by Xiyue: periodical slowdown is also logged here.
 
-			if (m_ins.isFull()) return true;
+			if (m_ins.isFull ())
+				return true;
 
 			bool done = false;
 			int nIns = Config.proc.instructionsPerCycle;
 			int nMem = 1;
 
-			while (!done && nIns > 0 && !m_ins.isFull())
-			{
+			while (!done && nIns > 0 && !m_ins.isFull ()) {
 				if (!m_trace_valid) ///By Xiyue: Why advance twice?
-					m_trace_valid = advanceTrace();
+					m_trace_valid = advanceTrace ();
 				if (!m_trace_valid)
 					return false;
 
-				if (m_trace.type == Trace.Type.Pause) // when execution-driven, source has nothing to give
-				{
+				if (m_trace.type == Trace.Type.Pause) { // when execution-driven, source has nothing to give
 					m_trace_valid = false;
 					return true;
 				}
 
-				if (m_trace.type == Trace.Type.Sync)
-				{
+				if (m_trace.type == Trace.Type.Sync) {
 					// `from' field: translate referrent from thd ID to physical CPU id
-					syncID = Simulator.network.workload.mapThd(m_group, m_trace.from);
-				}
-				else
+					syncID = Simulator.network.workload.mapThd (m_group, m_trace.from);
+				} else
 					syncID = m_trace.from;
 
-				switch (m_trace.type)
-				{
+				switch (m_trace.type) {
 				case Trace.Type.Rd:
 				case Trace.Type.Wr:
-					if (nMem == 0 || !canIssueMSHR(m_trace.address))
-					{
+
+					// if no mshr available when the next is a memory instruction, break out of loop here
+					if (nMem == 0 || !canIssueMSHR (m_trace.address)) {
 						done = true;
 						break;
 					}
@@ -418,13 +437,17 @@ namespace ICSimulator
 
 					ulong addr = m_trace.address;
 					bool isWrite = m_trace.type == Trace.Type.Wr;
-					bool inWindow = m_ins.contains(addr, isWrite);
+					bool inWindow = m_ins.contains (addr, isWrite);
+					
+					Request req = inWindow ? null : new Request (m_ID, addr, isWrite, throttleCycle);
+					
+					m_ins.fetch (req, addr, isWrite, inWindow);
 
-					Request req = inWindow ? null : new Request(m_ID, addr, isWrite);
-					m_ins.fetch(req, addr, isWrite, inWindow);
+					if (!inWindow) {
+						throttleCycle = 0;
+						issueReq (req);
 
-					if (!inWindow)
-						issueReq(req);
+					}
 
 					m_trace_valid = false;
 					break;
