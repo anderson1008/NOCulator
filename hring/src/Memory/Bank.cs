@@ -72,10 +72,10 @@ namespace ICSimulator
          */
         public void tick()
         {
-            for (int i = 0; i < Config.N; i++){
+            //for (int i = 0; i < Config.N; i++){
                 //Console.WriteLine(bank_id.ToString() + '\t' + i.ToString());
                 //Simulator.stats.bank_queuedepth_persrc[bank_id, i].Add(outstandingReqs_perapp[i]);
-            }
+            //}
             Simulator.stats.bank_queuedepth[bank_id].Add(outstandingReqs);
 
             //sanity check

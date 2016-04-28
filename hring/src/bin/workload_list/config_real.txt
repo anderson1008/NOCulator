@@ -6,8 +6,8 @@ network_nrY = 8
 //insns = 1000000
 //trace_wraparound = true
 
-finish = cycle 100000000
-warmup_cyc = 5000000
+finish = cycle 100000
+warmup_cyc = 5000
 
 topology = Mesh
 router.algorithm = DR_FLIT_SWITCHED_OLDEST_FIRST 

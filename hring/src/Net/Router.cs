@@ -331,24 +331,7 @@ namespace ICSimulator
 						throw new Exception("The RouterType should only be 1 or 2");
 				}
 			}
-  /*          if (Config.ScalableRingClustered == false && Config.RingClustered == false && Config.TorusSingleRing == false && Config.HierarchicalRing == false && Config.Simple_HR == false)
-            {
-            	for (int i = 0; i < 4; i++)
-           		{
-               		if (linkIn[i] != null && linkIn[i].Out != null)
-                	{
-                	    linkIn[i].Out.Deflected = false;
-
-                	    if (Simulator.network.golden.isGolden(linkIn[i].Out))
-                	        goldenCount++;
-                	    incomingFlits++;
-                	}
-            	}
-            }*/
-//            Simulator.stats.golden_pernode.Add(goldenCount);
-//            Simulator.stats.golden_bycount[goldenCount].Add();
-//
-//            Simulator.stats.traversals_pernode[incomingFlits].Add();
+  
         }
 
         private void statsOutput()
@@ -436,7 +419,7 @@ namespace ICSimulator
                 f.packet.injectionTime = Simulator.CurrentRound;
             f.injectionTime = Simulator.CurrentRound;
 
-            ulong hoq = Simulator.CurrentRound - m_lastInj;
+            ulong hoq = Simulator.CurrentRound - m_lastInj; // hoq record the gap between each injection.
             m_lastInj = Simulator.CurrentRound;
 
             Simulator.stats.hoq_latency.Add(hoq);
@@ -448,8 +431,8 @@ namespace ICSimulator
         protected void statsEjectFlit(Flit f)
         {
             // per-flit latency stats
-            ulong net_latency = Simulator.CurrentRound - f.injectionTime;
-            ulong total_latency = Simulator.CurrentRound - f.packet.creationTime;
+            ulong net_latency = Simulator.CurrentRound - f.injectionTime; //end-to-end delay
+            ulong total_latency = Simulator.CurrentRound - f.packet.creationTime; // from generation to receive
             ulong inj_latency = total_latency - net_latency;
 
 			Simulator.stats.flit_intf.Add(f.intfCycle);
@@ -466,13 +449,9 @@ namespace ICSimulator
 			}
 			else if (f.ejectTrial == 1)
 				Simulator.stats.singleEjectTrialFlits.Add();
-			//else if (this is Router_Flit) 
-			//	throw new Exception("The eject trial is incorrect");
 
 			if (Config.N == 16)
 			{
-		//		if (net_latency > 10) 
-		//			Console.WriteLine("src: {0}, dest:{1}, latency:{2}", f.packet.src.ID, f.packet.dest.ID, net_latency);
 				if (f.packet.dest.ID / 4 == f.packet.src.ID / 4)
 				{
 					Simulator.stats.flitLocal.Add(1);

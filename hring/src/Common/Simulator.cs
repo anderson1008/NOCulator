@@ -49,7 +49,7 @@ namespace ICSimulator
         }
 
         public static void Init(string[] args)
-        {
+         {
             Config config = new Config();
 
 			// Read in the configuration
@@ -161,12 +161,10 @@ namespace ICSimulator
             CurrentRound++;
 
             network.doStep();
-			if (Config.simpleLivelock)
-				Router.livelockFreedom();
+            if (Config.simpleLivelock)
+	    		Router.livelockFreedom();
             controller.doStep();
 
-			//if (Config.synthGen)
-			//	return Simulator.stats.re
             return !network.isFinished() && (Config.ignore_livelock || !network.isLivelocked());
         }
 

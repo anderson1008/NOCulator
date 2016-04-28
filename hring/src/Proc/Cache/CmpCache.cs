@@ -747,6 +747,7 @@ namespace ICSimulator
 		{
 			
 			// here, we need to go to memory
+
 			Debug.Assert(!m_sh_perfect);
 
 			if (Simulator.controller.tryInject (node) == false && Config.throttle_enable == true && (node != sh_slice)) {

@@ -38,7 +38,7 @@ namespace ICSimulator
         public bool is_shared_MC = false;        //whether all memory share the same controller
 
         //memory scheduling algorithm
-        public MemSchedAlgo mem_sched_algo = MemSchedAlgo.FULL_BATCH;    //memory scheduling algorithm
+		public MemSchedAlgo mem_sched_algo = MemSchedAlgo.FRFCFS;    //memory scheduling algorithm
 
         //memory address mapping
         public AddressMap address_mapping = AddressMap.BMR;
