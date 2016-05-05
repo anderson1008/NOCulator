@@ -528,8 +528,10 @@ namespace ICSimulator
 			bool stats_active, bool L1hit, bool L1upgr, bool L1ev, bool L1wb,
 			bool L2access, bool L2hit, bool L2ev, bool L2wb, bool c2c, ulong throttleCycle)
 		{
+			/*
 			// do not throttle L2 local access
-			if (Simulator.controller.tryInject (node) == false && Config.throttle_enable == true && (node != sh_slice)) {
+			// TODO: add this when throttle at the l2 access/NI injection  
+			if (Simulator.controller.tryInject (node) == false && Config.throttle_enable == true && (node != sh_slice) && Config.controller == ControllerType.THROTTLE_QOS) {
 				#if DEBUG
 				Console.WriteLine ("THROTTLED Req_addr = {1}, Node = {2} thrtCyc = {3} time = {0}", Simulator.CurrentRound, addr, node, throttleCycle + 1);
 				#endif
@@ -544,6 +546,7 @@ namespace ICSimulator
 			} 
 			else 
 			{
+				*/
 				#if DEBUG
 				//if (throttleCycle != 0)
 				//Console.WriteLine ("ISSUE L2 Req_addr = {1}, Node = {2} time = {0}", Simulator.CurrentRound, addr, node);
@@ -552,7 +555,7 @@ namespace ICSimulator
 				CmpCache_Txn txn = null;
 				txn = new CmpCache_Txn ();
 				txn.node = node;
-				txn.throttleCycle = throttleCycle;
+				txn.throttleCycle = txn.throttleCycle + throttleCycle;
 				txn.qos_cb = qos_cb;
 				txn.req_addr = addr;
 				txn.cb = cb;
@@ -679,7 +682,7 @@ namespace ICSimulator
 				do_stats(stats_active, node, L1hit, L1upgr, L1ev, L1wb,
 					L2access, L2hit, L2ev, L2wb, c2c);
 				txn_schedule (txn, cb);
-			}
+			//}
 		}
 
 		/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *                                
@@ -750,7 +753,7 @@ namespace ICSimulator
 
 			Debug.Assert(!m_sh_perfect);
 
-			if (Simulator.controller.tryInject (node) == false && Config.throttle_enable == true && (node != sh_slice)) {
+			if (Simulator.controller.tryInject (node) == false && Config.throttle_enable == true && (node != sh_slice) && Config.controller == ControllerType.THROTTLE_QOS) {
 				Simulator.Defer (delegate() {
 					Mem_access (node, mshr, addr, sh_slice, write, state, cb, qos_cb,
 						stats_active, L1hit, L1upgr, L1ev, L1wb,

@@ -2,23 +2,15 @@
 
 network_nrX = 4
 network_nrY = 4
-//finish = app
-//insns = 1000000
-//trace_wraparound = true
+finish = app
+insns = 10000000
+trace_wraparound = true
 
-finish = cycle 6000000
-warmup_cyc = 1000000
+//finish = cycle 6000000
+warmup_cyc = 200000
 slowdown_epoch = 100000
 
-curr_L1miss_threshold = 0.1
-th_bad_dec_counter = 3
-th_unfairness = 0.2
-th_bad_rst_counter = 10
-thrt_up_slow_app = 4
-thrt_down_stc_app = 4
 throttle_enable = true
-throt_down_stage1 = 0.7
-throt_min = 0.3
 
 topology = Mesh
 router.algorithm = DR_AFC 
@@ -45,7 +37,7 @@ idealnet = false
 router.linkLatency = 2
 edge_loop = false 
 
-controller = THROTTLE_QOS
+//controller = THROTTLE_QOS
 shcache_buf = 16
 
 

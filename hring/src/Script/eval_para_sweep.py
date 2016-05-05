@@ -26,10 +26,10 @@ from matplotlib.ticker import FuncFormatter
 
 
 # target dir
-NUM_WORKLOAD = 5 
+NUM_WORKLOAD = 4 
 num_value = 0
-target_dir = "/home/xiyue/4x4/SweepAll/results/homo/4x4/design/"
-workload_dir = "/home/xiyue/workload_list/homo_4x4_ipc"
+target_dir = "/Users/Anderson/Desktop/SweepB/results/homo/4x4/design/"
+workload_dir = "/Users/Anderson/Desktop/workload_list_1/homo_4x4_ipc"
 ws_plt = []
 hs_plt = []
 uf_plt = []

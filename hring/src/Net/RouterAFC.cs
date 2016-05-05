@@ -631,9 +631,21 @@ namespace ICSimulator
         public override bool canInjectFlit(Flit f)
         {
             int cl = f.packet.getClass();
+			bool inject;
 
-            if (m_buffered)
-                return m_buf[4, cl].Count < capacity(cl);
+			if (m_buffered){
+				/*
+				 * Don't throttle here because of Head of line blocking.
+				if (f.packet.requesterID == ID && f.packet.nrOfFlits == Config.router.addrPacketSize)   { //TODO: Is there any data packet throttled? 
+					inject = Simulator.controller.tryInject (ID);
+					if (inject)
+						return m_buf [4, cl].Count < capacity (cl);
+					else
+						return false;
+				} else
+				*/
+					return m_buf[4, cl].Count < capacity(cl);
+			}
             else
                 return m_injectSlot == null;
         }
@@ -654,15 +666,6 @@ namespace ICSimulator
 					{
 						slot.flit.packet.txn.serialization_latency = slot.flit.packet.txn.serialization_latency + (ulong)slot.flit.packet.nrOfFlits;
 						slot.flit.packet.txn.queue_latency = slot.flit.packet.txn.queue_latency + (ulong)Math.Max(temp_queueCycle,slot.flit.packet.nrOfFlits);
-
-#if DEBUG
-					
-						Console.WriteLine ("!!!!!!BLOCK pkt = {4}, txn req_addr = {5}, serilatency = {0}, queue_latency = {1}, at time = {2} node {3}",
-							slot.flit.packet.txn.serialization_latency, slot.flit.packet.txn.queue_latency, Simulator.CurrentRound, ID, slot.flit.packet.ID, slot.flit.packet.txn.req_addr);
-#endif
-
-						if (slot.flit.packet.txn.queue_latency < slot.flit.packet.txn.serialization_latency)
-							throw new Exception("queue cycle less than serialization latency!");
 
 					}else if (temp_queueCycle < 0)
 						throw new Exception("queue latency is less than 0!");

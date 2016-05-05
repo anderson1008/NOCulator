@@ -9,11 +9,19 @@ import my_print
 import matplotlib.pyplot as plt
 import get
 
+#ipc_alone = [2.03, 2.16, 2.00, 1.90, 2.03, 2.16, 2.00, 1.90, 2.03, 2.16, 2.00, 1.90, 2.03, 2.16, 2.00, 1.90]
+ipc_alone = [2.07, 2.07, 1.33, 1.33, 2.07, 2.07, 1.33, 1.13, 1.83, 1.83, 1.90, 1.90, 1.83, 1.83, 1.90, 1.90]
+work_dir = "/Users/Anderson/GoogleDrive/NOCulator/hring/src/bin"
+input_file = "nas_2.out"
+
+#ipc_alone = [] 
 #ipc_alone = [2.02, 1.85, 1.91, 2.51, 2.02, 1.85, 1.91, 2.51, 2.02, 1.85, 1.91, 2.51, 2.02, 1.85, 1.91, 2.51] # heter_app 1
 #ipc_alone = [2.08, 2.16, 1.77, 1.91, 2.08, 2.16, 1.77, 1.91, 2.08, 2.16, 1.77, 1.91, 2.08, 2.16, 1.77, 1.91] # mix_app 2 in 16 node
 
-ipc_alone = [1.30, 1.65, 1.43, 1.73, 1.30, 1.65, 1.43, 1.73, 1.30, 1.65, 1.43, 1.73, 1.30, 1.65, 1.43, 1.73, 1.30, 1.65, 1.43, 1.73, 1.30, 1.65, 1.43, 1.73, 1.30, 1.65, 1.43, 1.73, 1.30, 1.65, 1.43, 1.73, 1.30, 1.65, 1.43, 1.73, 1.30, 1.65, 1.43, 1.73, 1.30, 1.65, 1.43, 1.73, 1.30, 1.65, 1.43, 1.73, 1.30, 1.65, 1.43, 1.73, 1.30, 1.65, 1.43, 1.73, 1.30, 1.65, 1.43, 1.73, 1.30, 1.65, 1.43, 1.73]
+#ipc_alone = [1.30, 1.65, 1.43, 1.73, 1.30, 1.65, 1.43, 1.73, 1.30, 1.65, 1.43, 1.73, 1.30, 1.65, 1.43, 1.73, 1.30, 1.65, 1.43, 1.73, 1.30, 1.65, 1.43, 1.73, 1.30, 1.65, 1.43, 1.73, 1.30, 1.65, 1.43, 1.73, 1.30, 1.65, 1.43, 1.73, 1.30, 1.65, 1.43, 1.73, 1.30, 1.65, 1.43, 1.73, 1.30, 1.65, 1.43, 1.73, 1.30, 1.65, 1.43, 1.73, 1.30, 1.65, 1.43, 1.73, 1.30, 1.65, 1.43, 1.73, 1.30, 1.65, 1.43, 1.73]
 #ipc_alone = [1.43, 1.88, 1.30, 0.93, 1.43, 1.88, 1.30, 0.93, 1.43, 1.88, 1.30, 0.93, 1.43, 1.88, 1.30, 0.93, 1.43, 1.88, 1.30, 0.93, 1.43, 1.88, 1.30, 0.93, 1.43, 1.88, 1.30, 0.93, 1.43, 1.88, 1.30, 0.93, 1.43, 1.88, 1.30, 0.93, 1.43, 1.88, 1.30, 0.93, 1.43, 1.88, 1.30, 0.93, 1.43, 1.88, 1.30, 0.93, 1.43, 1.88, 1.30, 0.93, 1.43, 1.88, 1.30, 0.93, 1.43, 1.88, 1.30, 0.93, 1.43, 1.88, 1.30, 0.93] # mix_app 1 in 64 node
+
+
 
 def get_stat (file_name):
   result_file = open (file_name, 'r')
@@ -149,8 +157,6 @@ def cmp_uf (ipc_alone, ipc_share):
 
 #work_dir = str(input('Please input your work dir: '))
 #input_file = str(input('Please input the file name (*.out): ' ))
-work_dir = "/Users/Anderson/GoogleDrive/NOCulator/hring/src/bin"
-input_file = "test_0.out"
 test_file_name = work_dir + "/" + input_file
 stat_shared = get_stat (test_file_name)
 act_t_shared = get_active_cycles(stat_shared)
@@ -159,14 +165,14 @@ ipc_shared = cmp_ipc (insns_shared, act_t_shared)
 mpki=cmp_mpki(stat_shared)
 print "Avg app mpki"
 print cmp_app_avg(mpki)
-est_sd = get_est_sd(stat_shared)
-l1_miss = get_est_L1miss(stat_shared)
+#est_sd = get_est_sd(stat_shared)
+#l1_miss = get_est_L1miss(stat_shared)
 
-plt.figure(1)
-plt.subplot(2,1,1)
-my_print.print_period(est_sd)
-plt.subplot(2,1,2)
-my_print.print_period(l1_miss)
+#plt.figure(1)
+#plt.subplot(2,1,1)
+#my_print.print_period(est_sd)
+#plt.subplot(2,1,2)
+#my_print.print_period(l1_miss)
 #plt.show() # enable to show the plot
 
 #print est_sd

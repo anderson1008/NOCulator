@@ -114,6 +114,16 @@ namespace ICSimulator
 
 		// ----
 		// By Xiyue
+
+		// Slowdown-aware Throttling
+		public static bool throttle_enable = true;
+		public static double slowdown_epoch = 300000; // may sweep seperately, D
+		public static double fast_throttle_threshold = 1.15; // may sweep, A
+		public static double sd_tolerant_per_node = 0.001; // may sweep, B, insignificant
+		public static int th_bad_dec_counter = 3; // may sweep, C
+		public static int th_bad_rst_counter = 10; // E
+
+
 		public static bool preempt = false;
 		public static bool slowdown_aware = false;
 		public static double preempt_threshold = 8;
@@ -122,22 +132,17 @@ namespace ICSimulator
 		public static double enable_qos_mem_threshold = 3;
 		public static double mpki_threshold = 30;
 
-		public static bool throttle_enable = true;
 		public static double curr_L1miss_threshold = 0.06; // an app can be throttled only if L1 miss > curr_L1miss_threshlod; Greater value will preserve performance (i.e., less applciation will be throughput sensitive), but give less improvement on fairness
-		public static double slowdown_epoch = 10000; // may sweep
 		public static double throt_min = 0.1;  // share with Sigcomm paper
-		public static int th_bad_dec_counter = 3; // may sweep
-		public static double th_unfairness = 0.001; // may sweep
+		public static double th_unfairness = 0.3; 
 		public static double throt_prob_lv1 = 0.4;
 		public static double throt_prob_lv2 = 0.6;
 		public static double throt_prob_lv3 = 0.8;
-		public static int th_bad_rst_counter = 10; //may sweep
 		public static int thrt_up_slow_app = 4; // Parameter: Greater value improves fairness at the cost of lower performance improvement margin.
 		public static int thrt_down_stc_app = 4; // Parameter: greater value improve fairness at the cost of performance degradation
 		public static double throt_down_stage1 = 0.5;
 
-		// Slowdown-aware Throttling
-		
+
 		public static string throttle_node = "1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1";
 		//public static string throttle_node = "1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1";
 		public static int throt_app_count = 4;
@@ -491,7 +496,7 @@ namespace ICSimulator
         public static bool nack_epoch = false;
         // ----
 
-        public static bool progress = true;
+        public static bool progress = true;  // process update enable
         public static string output = "output.txt";
         public static string matlab = "";
         public static string fairdata = "";

@@ -34,12 +34,13 @@ namespace ICSimulator
         }
 
         int mshrs_free;
+		public int freeMSHR {get { return mshrs_free;}}
         MSHR[] m_mshrs;
 
         Trace m_trace;
         bool m_trace_valid; // current record valid?
 
-        int m_ID, m_group; //, m_thdID;
+        int m_ID, m_group; //m_thdID;
 
         int group_count;
 
@@ -59,7 +60,6 @@ namespace ICSimulator
         public ulong outstandingReqsNetworkCycle;
         public ulong outstandingReqsMemory = 0;
         public ulong outstandingReqsMemoryCycle;
-		public ulong throttleCycle = 0;
 
         ulong alone_t;
 
@@ -224,14 +224,10 @@ namespace ICSimulator
 					noFreeMSHRs = false;
 			}
             
-			// use up credit
-			bool stallThrottle = false;
-			if (Config.throttle_enable)
-				stallThrottle = !windowFull && ((Config.mshrs - mshrs_free) > Controller_QoSThrottle.mshr_quota [m_ID]) && nextIsMem;
 
 			// any stall: either (i) window is full, or (ii) window is not full
 			// but next insn (LD / ST) can't be issued
-			stall = windowFull || (nextIsMem && noFreeMSHRs) || stallThrottle;
+			stall = windowFull || (nextIsMem && noFreeMSHRs);
 
 			// MSHR stall: window not full, next insn is memory, but we have no free MSHRs
 			bool stallMem = !windowFull && (nextIsMem && noFreeMSHRs);
@@ -240,12 +236,6 @@ namespace ICSimulator
 				Simulator.stats.cpu_stall [m_ID].Add ();
 			if (stallMem)
 				Simulator.stats.cpu_stall_mem [m_ID].Add ();
-			if (stallThrottle) {
-				Simulator.stats.cpu_stall_throttle [m_ID].Add ();
-				throttleCycle ++;
-				//Console.WriteLine("Core {0} ThrottleCycle {1} at TIME = {2}", m_ID, throttleCycle, Simulator.CurrentRound);
-			}
-
         }
 
         bool advanceTrace()
@@ -298,13 +288,8 @@ namespace ICSimulator
 				if (m_mshrs [i].block == block)
 					return true;
 
-			// Without throttling, an mshr entry can be issued as long as there is an available entry.
-			// In the case of throttling, we need to check credit.
-			if (!Config.throttle_enable) {
-				return mshrs_free > 0;
-			} else {
-				return mshrs_free > 0 && ((Config.mshrs - mshrs_free) <= Controller_QoSThrottle.mshr_quota [m_ID]);
-			}
+			return mshrs_free > 0;
+		
         }
 
 		// called when completing a LD/ST request
@@ -439,14 +424,12 @@ namespace ICSimulator
 					bool isWrite = m_trace.type == Trace.Type.Wr;
 					bool inWindow = m_ins.contains (addr, isWrite);
 					
-					Request req = inWindow ? null : new Request (m_ID, addr, isWrite, throttleCycle);
+					Request req = inWindow ? null : new Request (m_ID, addr, isWrite, 0);
 					
 					m_ins.fetch (req, addr, isWrite, inWindow);
 
 					if (!inWindow) {
-						throttleCycle = 0;
 						issueReq (req);
-
 					}
 
 					m_trace_valid = false;
