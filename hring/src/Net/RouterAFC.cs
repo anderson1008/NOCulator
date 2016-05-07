@@ -631,7 +631,6 @@ namespace ICSimulator
         public override bool canInjectFlit(Flit f)
         {
             int cl = f.packet.getClass();
-			bool inject;
 
 			if (m_buffered){
 				/*

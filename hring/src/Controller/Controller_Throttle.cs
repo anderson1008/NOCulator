@@ -73,7 +73,7 @@ namespace ICSimulator
 		private ulong[] m_index_sd = new ulong[Config.N];
 		private double m_l1miss_avg;
 		private double m_sd_avg;
-
+		private double m_uf_target;
 
 		public static ulong [] app_rank = new ulong[Config.N];
 		public static APP_TYPE [] app_type = new APP_TYPE[Config.N];
@@ -90,15 +90,16 @@ namespace ICSimulator
 		private int m_epoch_counter;
 		private int m_opt_counter;
 
-		private int m_perf_opt_counter, m_fair_opt_counter, m_idle_counter;
+		private int m_perf_opt_counter, m_fair_opt_counter, m_idle_counter, m_succ_meet_counter;
 		private double m_currunfairness, m_oldunfairness;
 		private double m_currperf, m_oldperf;
 		private string [] throttle_node = new string[Config.N];	// to enable/disable the throttling mechanism 
 		private double m_init_unfairness, m_init_perf;
 		private bool m_throttle_enable;
 		private int unthrottable_count;
-		private int m_choose_throttle_down;
-		
+		private THROTTLE_ACTION m_action;
+	
+
 		private double m_stc_max, m_stc_avg;
 		private double m_fast_throttle_stc_threshold;
 		private THROTTLE_ACTION [] m_actionQ = new THROTTLE_ACTION[Config.N];
@@ -145,6 +146,7 @@ namespace ICSimulator
 				pre_throt  [i] = false;
 				bad_decision_counter [i] = 0;
 				m_actionQ [i] = THROTTLE_ACTION.NO_OP;
+				m_uf_target = 0;
 			}
 
 			m_opt_state = OPT_STATE.PERFORMANCE_OPT;
@@ -154,6 +156,7 @@ namespace ICSimulator
             m_fastest_core = 0;
 			m_perf_opt_counter = 0;
 			m_fair_opt_counter = 0;
+			m_succ_meet_counter = 0;
 			m_init_unfairness = 0;
 			m_init_perf = 0;
 			m_epoch_counter = 0;
@@ -165,7 +168,7 @@ namespace ICSimulator
 			m_l1miss_avg = 0;
 			m_sd_avg = 0;
 			unthrottable_count = 0;
-			m_choose_throttle_down = -1;
+			m_action = THROTTLE_ACTION.NO_OP;
 		}
 
 		public override void doStep()
@@ -357,14 +360,17 @@ namespace ICSimulator
 
 			classifyApp();
 
+			Adjust_opt_target ();
+
 			throttleAction();
+
+
 
 		}
 
 		public void classifyApp()
 		{
 			
-
 			// applications cannot have exact the same STC.
 			// FAST will converge if the STC of each application stays within Config.fast_throttle_threshold % of avg stc.
 			// Smaller (i.e. < 1) Config.fast_throttle_threshold is likely to prevent more application being throttling down and therefore improve system performance.
@@ -385,62 +391,89 @@ namespace ICSimulator
 		}
 
 
-
 		public void throttleAction()
 		{
+			
 			double unfairness_delta = m_est_sd [0] - m_est_sd [Config.N-1] ;
 			m_throttle_enable = (unfairness_delta > Config.th_unfairness) ? true : false;
-			if (m_throttle_enable == false) {
+
+			switch (m_action) {
+			case THROTTLE_ACTION.RESET:
 				for (int i = 0; i < Config.N; i++) {
-					if (throttle_rate [i] > 0) {
-						m_actionQ [i] = THROTTLE_ACTION.RESET;
-						throttle_rate [i] = 0;
-					} else 
-						m_actionQ [i] = THROTTLE_ACTION.NO_OP;
-					
+					m_actionQ [i] = THROTTLE_ACTION.RESET;
+					throttle_rate [i] = 0;
 				}
+				break;
+			case THROTTLE_ACTION.DOWN:
+				for (int i = 0; i < Config.N; i++) {
+					m_actionQ [i] = THROTTLE_ACTION.NO_OP;
+					if (fast_app_type [i] == APP_TYPE.NSTC) {
+						if (ThrottleDown (i))
+							m_actionQ [i] = THROTTLE_ACTION.DOWN;
+					}
+				}
+				break;
+			case THROTTLE_ACTION.UP:
+				for (int i = 0; i < Config.N; i++) {
+					m_actionQ [i] = THROTTLE_ACTION.NO_OP;
+					if (ThrottleUp(i))
+						m_actionQ [i] = THROTTLE_ACTION.UP;
+				}
+				break;
+	
+				default: 
+					for (int i = 0; i < Config.N; i++) 
+						m_actionQ [i] = THROTTLE_ACTION.NO_OP;
+				break;
+			}
+
+		}
+
+		public void Adjust_opt_target ()
+		{
+			m_opt_counter++;
+
+			// First epoch only set the initial UF target
+			if (m_opt_counter == 1) {
+				m_uf_target = m_currunfairness;
+				m_opt_state = OPT_STATE.FAIR_OPT;
 				return;
 			}
 
-			int num_thrt_dwn = 0;
-			bool [] thrt_downQ = new bool [Config.N];
-			for (int i = 0; i < Config.N; i++) {
-				thrt_downQ [i] = false;
-				m_actionQ [i] = THROTTLE_ACTION.NO_OP;
-			}
-
-			for (int i = 0; i < Config.N; i++)
-			{
-				if (fast_app_type [i] == APP_TYPE.STC && throttle_rate[i] > 0) {
-					m_actionQ [i] = THROTTLE_ACTION.RESET;
-					throttle_rate [i] = 0;
-				} else if (fast_app_type [i] == APP_TYPE.NSTC ) {
-					if (m_est_sd_unsort [i] <= 0.8 * m_est_sd[0])  
-						thrt_downQ [i] =true;
-					else if (ThrottleUp(i)){
-						// throttle up
-						m_actionQ [i] = THROTTLE_ACTION.UP;
-						//throttle_rate [i] = 0;
-					}
-				} 
-			}
-
-			int thrt_index = m_choose_throttle_down + 1;
-			for (int j = 0; j < Config.N; j++) {
-				if (thrt_downQ [thrt_index] == true && num_thrt_dwn < Config.thrt_down_stc_app) {
-					
-					if (ThrottleDown (thrt_index)) {
-						m_choose_throttle_down = thrt_index;
-						num_thrt_dwn++;
-						m_actionQ [thrt_index] = THROTTLE_ACTION.DOWN;
-					}
-
+			// if uf target meets
+			if (m_currunfairness - m_uf_target < 0) {
+				Console.WriteLine ("Meet unfairness target.");
+				if (++m_succ_meet_counter > Config.succ_meet_fair) {
+					m_uf_target = m_currunfairness - Config.uf_adjust;
+					m_opt_state = OPT_STATE.PERFORMANCE_OPT;
+					m_fair_opt_counter = 0;
+					m_action = THROTTLE_ACTION.UP;
+				} else {
+					m_opt_state = OPT_STATE.FAIR_OPT;
+					m_fair_opt_counter++;
+					m_action = THROTTLE_ACTION.NO_OP;
 				}
-				thrt_index = (thrt_index + 1)%Config.N;
+			} else {
+			// uf target miss
+				Console.WriteLine ("Miss unfairness target.");
+				if (m_fair_opt_counter > Config.fair_keep_trying) { 
+					m_uf_target = m_currunfairness - Config.uf_adjust;
+					m_opt_state = OPT_STATE.PERFORMANCE_OPT;
+					m_action = THROTTLE_ACTION.RESET;
+					m_fair_opt_counter = 0;
+					Console.WriteLine ("FAIR_OPT_COUNT reaches max value.");
+				} else {
+					m_fair_opt_counter++;
+					m_action = THROTTLE_ACTION.DOWN;
+					m_opt_state = OPT_STATE.FAIR_OPT;			
+				}
+				m_succ_meet_counter = 0;
 			}
+
+			Console.WriteLine ("Next state is {0}", m_opt_state.ToString());
+			Console.WriteLine ("New UF target is {0:0.00}", m_uf_target);
 				
 		}
-
 		public override bool tryInject(int node)
 		{
 			double prob = Simulator.rand.NextDouble ();
@@ -465,11 +498,11 @@ namespace ICSimulator
 			
 		public bool ThrottleDown (int node)
 		{
-			if (throttle_rate [node] < 0.7)
-				throttle_rate [node] = throttle_rate [node] + 0.1;
-			else if (throttle_rate [node] < 0.9)
-				throttle_rate [node] = throttle_rate [node] + 0.02;
-			else if (throttle_rate [node] < 0.94)
+			if (throttle_rate [node] < 0.6)
+				throttle_rate [node] = throttle_rate [node] + 0.3;
+			else if (throttle_rate [node] < 0.8)
+				throttle_rate [node] = throttle_rate [node] + 0.05;
+			else if (throttle_rate [node] < 0.85)
 				throttle_rate [node] = throttle_rate [node] + 0.01;
 			else
 				return false;
@@ -478,11 +511,11 @@ namespace ICSimulator
 
 		public bool ThrottleUp (int node)
 		{
-			if (throttle_rate [node] < 0.7 && throttle_rate [node] > 0)
-				throttle_rate [node] = Math.Max(throttle_rate [node] - 0.1, 0);
-			else if (throttle_rate [node] < 0.9 && throttle_rate [node] > 0)
-				throttle_rate [node] = Math.Max(throttle_rate [node] - 0.02, 0);
-			else if (throttle_rate [node] < 0.94 && throttle_rate [node] > 0)
+			if (throttle_rate [node] < 0.6 && throttle_rate [node] > 0)
+				throttle_rate [node] = Math.Max(throttle_rate [node] - 0.3, 0);
+			else if (throttle_rate [node] < 0.8 && throttle_rate [node] > 0)
+				throttle_rate [node] = Math.Max(throttle_rate [node] - 0.05, 0);
+			else if (throttle_rate [node] < 0.85 && throttle_rate [node] > 0)
 				throttle_rate [node] = Math.Max(throttle_rate [node] - 0.01, 0);
 			else 
 				return false;

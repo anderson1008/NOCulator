@@ -118,16 +118,19 @@ namespace ICSimulator
 		// Slowdown-aware Throttling
 		public static bool throttle_enable = true;
 		public static double slowdown_epoch = 300000; // may sweep seperately, D
-		public static double fast_throttle_threshold = 1.15; // may sweep, A
+		public static double fast_throttle_threshold = 1.0; // may sweep, A
+		public static double succ_meet_fair = 5; //number of epoch meeting fairness goals before throttling up for performance improvement
+		public static double uf_adjust = 0.02; // should not be sensitive
+		public static double fair_keep_trying = 10; // should equal to the steps taken to increase throttling rate from 0 to max.
+
 		public static double sd_tolerant_per_node = 0.001; // may sweep, B, insignificant
 		public static int th_bad_dec_counter = 3; // may sweep, C
 		public static int th_bad_rst_counter = 10; // E
 
-
+		public static double slowdown_delta = 0.1; // slowdown difference between each ranking level
 		public static bool preempt = false;
 		public static bool slowdown_aware = false;
 		public static double preempt_threshold = 8;
-		public static double slowdown_delta = 0.1; // slowdown difference between each ranking level
 		public static double enable_qos_non_mem_threshold = 3; // i.e. enable_qos_non_mem_threhold * slowdown_delta
 		public static double enable_qos_mem_threshold = 3;
 		public static double mpki_threshold = 30;
