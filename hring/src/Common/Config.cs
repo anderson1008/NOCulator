@@ -121,6 +121,7 @@ namespace ICSimulator
 		public static double enable_qos_non_mem_threshold = 3; // i.e. enable_qos_non_mem_threhold * slowdown_delta
 		public static double enable_qos_mem_threshold = 3;
 		public static double mpki_threshold = 30;
+		public static bool favor_performance = false;
 
 		public static bool throttle_enable = true;
 		public static double curr_L1miss_threshold = 0.06; // an app can be throttled only if L1 miss > curr_L1miss_threshlod; Greater value will preserve performance (i.e., less applciation will be throughput sensitive), but give less improvement on fairness

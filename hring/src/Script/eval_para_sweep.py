@@ -26,10 +26,10 @@ from matplotlib.ticker import FuncFormatter
 
 
 # target dir
-NUM_WORKLOAD = 5 
+NUM_WORKLOAD = 2 
 num_value = 0
-target_dir = "/home/xiyue/4x4/SweepAll/results/homo/4x4/design/"
-workload_dir = "/home/xiyue/workload_list/homo_4x4_ipc"
+target_dir = "/Users/Anderson/Desktop/SweepAll_8x8/results/homo/8x8/design/"
+workload_dir = "/Users/Anderson/Desktop/workload_list/homo_8x8_ipc"
 ws_plt = []
 hs_plt = []
 uf_plt = []
@@ -42,7 +42,7 @@ for dir in os.listdir (target_dir):
   _ws_per_workload = [0] * NUM_WORKLOAD
   _hs_per_workload = [0] * NUM_WORKLOAD
   _uf_per_workload = [0] * NUM_WORKLOAD
-  for sim_index in range (1, NUM_WORKLOAD+1, 1):
+  for sim_index in range (2, NUM_WORKLOAD+1, 1):
     sim_file = target_dir + dir + "/sim_" + str(sim_index) + ".out"
     if os.path.isfile (sim_file) is False:
       print "The file " + sim_file + " doesn't exist."
@@ -78,6 +78,11 @@ plt.plot (para_value_plt, hs_plt, 'gv')
 plt.subplot(3,1,3)
 plt.plot (para_value_plt, uf_plt, 'bs')
 plt.show ()
+
+### Just to print out the ws, hs, and uf array
+print _ws_per_workload
+print _hs_per_workload
+print _uf_per_workload
 
 
 

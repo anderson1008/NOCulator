@@ -1,5 +1,4 @@
 #!/usr/bin/python
-<<<<<<< HEAD
 
 import sys
 import os

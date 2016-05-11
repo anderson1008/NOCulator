@@ -45,7 +45,7 @@ idealnet = false
 router.linkLatency = 2
 edge_loop = false 
 
-controller = THROTTLE_QOS
+//controller = THROTTLE_QOS
 shcache_buf = 16
 
 

@@ -164,7 +164,9 @@ namespace ICSimulator {
                 requests[next] = r;
                 issueT[next] = Simulator.CurrentRound;
                 headT[next] = Simulator.CurrentRound;
-                if (isReady && r != null) r.service();  // service non-memory instruction directly here.
+				if (isReady && r != null) {
+					r.service();  // service non-memory instruction directly here.
+				}
                 //Console.WriteLine("pr{0}: new req in slot {1}: addr {2}, write {3} ready {4}", m_cpu.ID, next, address, isWrite, isReady);
                 next++;
                 if (!isReady) outstandingReqs++;

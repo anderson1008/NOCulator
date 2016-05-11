@@ -136,10 +136,10 @@ def cmp_geo_avg (data_set):
   new_data_set = [log(x) for x in data_set]
   return exp(sum (new_data_set)/len(new_data_set))
 
-def cmp_geo_avg (error_raw):
-  # error rate has to be an array or list
-  new_error_raw = [log(x) for x in error_raw]
-  return exp(sum (new_error_raw)/len(new_error_raw))
+#def cmp_geo_avg (error_raw):
+#  # error rate has to be an array or list
+#  new_error_raw = [log(x) for x in error_raw]
+#  return exp(sum (new_error_raw)/len(new_error_raw))
 
 
 

@@ -426,6 +426,7 @@ namespace ICSimulator
 				switch (m_trace.type) {
 				case Trace.Type.Rd:
 				case Trace.Type.Wr:
+		
 
 					// if no mshr available when the next is a memory instruction, break out of loop here
 					if (nMem == 0 || !canIssueMSHR (m_trace.address)) {
@@ -448,7 +449,7 @@ namespace ICSimulator
 						issueReq (req);
 
 					}
-
+					//|| !canIssueMSHR (m_trace.address)
 					m_trace_valid = false;
 					break;
 

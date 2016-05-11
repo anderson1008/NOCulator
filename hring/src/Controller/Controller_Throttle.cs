@@ -295,14 +295,26 @@ namespace ICSimulator
 			Console.WriteLine ("sd_delta = {0:0.000}", sd_delta);
 			Console.WriteLine ("uf_delta = {0:0.000}", uf_delta);
 
-			if (sd_delta / Config.N + uf_delta <= 0) {
-				Console.WriteLine ("Good deal!");
-				return false; // the average of slowdown reduction of each core outweight the degradation of unfairness; Or simply both of them are improved.
+			// the average slowdown decrease of each node exceed the increased unfairness.
+			// or
+			// the unfairness reduction outweight the average increased slowdown at each node.
+			if (Config.favor_performance == true) {
+				if (sd_delta < 0) {
+					Console.WriteLine ("Good deal!");
+					return false; // the average of slowdown reduction of each core outweight the degradation of unfairness; Or simply both of them are improved.
+				} else {
+					Console.WriteLine ("Bad Idea! Rollback is needed.");
+					return true;
+				}
 			} else {
-				Console.WriteLine ("Bad Idea! Rollback is needed.");
-				return true;
+				if (sd_delta / Config.N + uf_delta <= 0) {
+					Console.WriteLine ("Good deal!");
+					return false; // the average of slowdown reduction of each core outweight the degradation of unfairness; Or simply both of them are improved.
+				} else {
+					Console.WriteLine ("Bad Idea! Rollback is needed.");
+					return true;
+				}
 			}
-
 		}
 
 		public void ThrottleSTC ()
@@ -531,14 +543,7 @@ namespace ICSimulator
 		{
 			return MultiQThrottlePktPool.construct();
 		}		
-
-
-
-
-		/// <summary>
-		/// 	throttle_stc() 
-		/// </summary>		
-
+			
 		public void throttle_stc ()
 		{
 			m_currunfairness = m_est_sd [m_slowest_core];	

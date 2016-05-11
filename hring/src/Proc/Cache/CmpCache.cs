@@ -1188,7 +1188,7 @@ namespace ICSimulator
             if (txn.n_pkts_remaining > 0)
                 send_pkt(txn, txn.pkts);
             else
-                txn.cb();  // TODO: by Xiyue: not known what's for.
+                txn.cb();  // use to call req_done 
         }
 
         void send_pkt(CmpCache_Txn txn, CmpCache_Pkt pkt)

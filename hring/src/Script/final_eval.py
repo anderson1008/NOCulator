@@ -85,11 +85,11 @@ NODE = 64
 ACTIVE_CYCLE = 5000000
 
 # My MacPro
-PATH_WORKLOAD = "/home/xiyue/workload_list/"+TYPE+"_"+SIZE+"_ipc"
-PATH_DESIGN = "/home/xiyue/"+SIZE+"/FinalEval/results/"+TYPE+"/"+SIZE+"/design/"
+PATH_WORKLOAD = "/Users/Anderson/Desktop/nas_raw/nasm/workload_list/"+TYPE+"_"+SIZE+"_ipc"
+PATH_DESIGN = "/Users/Anderson//Desktop/nas_raw/nasm/8x8/FinalEval/results_1/results/"+TYPE+"/"+SIZE+"/design/"
 #PATH_DESIGN = "/home/xiyue/ACT_8x8/homo/8x8/design/"
-PATH_BASELINE = "/home/xiyue/"+SIZE+"/FinalEval/results_1/"+TYPE+"/"+SIZE+"/baseline/"
-NUM_SIM = 30
+PATH_BASELINE = "/Users/Anderson/Desktop/nas_raw/nasm/8x8/"+"/FinalEval/results_1/results/"+TYPE+"/"+SIZE+"/baseline/"
+NUM_SIM = 10
 
 # Uni MacPro
 #ROOT_DIR = "/Users/xiyuexiang/Desktop/FinalEval/"
