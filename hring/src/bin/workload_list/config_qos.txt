@@ -7,7 +7,7 @@ network_nrY = 4
 //trace_wraparound = true
 
 finish = cycle 6000000
-warmup_cyc = 1000000
+//warmup_cyc = 1000000
 slowdown_epoch = 100000
 
 curr_L1miss_threshold = 0.1

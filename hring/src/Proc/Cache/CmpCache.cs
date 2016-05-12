@@ -361,6 +361,31 @@ namespace ICSimulator
 			}
 		}
 
+		public bool needMSHR(int node, ulong addr,  bool write){
+
+		
+			// probe private cache
+			CmpCache_State state = new CmpCache_State(); // not allocate anything, just to fool the compilier
+			bool prv_state;
+			bool prv_hit = m_prv[node].probe(addr, out prv_state);
+
+			bool sh_hit = false;
+
+			if (m_sh_perfect)
+			{
+				ulong blk = addr >> m_blkshift;
+				sh_hit = true;
+				if (m_perf_sh.ContainsKey(blk))
+					state = m_perf_sh[blk];
+			}
+			else
+				sh_hit = m_sh.probe(addr, out state);
+
+			bool prv_excl = sh_hit ? (state.excl == node) : false;
+
+			if ((prv_hit && write && !prv_excl) || !prv_hit)  return true;
+			else return false;
+		}
 
 		public void access(int node, ulong addr, int mshr, bool write, bool stats_active, 
 			Simulator.Ready cb, CPU.qos_stat_delegate qos_cb)
@@ -378,20 +403,20 @@ namespace ICSimulator
 
 			bool sh_hit = false;
             
-            if (m_sh_perfect)
-            {
-                ulong blk = addr >> m_blkshift;
-                sh_hit = true;
-                if (m_perf_sh.ContainsKey(blk))
-                    state = m_perf_sh[blk];
-                else
-                {
-                    state = new CmpCache_State();
-                    m_perf_sh[blk] = state;
-                }
-            }
-            else
-                sh_hit = m_sh.probe(addr, out state);
+			if (m_sh_perfect)
+			{
+				ulong blk = addr >> m_blkshift;
+				sh_hit = true;
+				if (m_perf_sh.ContainsKey(blk))
+					state = m_perf_sh[blk];
+				else // create l2 cache block for perfect shared cache !!!!!!!!!!!!WRONG
+				{
+					state = new CmpCache_State();
+					m_perf_sh[blk] = state;
+				}
+			}
+			else
+				sh_hit = m_sh.probe(addr, out state);
 
             bool prv_excl = sh_hit ? (state.excl == node) : false;
 
@@ -433,6 +458,7 @@ namespace ICSimulator
                 txn.node = node;
 				txn.cb = cb;
 				txn.qos_cb = qos_cb;
+				txn.mshr = mshr;
 
                 // request packet
                 CmpCache_Pkt req_pkt = add_ctl_pkt(txn, node, sh_slice, false, 1, false);

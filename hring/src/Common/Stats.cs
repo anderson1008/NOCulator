@@ -10,16 +10,20 @@ namespace ICSimulator
     {
 		// By Xiyue: for coherent packet profiling
 		//public SampledStat[] avg_slowdown_error;
+
+		public PeriodicAccumStat[] L1miss_persrc_period;
+		public AccumStat [] throttle_down_profile; 
+		public AccumStat [] cpu_stall_throttle;
+
 		public SampledStat flit_intf, packet_intf, request_intf, app_stall_per_epoch;
 		public AccumStat false_block, correct_block;
 		public AccumStat priority_inv;
 		public PeriodicAccumStat[] estimated_slowdown;
-		public PeriodicAccumStat[] L1miss_persrc_period;
+
 		//public PeriodicAccumStat[] estimated_slowdown_period;
 		public PeriodicAccumStat[] noc_stc; // noc-level stall time criticality
 		public PeriodicAccumStat[] app_rank;
-		public AccumStat [] throttle_down_profile; 
-		public AccumStat [] cpu_stall_throttle;
+
 		public AccumStat opt_fair, opt_perf;
 		public SampledStat[] mshrs_credit, mshrs_util;
 		public SampledStat inherit_table_size;

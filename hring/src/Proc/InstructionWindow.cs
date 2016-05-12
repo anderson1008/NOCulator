@@ -308,6 +308,7 @@ namespace ICSimulator {
                     // 1. the outstanding req is a write, AND
                     // 2. the completion is a read completion.
                     if (writes[i] && !write) continue;
+					else if (!writes[i] && write) continue;
 
 					//Console.WriteLine ("SetReady node = {0}, addr = {1}, time = {2}", m_cpu.ID, addresses [i], Simulator.CurrentRound);
 
