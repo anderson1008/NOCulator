@@ -281,19 +281,19 @@ namespace ICSimulator
 						}*/
 					}
 				}
-                                else if (Config.throttle_enable==true)
-                                {
+				else if (Config.throttle_enable && Config.controller == ControllerType.THROTTLE_QOS)
+            	{
 
 
-                if (p != null)
-                {
-					int intfCycle = get_txn_intf(p);
-                    foreach (Flit f in p.flits)
-					{
-						f.intfCycle = intfCycle;
-                        m_injQueue_flit.Enqueue(f);
-					}
-                }
+	                if (p != null)
+	                {
+						int intfCycle = get_txn_intf(p);  // first term: interf. of predecessor, second term: throttled cycle
+	                    foreach (Flit f in p.flits)
+						{
+							f.intfCycle = intfCycle;
+	                        m_injQueue_flit.Enqueue(f);
+						}
+	                }
 
 				if (m_injQueue_evict.Count > 0 && m_router.canInjectFlit(m_injQueue_evict.Peek())) // By Xiyue: ??? What is m_injQueue_evict ?
                 {
@@ -320,7 +320,7 @@ namespace ICSimulator
                 	    }
                 }
 
-                                }
+                 }
 				else
 				{
 

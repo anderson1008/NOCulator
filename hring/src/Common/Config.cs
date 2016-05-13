@@ -122,7 +122,8 @@ namespace ICSimulator
 		public static double enable_qos_mem_threshold = 3;
 		public static double mpki_threshold = 30;
 		public static bool favor_performance = false;
-
+		public static bool throttle_at_NI = true;
+		public static bool throttle_at_mshr = false;
 		public static bool throttle_enable = true;
 		public static double curr_L1miss_threshold = 0.06; // an app can be throttled only if L1 miss > curr_L1miss_threshlod; Greater value will preserve performance (i.e., less applciation will be throughput sensitive), but give less improvement on fairness
 		public static double slowdown_epoch = 10000; // may sweep
@@ -136,7 +137,10 @@ namespace ICSimulator
 		public static int thrt_up_slow_app = 4; // Parameter: Greater value improves fairness at the cost of lower performance improvement margin.
 		public static int thrt_down_stc_app = 4; // Parameter: greater value improve fairness at the cost of performance degradation
 		public static double throt_down_stage1 = 0.5;
-
+		public static double fast_throttle_threshold = 1.0; // may sweep, A
+		public static double succ_meet_fair = 5; //number of epoch meeting fairness goals before throttling up for performance improvement
+		public static double uf_adjust = 0.02; // should not be sensitive
+		public static double fair_keep_trying = 10; // should equal to the steps taken to increase throttling rate from 0 to max.
 		// Slowdown-aware Throttling
 		
 		public static string throttle_node = "1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1";

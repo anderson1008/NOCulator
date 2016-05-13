@@ -169,10 +169,13 @@ namespace ICSimulator
         void advanceRR()
         {
             int tries = nqueues;
+			bool inject = Simulator.controller.tryInject (node_id);
 
-            do
-                queue_next = (queue_next + 1) % nqueues;
-            while (tries-- > 0 && queues[queue_next].Count == 0 );
+			do
+				queue_next = (queue_next + 1) % nqueues;
+			while ((tries-- > 0 && queues [queue_next].Count == 0) || (queue_next == 0 && !inject && Config.throttle_at_NI));
+            //while (tries-- > 0 && queues[queue_next].Count == 0 &&
+			//	(queue_next==0 || !Simulator.controller.tryInject(node_id)));
         }
 
         public Packet next()
@@ -180,14 +183,11 @@ namespace ICSimulator
             if(node_id==-1)
                 throw new Exception("Haven't configured the packet pool");
             advanceRR();
-            
-            if (queues[queue_next].Count > 0 &&
-                    (queue_next != 0 || Simulator.controller.tryInject(node_id)) )
-            {
-                Packet p = queues[queue_next].Dequeue();
-                flitCount -= p.nrOfFlits;
-                return p;
-            }
+			if (queues [queue_next].Count > 0 ){ 
+				Packet p = queues [queue_next].Dequeue ();
+				flitCount -= p.nrOfFlits;
+				return p;
+			} 
             else
                 return null;
         }
