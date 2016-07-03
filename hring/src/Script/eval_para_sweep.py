@@ -26,10 +26,10 @@ from matplotlib.ticker import FuncFormatter
 
 
 # target dir
-NUM_WORKLOAD = 2 
+NUM_WORKLOAD = 3 
 num_value = 0
-target_dir = "/Users/Anderson/Desktop/SweepAll_8x8/results/homo/8x8/design/"
-workload_dir = "/Users/Anderson/Desktop/workload_list/homo_8x8_ipc"
+target_dir = "/Users/Anderson/Desktop/8x8/SweepThrotUpNum/results/homo/8x8/design/"
+workload_dir = "/Users/Anderson/GoogleDrive/NOCulator/hring/src/bin/workload_list/homo_8x8_ipc"
 ws_plt = []
 hs_plt = []
 uf_plt = []
@@ -42,7 +42,7 @@ for dir in os.listdir (target_dir):
   _ws_per_workload = [0] * NUM_WORKLOAD
   _hs_per_workload = [0] * NUM_WORKLOAD
   _uf_per_workload = [0] * NUM_WORKLOAD
-  for sim_index in range (2, NUM_WORKLOAD+1, 1):
+  for sim_index in range (1, NUM_WORKLOAD+1, 1):
     sim_file = target_dir + dir + "/sim_" + str(sim_index) + ".out"
     if os.path.isfile (sim_file) is False:
       print "The file " + sim_file + " doesn't exist."

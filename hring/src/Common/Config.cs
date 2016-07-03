@@ -125,7 +125,7 @@ namespace ICSimulator
 		public static bool throttle_at_NI = true;
 		public static bool throttle_at_mshr = false;
 		public static bool throttle_enable = true;
-		public static double curr_L1miss_threshold = 0.06; // an app can be throttled only if L1 miss > curr_L1miss_threshlod; Greater value will preserve performance (i.e., less applciation will be throughput sensitive), but give less improvement on fairness
+		public static double curr_L1miss_threshold = 0.05; // an app can be throttled only if L1 miss > curr_L1miss_threshlod; Greater value will preserve performance (i.e., less applciation will be throughput sensitive), but give less improvement on fairness
 		public static double slowdown_epoch = 10000; // may sweep
 		public static double throt_min = 0.1;  // share with Sigcomm paper
 		public static int th_bad_dec_counter = 3; // may sweep
@@ -135,7 +135,7 @@ namespace ICSimulator
 		public static double throt_prob_lv3 = 0.8;
 		public static int th_bad_rst_counter = 10; //may sweep
 		public static int thrt_up_slow_app = 4; // Parameter: Greater value improves fairness at the cost of lower performance improvement margin.
-		public static int thrt_down_stc_app = 4; // Parameter: greater value improve fairness at the cost of performance degradation
+		public static int thrt_down_stc_app = 8; // Parameter: greater value improve fairness at the cost of performance degradation
 		public static double throt_down_stage1 = 0.5;
 		public static double fast_throttle_threshold = 1.0; // may sweep, A
 		public static double succ_meet_fair = 5; //number of epoch meeting fairness goals before throttling up for performance improvement

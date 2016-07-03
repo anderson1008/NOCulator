@@ -9,9 +9,9 @@ import my_print
 import matplotlib.pyplot as plt
 import get
 
-#work_dir = "/Users/Anderson/GoogleDrive/NOCulator/hring/src/bin"
-work_dir = "//Users/Anderson/Desktop/SweepAll_8x8/results/homo/8x8/design/17"
-input_file = "sim_17.out"
+work_dir = "/Users/Anderson/GoogleDrive/NOCulator/hring/src/bin"
+#work_dir = "//Users/Anderson/Desktop/SweepAll_8x8/results/homo/8x8/design/17"
+input_file = "bs_homo_8x8_2.out"
 
 # MAP 1 & 2
 #ipc_alone = [1.90, 2.78, 2.52, 1.83, 1.90, 2.78, 2.52, 1.83, 1.90, 2.78, 2.52, 1.83, 1.90, 2.78, 2.52, 1.83] 
@@ -176,14 +176,14 @@ ipc_shared = cmp_ipc (insns_shared, act_t_shared)
 mpki=cmp_mpki(stat_shared)
 print "Avg app mpki"
 print cmp_app_avg(mpki)
-est_sd = get_est_sd(stat_shared)
-l1_miss = get_est_L1miss(stat_shared)
+#est_sd = get_est_sd(stat_shared)
+#l1_miss = get_est_L1miss(stat_shared)
 
-plt.figure(1)
-plt.subplot(2,1,1)
-my_print.print_period(est_sd)
-plt.subplot(2,1,2)
-my_print.print_period(l1_miss)
+#plt.figure(1)
+#plt.subplot(2,1,1)
+#my_print.print_period(est_sd)
+#plt.subplot(2,1,2)
+#my_print.print_period(l1_miss)
 #plt.show() # enable to show the plot
 
 #print est_sd

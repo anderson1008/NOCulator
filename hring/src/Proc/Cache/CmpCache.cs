@@ -779,174 +779,167 @@ namespace ICSimulator
 
 			Debug.Assert(!m_sh_perfect);
 
-			if (Simulator.controller.tryInject (node) == false && Config.throttle_enable == true && (node != sh_slice) && Config.controller == ControllerType.THROTTLE_QOS) {
-				Simulator.Defer (delegate() {
-					Mem_access (node, mshr, addr, sh_slice, write, state, cb, qos_cb,
-						stats_active, L1hit, L1upgr, L1ev, L1wb,
-						L2access, L2hit, L2ev, L2wb, c2c, throttleCycle + 1);
-				}, Simulator.CurrentRound + 1);
+			
 
-			} else {
+			#if DEBUG
+			//if (throttleCycle != 0)
+			Console.WriteLine ("ISSUE MEM Req_addr = {1}, Node = {2} time = {0}", Simulator.CurrentRound, addr, node);
+			#endif
 
-				#if DEBUG
-				//if (throttleCycle != 0)
-				Console.WriteLine ("ISSUE MEM Req_addr = {1}, Node = {2} time = {0}", Simulator.CurrentRound, addr, node);
-				#endif
+			CmpCache_Txn txn = null;
+			txn = new CmpCache_Txn();
+			txn.node = node;
+			txn.throttleCycle = throttleCycle;
+			txn.cb = cb;
+			txn.qos_cb = qos_cb;
+			txn.req_addr = addr;
+			txn.mshr = mshr;
 
-				CmpCache_Txn txn = null;
-				txn = new CmpCache_Txn();
-				txn.node = node;
-				txn.throttleCycle = throttleCycle;
-				txn.cb = cb;
-				txn.qos_cb = qos_cb;
-				txn.req_addr = addr;
-				txn.mshr = mshr;
+			/*
+			L2access = true;
+			L2ev = false;
+			L2wb = false;
+			L1ev = false;
+			L1wb = false;
+			*/
 
-				/*
-				L2access = true;
-				L2ev = false;
-				L2wb = false;
-				L1ev = false;
-				L1wb = false;
-				*/
+			// request packet
+			CmpCache_Pkt req_pkt = add_ctl_pkt(txn, node, sh_slice, false, 17, true);
 
-				// request packet
-				CmpCache_Pkt req_pkt = add_ctl_pkt(txn, node, sh_slice, false, 17, true);
+			// cache response packet
+			CmpCache_Pkt resp_pkt = add_data_pkt(txn, sh_slice, node, true, 18, true);
+			resp_pkt.delay = m_opdelay; // req already active -- just a pass-through op delay here
 
-				// cache response packet
-				CmpCache_Pkt resp_pkt = add_data_pkt(txn, sh_slice, node, true, 18, true);
-				resp_pkt.delay = m_opdelay; // req already active -- just a pass-through op delay here
+			// memory request packet
+			int mem_slice = map_addr_mem(node, addr);
+			CmpCache_Pkt memreq_pkt = add_ctl_pkt(txn, sh_slice, mem_slice, false, 19, true);
+			memreq_pkt.delay = m_shdelay;
 
-				// memory request packet
-				int mem_slice = map_addr_mem(node, addr);
-				CmpCache_Pkt memreq_pkt = add_ctl_pkt(txn, sh_slice, mem_slice, false, 19, true);
-				memreq_pkt.delay = m_shdelay;
+			// memory-access virtual node
+			CmpCache_Pkt mem_access = add_ctl_pkt(txn, 0, 0, false, 20, false);
+			mem_access.send = false;
+			mem_access.mem = true;
+			mem_access.mem_addr = addr;
+			mem_access.mem_write = false; // cache-line fill
+			mem_access.mem_requestor = node;
 
-				// memory-access virtual node
-				CmpCache_Pkt mem_access = add_ctl_pkt(txn, 0, 0, false, 20, false);
-				mem_access.send = false;
-				mem_access.mem = true;
-				mem_access.mem_addr = addr;
-				mem_access.mem_write = false; // cache-line fill
-				mem_access.mem_requestor = node;
+			// memory response packet
+			CmpCache_Pkt memresp_pkt = add_data_pkt(txn, mem_slice, sh_slice, false, 21, true);
 
-				// memory response packet
-				CmpCache_Pkt memresp_pkt = add_data_pkt(txn, mem_slice, sh_slice, false, 21, true);
+			// connect up the critical path first
+			add_dep(req_pkt, memreq_pkt);
+			add_dep(memreq_pkt, mem_access);
+			add_dep(mem_access, memresp_pkt);
+			add_dep(memresp_pkt, resp_pkt);
 
-				// connect up the critical path first
-				add_dep(req_pkt, memreq_pkt);
-				add_dep(memreq_pkt, mem_access);
-				add_dep(mem_access, memresp_pkt);
-				add_dep(memresp_pkt, resp_pkt);
+			// now, handle replacement in the shared cache...
+			CmpCache_State new_state = new CmpCache_State();
 
-				// now, handle replacement in the shared cache...
-				CmpCache_State new_state = new CmpCache_State();
+			new_state.owners.reset();
+			new_state.owners.set(node);
+			new_state.excl = node;
+			new_state.modified = write;
+			new_state.sh_dirty = false;
 
-				new_state.owners.reset();
-				new_state.owners.set(node);
-				new_state.excl = node;
-				new_state.modified = write;
-				new_state.sh_dirty = false;
+			ulong sh_evicted_addr;
+			CmpCache_State sh_evicted_state;
+			bool evicted = m_sh.insert(addr, new_state, out sh_evicted_addr, out sh_evicted_state, Simulator.CurrentRound);
 
-				ulong sh_evicted_addr;
-				CmpCache_State sh_evicted_state;
-				bool evicted = m_sh.insert(addr, new_state, out sh_evicted_addr, out sh_evicted_state, Simulator.CurrentRound);
+			if (evicted)
+			{
+				// shared-cache eviction (different from the private-cache evictions elsewhere):
+				// we must evict any private-cache copies, because we model an inclusive hierarchy.
 
-				if (evicted)
+				L2ev = true;
+
+				CmpCache_Pkt prv_evict_join = add_joinpt(txn, false, 22);
+
+				if (sh_evicted_state.excl != -1) // evicted block lives only in one prv cache
 				{
-					// shared-cache eviction (different from the private-cache evictions elsewhere):
-					// we must evict any private-cache copies, because we model an inclusive hierarchy.
+					// invalidate request to prv cache before sh cache does eviction
+					CmpCache_Pkt prv_invl = add_ctl_pkt(txn, sh_slice, sh_evicted_state.excl, false, 23, false);
+					add_dep(memresp_pkt, prv_invl);
+					CmpCache_Pkt prv_wb;
 
-					L2ev = true;
+					prv_invl.delay = m_opdelay;
 
-					CmpCache_Pkt prv_evict_join = add_joinpt(txn, false, 22);
-
-					if (sh_evicted_state.excl != -1) // evicted block lives only in one prv cache
+					if (sh_evicted_state.modified)
 					{
-						// invalidate request to prv cache before sh cache does eviction
-						CmpCache_Pkt prv_invl = add_ctl_pkt(txn, sh_slice, sh_evicted_state.excl, false, 23, false);
-						add_dep(memresp_pkt, prv_invl);
-						CmpCache_Pkt prv_wb;
+						// writeback
+						prv_wb = add_data_pkt(txn, sh_evicted_state.excl, sh_slice, false, 24, false);
+						prv_wb.delay = m_prvdelay;
+						sh_evicted_state.sh_dirty = true;
+					}
+					else
+					{
+						// simple ACK
+						prv_wb = add_ctl_pkt(txn, sh_evicted_state.excl, sh_slice, false, 25, false);
+						prv_wb.delay = m_prvdelay;
+					}
 
-						prv_invl.delay = m_opdelay;
+					add_dep(prv_invl, prv_wb);
+					add_dep(prv_wb, prv_evict_join); // By Xiyue: how to wake up a remote packet in node 0?
 
-						if (sh_evicted_state.modified)
+					bool prv_evicted_dat;
+					m_prv[sh_evicted_state.excl].inval(sh_evicted_addr, out prv_evicted_dat);
+				}
+				else if (sh_evicted_state.owners.any_set()) // evicted block has greater-than-one sharer set
+				{
+					for (int i = 0; i < m_N; i++)
+						if (sh_evicted_state.owners.is_set(i))
 						{
-							// writeback
-							prv_wb = add_data_pkt(txn, sh_evicted_state.excl, sh_slice, false, 24, false);
-							prv_wb.delay = m_prvdelay;
-							sh_evicted_state.sh_dirty = true;
+							CmpCache_Pkt prv_invl = add_ctl_pkt(txn, sh_slice, i, false, 26, false);
+							CmpCache_Pkt prv_ack = add_ctl_pkt(txn, i, sh_slice, false, 27, false);
+
+							prv_invl.delay = m_opdelay;
+							prv_ack.delay = m_prvdelay;
+
+							add_dep(memresp_pkt, prv_invl);
+							add_dep(prv_invl, prv_ack);
+							add_dep(prv_ack, prv_evict_join);
+
+							bool prv_evicted_dat;
+							m_prv[i].inval(sh_evicted_addr, out prv_evicted_dat);
 						}
-						else
-						{
-							// simple ACK
-							prv_wb = add_ctl_pkt(txn, sh_evicted_state.excl, sh_slice, false, 25, false);
-							prv_wb.delay = m_prvdelay;
-						}
-
-						add_dep(prv_invl, prv_wb);
-						add_dep(prv_wb, prv_evict_join); // By Xiyue: how to wake up a remote packet in node 0?
-
-						bool prv_evicted_dat;
-						m_prv[sh_evicted_state.excl].inval(sh_evicted_addr, out prv_evicted_dat);
-					}
-					else if (sh_evicted_state.owners.any_set()) // evicted block has greater-than-one sharer set
-					{
-						for (int i = 0; i < m_N; i++)
-							if (sh_evicted_state.owners.is_set(i))
-							{
-								CmpCache_Pkt prv_invl = add_ctl_pkt(txn, sh_slice, i, false, 26, false);
-								CmpCache_Pkt prv_ack = add_ctl_pkt(txn, i, sh_slice, false, 27, false);
-
-								prv_invl.delay = m_opdelay;
-								prv_ack.delay = m_prvdelay;
-
-								add_dep(memresp_pkt, prv_invl);
-								add_dep(prv_invl, prv_ack);
-								add_dep(prv_ack, prv_evict_join);
-
-								bool prv_evicted_dat;
-								m_prv[i].inval(sh_evicted_addr, out prv_evicted_dat);
-							}
-					}
-					else // evicted block has no owners (was only in shared cache)
-					{
-						add_dep(memresp_pkt, prv_evict_join);
-					}
-
-					// now writeback to memory, if we were dirty
-					if (sh_evicted_state.sh_dirty)
-					{
-						CmpCache_Pkt mem_wb = add_data_pkt(txn, sh_slice, mem_slice, false, 28, false);
-						mem_wb.delay = m_opdelay;
-						add_dep(prv_evict_join, mem_wb);
-						CmpCache_Pkt mem_wb_op = add_ctl_pkt(txn, 0, 0, false, 29, false);
-						mem_wb_op.send = false;
-						mem_wb_op.mem = true;
-						mem_wb_op.mem_addr = sh_evicted_addr;
-						mem_wb_op.mem_write = true;
-						mem_wb_op.mem_requestor = node;
-						add_dep(mem_wb, mem_wb_op);
-						L2wb = true;
-					}
+				}
+				else // evicted block has no owners (was only in shared cache)
+				{
+					add_dep(memresp_pkt, prv_evict_join);
 				}
 
-				// ...and insert and handle replacement in the private cache
-				ulong evict_addr;
-				bool evict_data;
-				bool prv_evicted = m_prv[node].insert(addr, true, out evict_addr, out evict_data, Simulator.CurrentRound);
-
-				// add either a writeback or a release packet
-				if (prv_evicted)
+				// now writeback to memory, if we were dirty
+				if (sh_evicted_state.sh_dirty)
 				{
-					L1ev = true;
-					do_evict(txn, resp_pkt, node, evict_addr, out L1wb);
+					CmpCache_Pkt mem_wb = add_data_pkt(txn, sh_slice, mem_slice, false, 28, false);
+					mem_wb.delay = m_opdelay;
+					add_dep(prv_evict_join, mem_wb);
+					CmpCache_Pkt mem_wb_op = add_ctl_pkt(txn, 0, 0, false, 29, false);
+					mem_wb_op.send = false;
+					mem_wb_op.mem = true;
+					mem_wb_op.mem_addr = sh_evicted_addr;
+					mem_wb_op.mem_write = true;
+					mem_wb_op.mem_requestor = node;
+					add_dep(mem_wb, mem_wb_op);
+					L2wb = true;
 				}
-
-				do_stats(stats_active, node, L1hit, L1upgr, L1ev, L1wb,
-					L2access, L2hit, L2ev, L2wb, c2c);
-				txn_schedule (txn, cb);
 			}
+
+			// ...and insert and handle replacement in the private cache
+			ulong evict_addr;
+			bool evict_data;
+			bool prv_evicted = m_prv[node].insert(addr, true, out evict_addr, out evict_data, Simulator.CurrentRound);
+
+			// add either a writeback or a release packet
+			if (prv_evicted)
+			{
+				L1ev = true;
+				do_evict(txn, resp_pkt, node, evict_addr, out L1wb);
+			}
+
+			do_stats(stats_active, node, L1hit, L1upgr, L1ev, L1wb,
+				L2access, L2hit, L2ev, L2wb, c2c);
+			txn_schedule (txn, cb);
+			
 		}
 
 
