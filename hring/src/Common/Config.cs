@@ -82,9 +82,9 @@ namespace ICSimulator
 
 	public enum SynthTrafficPattern
 	{
-		UR,
-		BC,
-		TR
+		UR, // Uniform Random
+		BC, // Bit
+		TR // Tornado
 	}
 	
     public enum Topology
@@ -108,9 +108,35 @@ namespace ICSimulator
 
     public class Config : ConfigGroup
     {
+		// --- DO NOT MOVE ---//
+		// must be declared first
         public static ProcessorConfig proc = new ProcessorConfig();
         public static MemoryConfig memory = new MemoryConfig();
         public static RouterConfig router = new RouterConfig();
+		public static int N
+		{ get { return network_nrX * network_nrY; } }
+		// ---- synth traces
+		public static double synth_reads_fraction = 0.8;
+		//public static double synth_rate = 0.005;
+		public static bool bSynthBitComplement = false;
+		public static bool bSynthTranspose = false;
+		public static bool bSynthHotspot = false;
+		public static bool randomHotspot = false;
+		// ------------------------------------------//
+
+		// --- Synthetic Traffic Simulation --- //
+		public static bool synthGen = true; // will not generate CPU instance if it is true
+		public static double synth_rate = 0.4; // injection rate in packet/cycle/node
+		public static int synthQueueLimit = 1000;
+		public static bool uniform_size_enable = true;
+		public static int uniform_size = 1;
+		public static bool multicast = true;
+		public static int mc_degree = N; // number of packets send out; N: broadcast; 1: unicast;
+		public static double mc_rate = 0.01;
+		public static SynthTrafficPattern synthPattern = SynthTrafficPattern.UR;
+
+		// --- Carpool: NoC with Gather-Scatter Support
+
 
 		// ----
 		// By Xiyue
@@ -168,7 +194,8 @@ namespace ICSimulator
 
 
 
-		// For MBNoC
+		// For Deflection Containment
+		// Many parameters related to the underlying topology
 		public static int sub_net = 2;
 		public static int num_bypass = 1; // not include local; 
 		public static bool bypass_enable = true;
@@ -177,12 +204,7 @@ namespace ICSimulator
 		public static bool randomize_defl = false; // false: static deflection; true: randomized deflection
 		public static bool subnet_sel_rand = false;
 		public static ulong subnet_reset_period = 500;
-		public static bool synthGen = false;
-		public static double synth_rate = 0.5;
-		public static int synthQueueLimit = 1000;
-		public static bool uniform_size_enable = true;
-		public static int uniform_size = 1;
-		public static SynthTrafficPattern synthPattern = SynthTrafficPattern.UR;
+
 		// end Xiyue
 
         // ----
@@ -357,13 +379,7 @@ namespace ICSimulator
 
         public static bool bochs_fe = false;
 
-        // ---- synth traces
-        public static double synth_reads_fraction = 0.8;
-        //public static double synth_rate = 0.005;
-		public static bool bSynthBitComplement = false;
-		public static bool bSynthTranspose = false;
-		public static bool bSynthHotspot = false;
-		public static bool randomHotspot = false;
+      
 
         // ----
 
@@ -535,8 +551,7 @@ namespace ICSimulator
         public static string finish = "cycle 10000000";
         public static string solo = "";
 
-        public static int N
-        { get { return network_nrX * network_nrY; } }
+
 
         //TODO: CATEGORIZE
         public static string[] traceFilenames;

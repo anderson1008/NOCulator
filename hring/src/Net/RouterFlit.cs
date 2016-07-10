@@ -1,6 +1,7 @@
 //#define DEBUG
 //#define RETX_DEBUG
 //#define memD
+//#define PACKETDUMP
 
 using System;
 using System.Collections.Generic;
@@ -11,6 +12,8 @@ namespace ICSimulator
 {
     public abstract class Router_Flit : Router
     {
+		//Implement the basic funcationality of a bufferless router (BLESS)
+
         // injectSlot is from Node; injectSlot2 is higher-priority from
         // network-level re-injection (e.g., placeholder schemes)
         protected Flit m_injectSlot, m_injectSlot2;
@@ -202,8 +205,13 @@ namespace ICSimulator
         	    	Flit eject = ejectLocal();
 					if (i == 0) f1 = eject; 
 					else if (i == 1) f2 = eject;
-					if (eject != null)             
-						acceptFlit(eject); 	// Eject flit			
+					if (eject != null) {
+						
+						acceptFlit (eject); 	// Eject flit	
+#if DEBUG
+						Console.WriteLine ("#3 Time {0}: Eject @ node {1} {2}", Simulator.CurrentRound,coord.ID, eject.ToString());
+#endif
+					}
 				}
 				if (f1 != null && f2 != null && f1.packet == f2.packet)
 					Simulator.stats.ejectsFromSamePacket.Add(1);
@@ -218,9 +226,13 @@ namespace ICSimulator
             for (int dir = 0; dir < 4; dir++)
                 if (linkIn[dir] != null && linkIn[dir].Out != null)
                 {
+#if DEBUG
+					Console.WriteLine ("#4 Time {0}: BW @ node {1} {3} port {2}", Simulator.CurrentRound,coord.ID, linkIn[dir].Out.inDir.ToString(),linkIn[dir].Out.ToString() );
+#endif
                     input[c++] = linkIn[dir].Out;  // c: # of incoming flits
                     //linkIn[dir].Out.inDir = dir;  // By Xiyue: what's the point? Seems redundant
                     linkIn[dir].Out = null;
+
                 }
 
             // sometimes network-meddling such as flit-injection can put unexpected
@@ -269,20 +281,14 @@ namespace ICSimulator
                     }
                     else
                         throw new Exception("what???inject null flits??");
-					
-                    input[c++] = inj;
+
+					if (inj != null) {
+						input [c++] = inj;
 #if DEBUG
-                    Console.WriteLine("injecting flit {0}.{1} at node {2} cyc {3}",
-                            m_injectSlot.packet.ID, m_injectSlot.flitNr, coord, Simulator.CurrentRound);
+					Console.WriteLine ("#5 Time {0}: Inject @ node {1} {2}", Simulator.CurrentRound,coord.ID, inj.ToString());
 #endif
-#if memD
-                    int r=inj.packet.requesterID;
-                    if(r==coord.ID)
-                        Console.WriteLine("inject flit at node {0}<>request:{1}",coord.ID,r);
-                    else
-                        Console.WriteLine("Diff***inject flit at node {0}<>request:{1}",coord.ID,r);
-#endif
-                    statsInjectFlit(inj);
+						statsInjectFlit (inj);
+					}
                 }
             }
 
@@ -304,8 +310,10 @@ namespace ICSimulator
 			_fullSort(ref input);
 
             // assign outputs
-            for (int i = 0; i < 4 && input[i] != null; i++)
+			for (int i = 0; i < 4; i++)
             {
+				if (input [i] == null)
+					continue;
                 PreferredDirection pd = determineDirection(input[i], coord);
                 int outDir = -1;
 				bool deflect = false;
@@ -384,6 +392,7 @@ namespace ICSimulator
 				{
                     if (pd.xDir != Simulator.DIR_NONE && linkOut[pd.xDir].In == null)
                     {
+						
                         linkOut[pd.xDir].In = input[i];
                         outDir = pd.xDir;
                     }
@@ -395,6 +404,7 @@ namespace ICSimulator
                     else 
                         deflect = true;
                 }
+
                 // deflect!
                 if (deflect)
                 {
@@ -415,6 +425,9 @@ namespace ICSimulator
                     if (outDir == -1) throw new Exception(
                             String.Format("Ran out of outlinks in arbitration at node {0} on input {1} cycle {2} flit {3} c {4} neighbors {5} outcount {6}", coord, i, Simulator.CurrentRound, input[i], c, neighbors, outCount));
                 }
+#if DEBUG
+				Console.WriteLine ("#6 Time {0}: SW @ node {1} Output{3} {2}", Simulator.CurrentRound,coord.ID, input[i].ToString(), outDir.ToString());
+#endif
             } // end assign output
         }
 
@@ -926,6 +939,8 @@ namespace ICSimulator
 
     public class Router_Flit_Ctlr : Router_Flit
     {
+
+		// Classic BLESS
         public Router_Flit_Ctlr(Coord myCoord)
             : base(myCoord)
         {

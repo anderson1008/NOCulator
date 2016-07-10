@@ -1254,7 +1254,8 @@ namespace ICSimulator
             txn.n_pkts_remaining--;
 
 			if (pkt.done) {
-				txn.qos_cb (txn); // Must be called before txn.cb(); Otherwise, instr entry will be reset.
+				if (Config.controller==ControllerType.THROTTLE_QOS)
+					txn.qos_cb (txn); // Must be called before txn.cb(); Otherwise, instr entry will be reset.
 				txn.cb ();
 			}
 

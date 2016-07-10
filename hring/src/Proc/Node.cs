@@ -159,46 +159,90 @@ namespace ICSimulator
             m_router = r;
         }
 
-
-		
-		void synthGen(double rate)
+		Packet packetization ()
 		{
-			if (Simulator.rand.NextDouble() < rate)
-			{
-				if (m_inj_pool.Count > Config.synthQueueLimit)
-					Simulator.stats.synth_queue_limit_drop.Add();
-				else
-				{
-					int dest = m_coord.ID;
-					Coord c = new Coord(dest);
-					switch (Config.synthPattern) {
-						case SynthTrafficPattern.UR:
-						dest = Simulator.rand.Next(Config.N);
-						c = new Coord(dest);
-						break;
-						case SynthTrafficPattern.BC:
-						dest = ~dest & (Config.N - 1);
-						c = new Coord(dest);
-						break;
-						case SynthTrafficPattern.TR:
-						c = new Coord(m_coord.y, m_coord.x);
-						break;
-					}
-					int packet_size;
-					if (Config.uniform_size_enable == true) 
-						if (Config.topology == Topology.Mesh_Multi)
-							packet_size = Config.uniform_size * Config.sub_net;
-						else
-							packet_size = Config.uniform_size;
-					else
-					{
-						if (Simulator.rand.NextDouble() < 0.5) packet_size = Config.router.addrPacketSize;
-						else  packet_size = Config.router.dataPacketSize;
-					}
-					Packet p = new Packet(null,0,packet_size,m_coord, c);
-					queuePacket(p);
+			int dest = m_coord.ID;
+			Coord c = new Coord (dest);
+
+			while (dest == m_coord.ID) {
+				
+				// TODO: Exclude src=dst
+				switch (Config.synthPattern) {
+				case SynthTrafficPattern.UR:
+					dest = Simulator.rand.Next (Config.N);
+					c = new Coord (dest);
+					break;
+				case SynthTrafficPattern.BC:
+					dest = ~dest & (Config.N - 1);
+					c = new Coord (dest);
+					break;
+				case SynthTrafficPattern.TR:  // TODO: Check if correct
+					c = new Coord (m_coord.y, m_coord.x);
+					break;
 				}
 			}
+
+			// decide packet size
+			int packet_size;
+			if (Config.uniform_size_enable == true) { 
+				if (Config.topology == Topology.Mesh_Multi)
+					packet_size = Config.uniform_size * Config.sub_net;
+				else
+					packet_size = Config.uniform_size;
+			}
+			else
+			{
+				if (Simulator.rand.NextDouble() < 0.5) packet_size = Config.router.addrPacketSize;
+				else  packet_size = Config.router.dataPacketSize;
+			}
+
+			Packet p = new Packet(null,0,packet_size,m_coord, c);
+#if PACKETDUMP
+			Console.WriteLine ("#1 Time {0}, @ node {1} {2}", Simulator.CurrentRound, m_coord.ID, p.ToString());
+#endif
+			return p;
+		}
+
+		void unicastSynthGen ()
+		{
+			if (m_inj_pool.Count > Config.synthQueueLimit)
+				Simulator.stats.synth_queue_limit_drop.Add();
+			else
+			{
+				Packet p = packetization ();
+				queuePacket(p);
+			}
+
+		}
+
+		void multicastSynthGenNaive ()
+		{
+			double mc_rate = Config.mc_rate; // enforcing mc_rate = 0 is equivalent to running unicast
+			double mc_degree = 1;
+
+			if (Simulator.rand.NextDouble () < mc_rate) {
+				mc_degree = Config.mc_degree; // multicast
+				//Console.WriteLine ("TIME={0} Node {1} send {2} MC_PKT", Simulator.CurrentRound, m_coord.ID, mc_degree);
+			}
+			else
+				mc_degree = 1;
+
+			while (mc_degree > 0) {
+				// Naive multicast
+				// Sending multiple unicast packets
+				unicastSynthGen ();
+				mc_degree--;
+			}
+		}
+		void synthGen()
+		{
+			double uc_rate = Config.synth_rate;
+
+
+			if (!Config.multicast && Simulator.rand.NextDouble () < uc_rate)
+				unicastSynthGen ();
+			else if (Config.multicast && Simulator.rand.NextDouble () < uc_rate)
+				multicastSynthGenNaive ();
 		}
 
         public void doStep()
@@ -206,7 +250,7 @@ namespace ICSimulator
 
 			if (Config.synthGen)
 			{
-				synthGen(Config.synth_rate);
+				synthGen();
 			}
 
             while (m_local.Count > 0 &&
@@ -339,10 +383,8 @@ namespace ICSimulator
 	                {
 	                    Flit f = m_injQueue_flit.Dequeue();
 	#if PACKETDUMP
-	                    if (f.flitNr == 0)
-	                        if (m_coord.ID == 0)
-	                            Console.WriteLine("start to inject packet {0} at node {1} (cyc {2})",
-	                                f.packet, coord, Simulator.CurrentRound);
+						Console.WriteLine("#2 Time {2}: @ node {1} Inject pktID {0}",
+							f.packet.ID, coord.ID, Simulator.CurrentRound);
 	#endif
 
 	                    m_router.InjectFlit(f);  // by Xiyue: inject into a router
@@ -383,7 +425,7 @@ namespace ICSimulator
 			{
 				// Compute the inteference cycle of a pacekt.
 				f.packet.intfCycle = (int)f.packet.intfCycle + ((int)Simulator.CurrentRound - (int)f.packet.first_flit_arrival - f.packet.nrOfFlits + 1); // assume the flits of will arrive consecutively without interference. In case of control packet, the portion inside of parenthesis is 0.
-				if (f.packet.intfCycle  > 0 && f.packet.requesterID != m_cpu.ID && f.packet.critical == true && Config.throttle_enable == true && Config.controller == ControllerType.THROTTLE_QOS)
+				if (f.packet.intfCycle  > 0 && f.packet.requesterID != m_coord.ID && f.packet.critical == true && Config.throttle_enable == true && Config.controller == ControllerType.THROTTLE_QOS)
 				{
 					// only log the delay of the packets whose associated request is not generated by the current node
 					// therefore, they will trigger some packets later.
@@ -426,11 +468,6 @@ namespace ICSimulator
         
 		public void queuePacket(Packet p) // By Xiyue: called by CmpCache::send_noc() 
         {
-#if PACKETDUMP
-            if (m_coord.ID == 0)
-            Console.WriteLine("queuePacket {0} at node {1} (cyc {2}) (queue len {3})",
-                    p, coord, Simulator.CurrentRound, queueLens);
-#endif
             if (p.dest.ID == m_coord.ID) // local traffic: do not go to net (will confuse router) // by Xiyue: just hijack the packet if it only access the shared cache at the local node.
             {
                 m_local.Enqueue(p);  // this is filter out

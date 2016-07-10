@@ -30,6 +30,9 @@ namespace ICSimulator
         public override bool hasSh(int id) { return true; }
         public override bool hasMem(int id)
         {
+			if (Config.synthGen == true)
+				return false; 
+
             foreach (Coord c in Config.memory.MCLocations)
                 if (c.ID == id)
                     return true;

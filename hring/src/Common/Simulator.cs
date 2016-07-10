@@ -83,10 +83,10 @@ namespace ICSimulator
 				network = new SingleRing_Network(Config.network_nrX, Config.network_nrY);
 			else if (Config.topology == Topology.MeshOfRings)
 				network = new MeshOfRings_Network(Config.network_nrX, Config.network_nrY);
-                        else if (Config.topology == Topology.BufRingNetwork)
-                            network = new BufRingNetwork(Config.network_nrX, Config.network_nrY);
-                        else if (Config.topology == Topology.BufRingNetworkMulti)
-                            network = new BufRingMultiNetwork(Config.network_nrX, Config.network_nrY);
+            else if (Config.topology == Topology.BufRingNetwork)
+                network = new BufRingNetwork(Config.network_nrX, Config.network_nrY);
+            else if (Config.topology == Topology.BufRingNetworkMulti)
+                network = new BufRingMultiNetwork(Config.network_nrX, Config.network_nrY);
 	    	else
 				network = new Network(Config.network_nrX, Config.network_nrY);
 

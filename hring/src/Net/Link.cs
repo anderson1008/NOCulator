@@ -57,10 +57,11 @@ namespace ICSimulator
         {
             if (m_delay > 0)
             {
-                Out = m_fifo[0];
+				Out = m_fifo [0];
                 for (int i = 0; i < m_delay - 1; i++)
                     m_fifo[i] = m_fifo[i + 1];
-                m_fifo[m_delay - 1] = In;
+				m_fifo [m_delay - 1] = In;
+
                 SideBandOut[0] = m_sideband_fifo[0][0];
                 SideBandOut[1] = m_sideband_fifo[0][1];
                 for (int i = 0; i < m_delay - 1; i++)

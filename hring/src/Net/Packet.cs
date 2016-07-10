@@ -210,6 +210,11 @@ namespace ICSimulator
 			get { return _intfCycle; }
 			set {_intfCycle = value; }
 		}
+
+		public virtual string ToString()
+		{
+			return String.Format("PktGen: pktID {0}, src {1} dest {2} of size {3}", _ID, src.ID, dest.ID, nrOfFlits);
+		}
 		//end Xiyue
 
 
@@ -429,7 +434,7 @@ namespace ICSimulator
         public override string ToString()
         {
             if (packet != null)
-				return String.Format("Flit {0} of packet {1} {2} (state {3})", flitNr, packet.ID, packet, state);
+				return String.Format("Flit {0} of packet {1} (state {2})", flitNr, packet.ID, state);
             else
                 return String.Format("Flit {0} of packet <NONE> (state {1})", flitNr, state);
         }

@@ -331,16 +331,13 @@ namespace ICSimulator
 		}
 
 
-		bool checkWAR (Request req, out int mshr)
+		bool checkWAR (Request req)
 		{
-			mshr = -1;
 			for (int i = 0; i < m_mshrs.Length; i++)
 				if (m_mshrs[i].block == req.blockAddress && m_mshrs[i].valid == true)
 				{
 					if (req.write && !m_mshrs [i].write)  //by Xiyue: Prevent Write After Read hazard???
-						m_mshrs [i].pending_write = true;
-					mshr = i;
-					return true;
+					  return true;
 				}
 			return false;
 
@@ -373,6 +370,7 @@ namespace ICSimulator
 		// By Xiyue
         void _issueReq(int mshr, ulong addr, bool write)
 		{
+			
 			qos_stat_delegate QOS_delegate = delegate (CmpCache_Txn txn) { computePenalty(txn, write); };
 
 			Simulator.network.cache.access(m_ID, addr, mshr, write, m_stats_active, 
@@ -483,7 +481,7 @@ namespace ICSimulator
 								break;
 							}
 							// allocate mshr for L2 access
-							if (checkWAR (req, out mshr)) { // access mshr to check WAR
+							if (checkWAR (req)) { // In case of WAR, fetch the same instruction next cycle. Core is stalled.
 								m_trace_valid = false;
 								nMem--;
 								nIns--;
@@ -545,6 +543,12 @@ namespace ICSimulator
 					break;
 
 				case Trace.Type.Lock:
+					// TODO: Model synchronization bahavior!
+					// Lock is constructed here. However, this is a very naive implementation.
+					// A simply queue (implemented as a dictionary) is used 
+					// No timing model, synchronization is not associated with cache coherence protocol
+					// Another word, the synchronization primitive activity is not modeled
+
 					//Console.WriteLine("Lock" + ' ' + m_ID.ToString() + ' ' + syncID.ToString() + ' ' + m_trace.address.ToString());
 					if (m_sync.Lock(m_ID, syncID, m_trace.address))
 						m_trace_valid = false;
