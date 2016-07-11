@@ -130,7 +130,7 @@ namespace ICSimulator
 		public static int synthQueueLimit = 1000;
 		public static bool uniform_size_enable = true;
 		public static int uniform_size = 1;
-		public static bool multicast = true;
+		public static bool multicast = false;
 		public static int mc_degree = N; // number of packets send out; N: broadcast; 1: unicast;
 		public static double mc_rate = 0.01;
 		public static SynthTrafficPattern synthPattern = SynthTrafficPattern.UR;

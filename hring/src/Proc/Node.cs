@@ -452,18 +452,16 @@ namespace ICSimulator
                 p, coord, Simulator.CurrentRound, Simulator.CurrentRound - p.creationTime);
 #endif
 
-            if (p is RetxPacket)
-            {
-                p.retx_count++;
-                p.flow_open = false;
-                p.flow_close = false;
-                queuePacket( ((RetxPacket)p).pkt );
-            }
-            else if (p is CachePacket)
-            {
-                CachePacket cp = p as CachePacket;
-                m_cpu.receivePacket(cp); // by Xiyue: Local ejection
-            }
+			// nothing happens for synthetic packet
+			if (p is RetxPacket) {
+				p.retx_count++;
+				p.flow_open = false;
+				p.flow_close = false;
+				queuePacket (((RetxPacket)p).pkt);
+			} else if (p is CachePacket) {
+				CachePacket cp = p as CachePacket;
+				m_cpu.receivePacket (cp); // by Xiyue: Local ejection
+			} 
         }
         
 		public void queuePacket(Packet p) // By Xiyue: called by CmpCache::send_noc() 

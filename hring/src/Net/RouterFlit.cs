@@ -97,10 +97,7 @@ namespace ICSimulator
                 }
             
 			if (bestDir != -1) linkIn[bestDir].Out = null;
-#if DEBUG
-            if (ret != null)
-                Console.WriteLine("ejecting flit {0}.{1} at node {2} cyc {3}", ret.packet.ID, ret.flitNr, coord, Simulator.CurrentRound);
-#endif
+
             ret = handleGolden(ret);
 
             return ret;
@@ -209,7 +206,7 @@ namespace ICSimulator
 						
 						acceptFlit (eject); 	// Eject flit	
 #if DEBUG
-						Console.WriteLine ("#3 Time {0}: Eject @ node {1} {2}", Simulator.CurrentRound,coord.ID, eject.ToString());
+						Console.WriteLine ("#6 Time {0}: Eject @ node {1} {2}", Simulator.CurrentRound,coord.ID, eject.ToString());
 #endif
 					}
 				}
@@ -227,10 +224,10 @@ namespace ICSimulator
                 if (linkIn[dir] != null && linkIn[dir].Out != null)
                 {
 #if DEBUG
-					Console.WriteLine ("#4 Time {0}: BW @ node {1} {3} port {2}", Simulator.CurrentRound,coord.ID, linkIn[dir].Out.inDir.ToString(),linkIn[dir].Out.ToString() );
+					Console.WriteLine ("#4 Time {0}: BW @ node {1} {3} Inport {2}", Simulator.CurrentRound,coord.ID, Simulator.network.portMap(dir),linkIn[dir].Out.ToString() );
 #endif
                     input[c++] = linkIn[dir].Out;  // c: # of incoming flits
-                    //linkIn[dir].Out.inDir = dir;  // By Xiyue: what's the point? Seems redundant
+                    linkIn[dir].Out.inDir = dir;  // By Xiyue: what's the point? Seems redundant
                     linkIn[dir].Out = null;
 
                 }
@@ -285,7 +282,7 @@ namespace ICSimulator
 					if (inj != null) {
 						input [c++] = inj;
 #if DEBUG
-					Console.WriteLine ("#5 Time {0}: Inject @ node {1} {2}", Simulator.CurrentRound,coord.ID, inj.ToString());
+					Console.WriteLine ("#3 Time {0}: Inject @ node {1} {2}", Simulator.CurrentRound,coord.ID, inj.ToString());
 #endif
 						statsInjectFlit (inj);
 					}
@@ -308,7 +305,7 @@ namespace ICSimulator
                     }
 			*/
 			_fullSort(ref input);
-
+			//_bubbleSort (ref input);
             // assign outputs
 			for (int i = 0; i < 4; i++)
             {
@@ -426,7 +423,7 @@ namespace ICSimulator
                             String.Format("Ran out of outlinks in arbitration at node {0} on input {1} cycle {2} flit {3} c {4} neighbors {5} outcount {6}", coord, i, Simulator.CurrentRound, input[i], c, neighbors, outCount));
                 }
 #if DEBUG
-				Console.WriteLine ("#6 Time {0}: SW @ node {1} Output{3} {2}", Simulator.CurrentRound,coord.ID, input[i].ToString(), outDir.ToString());
+				Console.WriteLine ("#5 Time {0}: ST @ node {1} {2} Output {3}", Simulator.CurrentRound,coord.ID, input[i].ToString(), Simulator.network.portMap(outDir));
 #endif
             } // end assign output
         }

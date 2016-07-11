@@ -52,7 +52,7 @@ namespace ICSimulator
 
 
         public ulong ICount { get { return m_active_ret; } }
-        bool m_done;
+        bool m_done;  // variable will be set if the specified number of instructions are received
         bool m_idle;
 
         //stats

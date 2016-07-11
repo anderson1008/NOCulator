@@ -119,10 +119,10 @@ namespace ICSimulator
 				return new Router_AFC(c);
 
 				case RouterAlgorithm.DR_FLIT_SWITCHED_CTLR:
-				return new Router_Flit_Ctlr(c);
+				return new Router_Flit_Ctlr(c); // BLESS random proritization
 
 				case RouterAlgorithm.DR_FLIT_SWITCHED_OLDEST_FIRST:
-				return new Router_Flit_OldestFirst(c);
+				return new Router_Flit_OldestFirst(c); // BLESS OF proritization
 
 				case RouterAlgorithm.DR_SCARAB:
 				return new Router_SCARAB(c);

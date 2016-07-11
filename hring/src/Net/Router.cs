@@ -431,8 +431,8 @@ namespace ICSimulator
         protected void statsEjectFlit(Flit f)
         {
             // per-flit latency stats
-            ulong net_latency = Simulator.CurrentRound - f.injectionTime; //end-to-end delay
-            ulong total_latency = Simulator.CurrentRound - f.packet.creationTime; // from generation to receive
+			ulong net_latency = Simulator.CurrentRound - f.injectionTime; //end-to-end delay
+			ulong total_latency = Simulator.CurrentRound - f.packet.creationTime ; // from generation to receive
             ulong inj_latency = total_latency - net_latency;
 
 			Simulator.stats.flit_intf.Add(f.intfCycle);

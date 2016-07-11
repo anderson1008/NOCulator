@@ -434,9 +434,9 @@ namespace ICSimulator
         public override string ToString()
         {
             if (packet != null)
-				return String.Format("Flit {0} of packet {1} (state {2})", flitNr, packet.ID, state);
+				return String.Format("Flit {0} of pktID {1} (state {2})", flitNr, packet.ID, state);
             else
-                return String.Format("Flit {0} of packet <NONE> (state {1})", flitNr, state);
+				return String.Format("Flit {0} of pktID <NONE> (state {1})", flitNr, state);
         }
     }
 }

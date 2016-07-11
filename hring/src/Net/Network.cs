@@ -655,5 +655,22 @@ namespace ICSimulator
                     throw new Exception("invalid routing algorithm " + Config.router.algorithm);
             }
         }
-    }
+
+		public string portMap (int i) {
+			/// Helper function to map port index to N/W/E/S
+			/// Clockwise 0->3 map to N->E->S->W
+			switch (i) {
+			case 0: return "N"; 
+			case 1: return "E"; 
+			case 2: return "S"; 
+			case 3: return "W";
+
+			default:
+				return "Warning: network::portMap only map port 0-3. Need to extend it for high-radix router."; 
+			}
+
+		}
+
+
+    } // end of network calss
 }
