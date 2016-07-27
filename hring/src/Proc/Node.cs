@@ -159,14 +159,13 @@ namespace ICSimulator
             m_router = r;
         }
 
-		Packet packetization ()
+		Coord PickDst ()
 		{
 			int dest = m_coord.ID;
 			Coord c = new Coord (dest);
 
-			while (dest == m_coord.ID) {
-				
-				// TODO: Exclude src=dst
+			while (dest == m_coord.ID) { // ensure src != dst
+
 				switch (Config.synthPattern) {
 				case SynthTrafficPattern.UR:
 					dest = Simulator.rand.Next (Config.N);
@@ -181,7 +180,12 @@ namespace ICSimulator
 					break;
 				}
 			}
+			return c;
+		}
 
+
+		int PickPktSize (bool mc)
+		{
 			// decide packet size
 			int packet_size;
 			if (Config.uniform_size_enable == true) { 
@@ -195,6 +199,17 @@ namespace ICSimulator
 				if (Simulator.rand.NextDouble() < 0.5) packet_size = Config.router.addrPacketSize;
 				else  packet_size = Config.router.dataPacketSize;
 			}
+
+			if (mc == true)
+				return packet_size * 2; // each packet only contains half of original payload.
+			else
+			    return packet_size;
+		}
+
+		Packet packetization ()
+		{
+			Coord c = PickDst ();
+			int packet_size = PickPktSize (false);
 
 			Packet p = new Packet(null,0,packet_size,m_coord, c);
 #if PACKETDUMP
@@ -215,13 +230,54 @@ namespace ICSimulator
 
 		}
 
+		void multicastSynthGenMultiDst ()
+		{
+			double mc_rate = Config.mc_rate; // enforcing mc_rate = 0 is equivalent to running unicast
+			double mc_degree = 1;
+			ArrayList sharerList = new ArrayList ();
+			int packet_size; 
+			Coord dst;
+			Coord[] destArray = new Coord[] { };
+
+			if (Simulator.rand.NextDouble () < mc_rate) {
+				mc_degree = Simulator.rand.Next (Config.mc_degree - 2) + 2; // multicast; generate index 2-15
+				//Console.WriteLine ("TIME={0} Node {1} send {2} MC_PKT", Simulator.CurrentRound, m_coord.ID, mc_degree);
+			}
+			else
+				mc_degree = 1;
+
+			if (mc_degree == 1) {
+				// This is a unicast packet
+				packet_size = PickPktSize (false); 
+				unicastSynthGen ();
+				return;
+			}
+				
+			while (mc_degree > 0) {
+				// This is a MC packet
+				// Generate the destination list
+				// it will be used for packetization
+				// Note: it is different from the destination list of a packet, 
+				//       which may be a subset, depending on the network size and pakcet format.
+				dst = PickDst();
+				if (sharerList.Contains (dst)) // ensure no dst is added twice
+					continue;
+				sharerList.Add(dst);
+				mc_degree--;
+			}
+			packet_size = PickPktSize (true); 
+			destArray = (Coord []) sharerList.ToArray (typeof (Coord));  // covert ArrayList to Array
+			Packet p = new Packet(null,0,packet_size,m_coord, destArray);
+			queuePacket(p);
+		}
+
 		void multicastSynthGenNaive ()
 		{
 			double mc_rate = Config.mc_rate; // enforcing mc_rate = 0 is equivalent to running unicast
 			double mc_degree = 1;
 
 			if (Simulator.rand.NextDouble () < mc_rate) {
-				mc_degree = Config.mc_degree; // multicast
+				mc_degree = Simulator.rand.Next(Config.mc_degree); // multicast
 				//Console.WriteLine ("TIME={0} Node {1} send {2} MC_PKT", Simulator.CurrentRound, m_coord.ID, mc_degree);
 			}
 			else
@@ -242,7 +298,13 @@ namespace ICSimulator
 			if (!Config.multicast && Simulator.rand.NextDouble () < uc_rate)
 				unicastSynthGen ();
 			else if (Config.multicast && Simulator.rand.NextDouble () < uc_rate)
-				multicastSynthGenNaive ();
+ 			{				
+				//if (Config.router.algorithm == RouterAlgorithm.DR_FLIT_SW_OF_MC)
+				if (Config.router.algorithm == RouterAlgorithm.DR_FLIT_SWITCHED_OLDEST_FIRST)
+					multicastSynthGenMultiDst ();
+				else
+					multicastSynthGenNaive ();
+			}
 		}
 
         public void doStep()
@@ -466,13 +528,13 @@ namespace ICSimulator
         
 		public void queuePacket(Packet p) // By Xiyue: called by CmpCache::send_noc() 
         {
-            if (p.dest.ID == m_coord.ID) // local traffic: do not go to net (will confuse router) // by Xiyue: just hijack the packet if it only access the shared cache at the local node.
+			if (p.dest.ID == m_coord.ID && p.mc == false) // local traffic: do not go to net (will confuse router) // by Xiyue: just hijack the packet if it only access the shared cache at the local node.
             {
                 m_local.Enqueue(p);  // this is filter out
                 return;
             }
 
-            if (Config.idealnet) // ideal network: deliver immediately to dest
+			if (Config.idealnet && p.mc == false) // ideal network: deliver immediately to dest
                 Simulator.network.nodes[p.dest.ID].m_local.Enqueue(p);
             else // otherwise: enqueue on injection queue
             {

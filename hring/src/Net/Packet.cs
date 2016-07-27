@@ -112,6 +112,9 @@ namespace ICSimulator
         private Coord _src;
         public Coord dest { get { return _dest; } }
         private Coord _dest;
+		private Coord [] _destList;
+		public Coord [] destList {get { return _destList;}}
+		public bool mc; // multicast
 
         public ulong ID { get { return _ID; } }
         private ulong _ID;
@@ -159,9 +162,25 @@ namespace ICSimulator
         public Packet scarab_retransmit;
         public bool scarab_is_nack, scarab_is_teardown;
 
+		public Packet(Request request, ulong block, int nrOfFlits, Coord source, Coord [] destList)
+		{
+			_request = request;
+			if (_request != null)
+				_request.beenToNetwork = true;
+			_block = block; // may not come from request (see above)
+			_src = source;
+			_destList = new Coord [destList.Length];
+			destList.CopyTo (_destList, 0);
+			if (request != null)
+				request.setCarrier (this);
+			requesterID = -1;
+			mc = true;
+			initialize (Simulator.CurrentRound, nrOfFlits);// Flitization of each packet;
+		}
+
 		public Packet(Request request, ulong block, int nrOfFlits, Coord source, Coord dest)
-        {
-            _request = request;
+     		   {
+          		  _request = request;
             if (_request != null)
                 _request.beenToNetwork = true;
             _block = block; // may not come from request (see above)
@@ -170,6 +189,7 @@ namespace ICSimulator
             if (request != null)
                 request.setCarrier(this);
             requesterID = -1;
+			mc = false;
             initialize(Simulator.CurrentRound, nrOfFlits);
         }
 

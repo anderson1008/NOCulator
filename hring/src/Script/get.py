@@ -13,6 +13,15 @@ def get_stat (file_name):
   result_file.close()
   return result
 
+def get_pkt_lat_tot (stat): 
+  searchObj = re.search(r'(?:packet tot latency: (.*?) \| MAX (.*?) )',stat)
+  pkt_lat_tot = [searchObj.group(1), searchObj.group(2)]
+  return pkt_lat_tot
+
+def get_pkt_lat_net (stat): 
+  searchObj = re.search(r'(?:packet net latency: (.*?) \| MAX (.*?) )',stat)
+  pkt_lat_tot = [searchObj.group(1), searchObj.group(2)]
+  return pkt_lat_tot
 
 def get_l1miss (stat):
   searchObj = re.search(r'(?:"L1_misses_persrc":\[(.*?)])',stat)

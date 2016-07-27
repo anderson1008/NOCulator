@@ -108,7 +108,7 @@ namespace ICSimulator
 
     public class Config : ConfigGroup
     {
-		// --- DO NOT MOVE ---//
+		// ------------------ DO NOT MOVE ------------------------
 		// must be declared first
         public static ProcessorConfig proc = new ProcessorConfig();
         public static MemoryConfig memory = new MemoryConfig();
@@ -122,7 +122,7 @@ namespace ICSimulator
 		public static bool bSynthTranspose = false;
 		public static bool bSynthHotspot = false;
 		public static bool randomHotspot = false;
-		// ------------------------------------------//
+		// ------------------DO NOT MOVE End------------------------//
 
 		// --- Synthetic Traffic Simulation --- //
 		public static bool synthGen = true; // will not generate CPU instance if it is true
@@ -130,7 +130,7 @@ namespace ICSimulator
 		public static int synthQueueLimit = 1000;
 		public static bool uniform_size_enable = true;
 		public static int uniform_size = 1;
-		public static bool multicast = false;
+		public static bool multicast = true;
 		public static int mc_degree = N; // number of packets send out; N: broadcast; 1: unicast;
 		public static double mc_rate = 0.01;
 		public static SynthTrafficPattern synthPattern = SynthTrafficPattern.UR;

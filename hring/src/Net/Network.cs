@@ -109,7 +109,15 @@ namespace ICSimulator
                 nodes[n].setRouter(routers[n]);
                 routers[n].setNode(nodes[n]);
                 endOfTraceBarrier[n] = false;
+				#if DEBUG
+				Console.WriteLine ("*******This is Node {0} **********", n);
+				((Router_BLESS_MC)nodes [n].router).PrintMask ();
+				#endif
             }
+
+
+			//Console.WriteLine ("Exit Normally!");
+			//System.Environment.Exit (1);
 
             // create the Golden manager
             golden = new Golden();
@@ -230,7 +238,8 @@ namespace ICSimulator
                     if (routers[i].neighbors < 4)
                         throw new Exception("torus construction not successful!");
         }
-        
+
+
         // Pins specification for nodeRouters
         public const int CW = 0;				//clockwise 
         public const int CCW = 1;			//counter clockwise
@@ -613,8 +622,12 @@ namespace ICSimulator
         {
             switch (Config.router.algorithm)
             {
-				case RouterAlgorithm.BLESS_BYPASS:
-					return new Router_BLESS_BYPASS(c);
+		case RouterAlgorithm.DR_FLIT_SW_OF_MC:
+		    return new Router_BLESS_MC (c);
+
+		case RouterAlgorithm.BLESS_BYPASS:
+                    return new Router_BLESS_BYPASS(c);
+
                 case RouterAlgorithm.DR_AFC:
                     return new Router_AFC(c);
 
