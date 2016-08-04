@@ -130,10 +130,11 @@ namespace ICSimulator
 		public static int synthQueueLimit = 1000;
 		public static bool uniform_size_enable = true;
 		public static int uniform_size = 1;
-		public static bool multicast = true;
+		public static bool multicast = false;
 		public static int mc_degree = N; // number of packets send out; N: broadcast; 1: unicast;
-		public static double mc_rate = 0.01;
+		public static double mc_rate = 0.05;
 		public static SynthTrafficPattern synthPattern = SynthTrafficPattern.UR;
+		public static bool scoreBoardDisable = false; // enable for to speed up simulation
 
 		// --- Carpool: NoC with Gather-Scatter Support
 
@@ -201,7 +202,7 @@ namespace ICSimulator
 		public static bool bypass_enable = true;
 		public static bool bridge_subnet = true;
 		public static bool partial_sort = true;
-		public static bool randomize_defl = false; // false: static deflection; true: randomized deflection
+		public static bool randomize_defl = true; // false: static deflection; true: randomized deflection
 		public static bool subnet_sel_rand = false;
 		public static ulong subnet_reset_period = 500;
 

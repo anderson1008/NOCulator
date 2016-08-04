@@ -212,13 +212,14 @@ namespace ICSimulator
 			int packet_size = PickPktSize (false);
 
 			Packet p = new Packet(null,0,packet_size,m_coord, c);
+
 #if PACKETDUMP
 			Console.WriteLine ("#1 Time {0}, @ node {1} {2}", Simulator.CurrentRound, m_coord.ID, p.ToString());
 #endif
 			return p;
 		}
 
-		void unicastSynthGen ()
+		void unicastSynthGen (bool mc, bool record)
 		{
 			if (m_inj_pool.Count > Config.synthQueueLimit)
 				Simulator.stats.synth_queue_limit_drop.Add();
@@ -226,22 +227,31 @@ namespace ICSimulator
 			{
 				Packet p = packetization ();
 				queuePacket(p);
+				Console.WriteLine ("Packet {0} is generated @ Time {1} Router {2}", p.ID, Simulator.CurrentRound, coord.ID);
+				ScoreBoard.RegPacket (p.dest.ID, p.ID);
+				Simulator.stats.generate_packet.Add ();
+				if (record) {
+					if (!mc) 
+						Simulator.stats.generate_uc_packet.Add ();
+					else 
+						Simulator.stats.generate_mc_packet.Add ();
+				}
+				
 			}
-
 		}
 
 		void multicastSynthGenMultiDst ()
 		{
 			double mc_rate = Config.mc_rate; // enforcing mc_rate = 0 is equivalent to running unicast
 			double mc_degree = 1;
-			ArrayList sharerList = new ArrayList ();
+			List <Coord> sharerList = new List <Coord> ();
 			int packet_size; 
 			Coord dst;
-			Coord[] destArray = new Coord[] { };
+			//Coord[] destArray = new Coord[] { };
 
 			if (Simulator.rand.NextDouble () < mc_rate) {
 				mc_degree = Simulator.rand.Next (Config.mc_degree - 2) + 2; // multicast; generate index 2-15
-				//Console.WriteLine ("TIME={0} Node {1} send {2} MC_PKT", Simulator.CurrentRound, m_coord.ID, mc_degree);
+				Console.WriteLine ("TIME={0} Node {1} send {2} MC_PKT", Simulator.CurrentRound, m_coord.ID, mc_degree);
 			}
 			else
 				mc_degree = 1;
@@ -249,7 +259,7 @@ namespace ICSimulator
 			if (mc_degree == 1) {
 				// This is a unicast packet
 				packet_size = PickPktSize (false); 
-				unicastSynthGen ();
+				unicastSynthGen (false, true);
 				return;
 			}
 				
@@ -266,41 +276,53 @@ namespace ICSimulator
 				mc_degree--;
 			}
 			packet_size = PickPktSize (true); 
-			destArray = (Coord []) sharerList.ToArray (typeof (Coord));  // covert ArrayList to Array
-			Packet p = new Packet(null,0,packet_size,m_coord, destArray);
+			Packet p = new Packet(null,0,packet_size,m_coord, sharerList);
 			queuePacket(p);
+			foreach (Coord dest in sharerList) {
+				ScoreBoard.RegPacket (dest.ID, p.ID);
+				p.creationTimeMC [dest.ID] = Simulator.CurrentRound; // it will be overriden everytime when replication occur, but only once.
+			}
+			
+			Simulator.stats.generate_mc_packet.Add ();
+			Simulator.stats.generate_packet.Add (sharerList.Count);
 		}
 
 		void multicastSynthGenNaive ()
 		{
 			double mc_rate = Config.mc_rate; // enforcing mc_rate = 0 is equivalent to running unicast
 			double mc_degree = 1;
+			bool mc;
 
 			if (Simulator.rand.NextDouble () < mc_rate) {
-				mc_degree = Simulator.rand.Next(Config.mc_degree); // multicast
+				mc_degree = Simulator.rand.Next (Config.mc_degree - 2) + 2; // multicast
+				mc = true;
 				//Console.WriteLine ("TIME={0} Node {1} send {2} MC_PKT", Simulator.CurrentRound, m_coord.ID, mc_degree);
-			}
-			else
+			} else {
 				mc_degree = 1;
+				mc = false;
+			}
 
 			while (mc_degree > 0) {
 				// Naive multicast
 				// Sending multiple unicast packets
-				unicastSynthGen ();
+				if (mc_degree == 1)
+					unicastSynthGen (mc, true);
+				else
+					unicastSynthGen (mc, false);
+					
 				mc_degree--;
 			}
 		}
+
 		void synthGen()
 		{
 			double uc_rate = Config.synth_rate;
 
-
 			if (!Config.multicast && Simulator.rand.NextDouble () < uc_rate)
-				unicastSynthGen ();
+				unicastSynthGen (false, true);
 			else if (Config.multicast && Simulator.rand.NextDouble () < uc_rate)
  			{				
-				//if (Config.router.algorithm == RouterAlgorithm.DR_FLIT_SW_OF_MC)
-				if (Config.router.algorithm == RouterAlgorithm.DR_FLIT_SWITCHED_OLDEST_FIRST)
+				if (Config.router.algorithm == RouterAlgorithm.DR_FLIT_SW_OF_MC)
 					multicastSynthGenMultiDst ();
 				else
 					multicastSynthGenNaive ();
@@ -309,8 +331,8 @@ namespace ICSimulator
 
         public void doStep()
         {
-
-			if (Config.synthGen)
+			// continue to run until all packets generated prior to stop time are received.
+			if (Config.synthGen && !Simulator.network.StopSynPktGen())
 			{
 				synthGen();
 			}
@@ -436,6 +458,8 @@ namespace ICSimulator
 	                        m_injQueue_flit.Enqueue(f);
 	                }
 
+					//Console.WriteLine ("FlitInjectQ size {0}", m_injQueue_flit.Count);
+
 					if (m_injQueue_evict.Count > 0 && m_router.canInjectFlit(m_injQueue_evict.Peek())) // By Xiyue: ??? What is m_injQueue_evict ?
 	                {
 	                    Flit f = m_injQueue_evict.Dequeue();
@@ -465,11 +489,32 @@ namespace ICSimulator
 
         public virtual void receiveFlit(Flit f)
         {
-            if (Config.naive_rx_buf)
-                m_rxbuf_naive.acceptFlit(f);
-            else
-               receiveFlit_noBuf(f);
+			if (Config.naive_rx_buf)
+				m_rxbuf_naive.acceptFlit (f);
+			else {
+				if (Config.router.algorithm == RouterAlgorithm.DR_FLIT_SW_OF_MC)
+					receiveFlit_noBuf_mc (f);
+				else
+					receiveFlit_noBuf (f);
+
+			}
        }
+
+		void receiveFlit_noBuf_mc (Flit f){
+			int nrOfarrivedFlit = -1;
+			if (f.packet.mc) {
+				f.packet.nrOfArrivedFlitsMC [m_coord.ID]++;
+				nrOfarrivedFlit = f.packet.nrOfArrivedFlitsMC [m_coord.ID];
+					
+			} else {
+				f.packet.nrOfArrivedFlits++;
+				nrOfarrivedFlit = f.packet.nrOfArrivedFlits;
+			}
+
+			if (nrOfarrivedFlit == f.packet.nrOfFlits) {
+				receivePacket (f.packet);
+			}
+		}
 
         void receiveFlit_noBuf(Flit f)
         {
@@ -497,6 +542,7 @@ namespace ICSimulator
 					// profile size of the m_inheritance_table
 					Simulator.stats.inherit_table_size.Add(m_inheritance_dict.Count);
 				}
+
 				receivePacket(f.packet);
 			}
         }
@@ -521,7 +567,7 @@ namespace ICSimulator
 				p.flow_close = false;
 				queuePacket (((RetxPacket)p).pkt);
 			} else if (p is CachePacket) {
-				CachePacket cp = p as CachePacket;
+				CachePacket cp = p as CachePacket;// TODO: DONT CAST, CREATE NEW ONE
 				m_cpu.receivePacket (cp); // by Xiyue: Local ejection
 			} 
         }

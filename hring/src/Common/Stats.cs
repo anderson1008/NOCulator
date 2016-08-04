@@ -8,9 +8,11 @@ namespace ICSimulator
 {
     public class Stats
     {
+
 		// By Xiyue: for coherent packet profiling
 		//public SampledStat[] avg_slowdown_error;
 
+		public AccumStat generate_packet, generate_mc_packet, generate_uc_packet;
 		public PeriodicAccumStat[] L1miss_persrc_period;
 		public AccumStat [] throttle_down_profile; 
 		public AccumStat [] cpu_stall_throttle;
@@ -71,7 +73,7 @@ namespace ICSimulator
 
 		//public PeriodicAccumStat[] actual_slowdown;
 		public AccumStat[] active_cycles;
-		public SampledStat net_latency, total_latency;
+		public SampledStat net_latency, total_latency; // req latency is the avy latency to serve an uni- or multi-cast request
 		public AccumStat synth_queue_limit_drop;
 		public SampledStat flit_inj_latency, flit_net_latency, flit_total_latency;
 		public SampledStat[] net_latency_bysrc, total_latency_bysrc;

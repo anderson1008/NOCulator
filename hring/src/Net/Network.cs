@@ -35,9 +35,16 @@ namespace ICSimulator
         public bool canRewind;
 
         // finish mode
-        public enum FinishMode { app, insn, synth, cycle, barrier };
+		public enum FinishMode { app, insn, packet, cycle, barrier };
         FinishMode m_finish;
-        ulong m_finishCount;
+		ulong m_finishCount;
+
+		public bool StopSynPktGen () {
+			if (Simulator.stats.generate_packet.Count >= (double)m_finishCount && finishMode == FinishMode.packet)
+				return true;
+			else
+				return false;
+		}
 
         public FinishMode finishMode { get { return m_finish; } }
 
@@ -541,10 +548,15 @@ namespace ICSimulator
                     return count == Config.N;
 
                 case FinishMode.cycle:
-                    return Simulator.CurrentRound >= m_finishCount;
+					return Simulator.CurrentRound >= m_finishCount && ScoreBoard.ScoreBoardisClean();
 
                 case FinishMode.barrier:
                     return Simulator.CurrentBarrier >= (ulong)Config.barrier;
+
+				case FinishMode.packet:
+					return Simulator.stats.generate_packet.Count == m_finishCount && ScoreBoard.ScoreBoardisClean() && (Simulator.stats.inject_flit.Count == Simulator.stats.eject_flit.Count);
+				
+				
             }
 
             throw new Exception("unknown finish mode");
@@ -562,12 +574,14 @@ namespace ICSimulator
             // finish is "app", "insn <n>", "synth <n>", or "barrier <n>"
 
             string[] parts = finish.Split(' ', '=');
-            if (parts[0] == "app")
-                m_finish = FinishMode.app;
-            else if (parts[0] == "cycle")
-                m_finish = FinishMode.cycle;
-            else if (parts[0] == "barrier")
-                m_finish = FinishMode.barrier;
+			if (parts [0] == "app")
+				m_finish = FinishMode.app;
+			else if (parts [0] == "cycle")
+				m_finish = FinishMode.cycle;
+			else if (parts [0] == "barrier")
+				m_finish = FinishMode.barrier;
+			else if (parts [0] == "packet")
+				m_finish = FinishMode.packet;
             else
                 throw new Exception("unknown finish mode");
 

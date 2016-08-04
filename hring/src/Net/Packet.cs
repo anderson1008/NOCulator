@@ -112,9 +112,12 @@ namespace ICSimulator
         private Coord _src;
         public Coord dest { get { return _dest; } }
         private Coord _dest;
-		private Coord [] _destList;
-		public Coord [] destList {get { return _destList;}}
+		public List <Coord> destList;
 		public bool mc; // multicast
+		public int [] nrOfArrivedFlitsMC;
+		public ulong [] creationTimeMC;
+		public int nrMCPacket;
+		public int nrArrivedMCPacket;
 
         public ulong ID { get { return _ID; } }
         private ulong _ID;
@@ -143,6 +146,7 @@ namespace ICSimulator
 
         public ulong creationTime;
         public ulong injectionTime;
+		//public ulong reqCreationTime;
 
         public Flit[] flits;
         public int nrOfFlits; // { get { return flits.Length; } }
@@ -162,15 +166,18 @@ namespace ICSimulator
         public Packet scarab_retransmit;
         public bool scarab_is_nack, scarab_is_teardown;
 
-		public Packet(Request request, ulong block, int nrOfFlits, Coord source, Coord [] destList)
+		public Packet(Request request, ulong block, int nrOfFlits, Coord source, List <Coord> _destList)
 		{
 			_request = request;
 			if (_request != null)
 				_request.beenToNetwork = true;
 			_block = block; // may not come from request (see above)
 			_src = source;
-			_destList = new Coord [destList.Length];
-			destList.CopyTo (_destList, 0);
+			destList = new List <Coord>(_destList);
+			nrMCPacket = _destList.Count;
+			nrArrivedMCPacket = 0;
+			nrOfArrivedFlitsMC = new int [Config.N]; // for safety, although mc_degree may not reach N
+			creationTimeMC = new ulong[Config.N]; // index the destination node ID
 			if (request != null)
 				request.setCarrier (this);
 			requesterID = -1;
@@ -247,6 +254,7 @@ namespace ICSimulator
          */
         public void initialize(ulong creationTime, int nrOfFlits)
         {
+
             _ID = Packet.nrPackets;
             Packet.nrPackets++;
 
@@ -263,11 +271,14 @@ namespace ICSimulator
                 flits[i].isHeadFlit = false;
 
             this.creationTime = creationTime;
+			//reqCreationTime = creationTime;
             injectionTime = ulong.MaxValue;
             nrOfArrivedFlits = 0;
 
             for (int i = 0; i < nrOfFlits; i++)
             {
+				if (flits[i].packet.mc)
+					flits[i].destList = new List <Coord> (destList);
                 flits[i].hasFlitArrived = false;
                 flits[i].nrOfDeflections = 0;
             }
@@ -327,6 +338,9 @@ namespace ICSimulator
     public class Flit
     {
         public Packet packet;
+
+		public List <Coord> destList;
+
         public int flitNr;
         public bool hasFlitArrived;
         public bool isHeadFlit;
@@ -334,6 +348,7 @@ namespace ICSimulator
         public ulong nrOfDeflections;
         public int virtualChannel; // to which virtual channel the packet should go in the next router. 
         public bool sortnet_winner;
+		public List <int> roadMap;
 
         public int currentX;
         public int currentY;
@@ -343,6 +358,7 @@ namespace ICSimulator
         public bool routingOrder;  //if (false): x direction prioritized over y
 
         public ulong injectionTime; // absolute injection timestamp
+		public ulong creationTime;
         public ulong headT; // reaches-head-of-queue timestamp
 
         public int nackWire; // nack wire nr. for last hop
@@ -369,6 +385,9 @@ namespace ICSimulator
 
 		public ulong ejectTrial = 0;
 		public ulong firstEjectTrial = 0;
+		public bool [] preferredDirVector;
+		public bool replicateNeed = false;
+		public bool replicateEnable = false;
 
         public BufRingMultiNetwork_Coord bufrings_coord;
 		
@@ -396,9 +415,12 @@ namespace ICSimulator
         {
             this.packet = packet;
             this.flitNr = flitNr;
+			roadMap = new List <int> ();
+
             hasFlitArrived = false;
             this.Deflected = false;
 			this.Bypassed = false;
+			this.creationTime = Simulator.CurrentRound;
             //deflections = new bool[100];
             //deflectionsIndex = 0;
             if (packet != null)
@@ -422,7 +444,10 @@ namespace ICSimulator
 
 			if (Config.SingleDirRing)
 				parity = 0;
-            	
+
+			preferredDirVector = new bool[5] {false, false, false, false, false};
+
+			
             /*if ((srcCluster == 0 || srcCluster == 3) && 
             	(destCluster == 1 || destCluster == 2))
             	Simulator.stats.flitToUpper.Add();
@@ -449,12 +474,24 @@ namespace ICSimulator
             Console.WriteLine();
         }*/
 
+
+		public void ClearRoutingInfo ()
+		{
+			Array.Clear (preferredDirVector, 0, 5);
+			replicateNeed = false;
+			replicateEnable = false;
+		}
         public delegate void Visitor(Flit f);
 
         public override string ToString()
         {
-            if (packet != null)
-				return String.Format("Flit {0} of pktID {1} (state {2})", flitNr, packet.ID, state);
+			if (packet != null) {
+				if (packet.mc)
+					return String.Format ("MC Packet {0}.{1}", packet.ID, flitNr,  state);
+				else
+					return String.Format ("UC Packet {0}.{1}", packet.ID, flitNr,  state);
+
+			}
             else
 				return String.Format("Flit {0} of pktID <NONE> (state {1})", flitNr, state);
         }

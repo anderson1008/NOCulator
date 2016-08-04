@@ -22,6 +22,7 @@ namespace ICSimulator
         public const int DIR_RIGHT = 1;
         public const int DIR_DOWN = 2;
         public const int DIR_LEFT = 3;
+		public const int DIR_LOCAL = 4;
         public const int DIR_BLOCKED = -1;
         public const int DIR_NONE = -99;
 
@@ -56,9 +57,13 @@ namespace ICSimulator
             config.read(args);
 
             rand = new Rand(Config.rand_seed);
+
             CurrentRound = 0;
 
             controller = Controller.construct();
+
+			ScoreBoard.createScoreBoard ();
+
 			if (Config.ScalableRingClustered)
 				network = new RC_Network (Config.network_nrX, Config.network_nrY);
 			else if (Config.topology == Topology.Mesh_Multi)
@@ -91,6 +96,7 @@ namespace ICSimulator
 				network = new Network(Config.network_nrX, Config.network_nrY);
 
 	      	network.setup();
+
             Warming = true;
         }
 

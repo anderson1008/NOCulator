@@ -80,7 +80,7 @@ namespace ICSimulator
             m_n.receiveFlit(f);
         }
 
-        Flit ejectLocal()
+        protected virtual Flit ejectLocal()
         {
             // eject locally-destined flit (highest-ranked, if multiple)
             Flit ret = null;			
@@ -103,27 +103,27 @@ namespace ICSimulator
             return ret;
         }
 
-		protected void _swap (ref Flit t0, ref Flit t1)
+		protected void _swap (ref Flit t0, ref Flit t1, bool downward)
 		{
 			if (t0 != null || t1 != null)
 				Simulator.stats.permute.Add();
-			if (rank(t1, t0)<0)
+			if ((rank(t1, t0)<0 && !downward) | (downward && rank(t0,t1)<0)) //higher : flit on the top
 			{
 				Flit t = t0;
 				t0 = t1;
 				t1 = t;
-			}
+			}				
 		}
 
 		protected void _fullSort(ref Flit[] input)
 		{
 			// only sort the first 4 flits;
-			_swap (ref input[0],ref input[1]);
-			_swap (ref input[2],ref input[3]);
-			_swap (ref input[0],ref input[2]);
-			_swap (ref input[1],ref input[3]);
-			_swap (ref input[0],ref input[2]);
-			_swap (ref input[1],ref input[3]);
+			_swap (ref input[0],ref input[1], false);
+			_swap (ref input[2],ref input[3], true);
+			_swap (ref input[0],ref input[2], false);
+			_swap (ref input[1],ref input[3], false);
+			_swap (ref input[0],ref input[1], false);
+			_swap (ref input[2],ref input[3], false);
 		}
 
 		protected void _bubbleSort(ref Flit[] input)
@@ -665,7 +665,7 @@ namespace ICSimulator
             Simulator.stats.net_decisionLevel.Add(zerosSeen);
             return
 				//(c6 != 0) ? c6 :
-                (c0 != 0) ? c0 :
+                //(c0 != 0) ? c0 :
                 (c1 != 0) ? c1 :
                 (c2 != 0) ? c2 :
                 c3;

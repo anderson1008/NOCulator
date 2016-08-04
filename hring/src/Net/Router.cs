@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.Collections;
 using System.Text;
 using System.IO;
+using System.Diagnostics;
+
 
 namespace ICSimulator
 {
@@ -184,17 +186,43 @@ namespace ICSimulator
             return determineDirection(f, new Coord(0, 0));
         }
 
+
+		protected bool [] determineDirection (Flit f, Coord current, int[,] mcMask)
+		{
+			bool [] preferredDirVector = new bool [5];
+			for (int i = 0; i < 5; i++)
+				preferredDirVector [i] = false;
+
+			List <Coord> destList;
+			int nodeID;
+
+			destList = f.destList;
+			foreach (Coord dest in destList) {
+				nodeID = dest.ID;
+				if (mcMask [Simulator.DIR_UP, nodeID] == 1 && preferredDirVector [Simulator.DIR_UP] != true && f.inDir != Simulator.DIR_UP)
+					preferredDirVector [Simulator.DIR_UP] = true;
+				if (mcMask [Simulator.DIR_RIGHT, nodeID] == 1 && preferredDirVector [Simulator.DIR_RIGHT] != true && f.inDir != Simulator.DIR_RIGHT)
+					preferredDirVector [Simulator.DIR_RIGHT] = true;
+				if (mcMask [Simulator.DIR_DOWN, nodeID] == 1 && preferredDirVector [Simulator.DIR_DOWN] != true && f.inDir != Simulator.DIR_DOWN)
+					preferredDirVector [Simulator.DIR_DOWN] = true;
+				if (mcMask [Simulator.DIR_LEFT, nodeID] == 1 && preferredDirVector [Simulator.DIR_LEFT] != true && f.inDir != Simulator.DIR_LEFT)
+					preferredDirVector [Simulator.DIR_LEFT] = true;
+				if (nodeID == current.ID)
+					preferredDirVector [Simulator.DIR_LOCAL] = true;
+				//else
+				//	Debug.Assert (false, "ERROR: Direction doesn't exist\n");
+			}
+			return preferredDirVector;
+		}
+
         protected PreferredDirection determineDirection(Flit f, Coord current)
         {
-            PreferredDirection pd;
+            PreferredDirection pd;		
             pd.xDir = Simulator.DIR_NONE;
             pd.yDir = Simulator.DIR_NONE;
 
             if (f.state == Flit.State.Placeholder) return pd;
 
-            //if (f.packet.ID == 238)
-            //    Console.WriteLine("packet 238 at ID ({0},{1}), wants ({2},{3})", current.x, current.y, f.packet.dest.x, f.packet.dest.y);
-            
             return determineDirection(f.dest);
         }
 
@@ -406,8 +434,8 @@ namespace ICSimulator
         {
             //if (f.packet.src.ID == 3) Console.WriteLine("inject flit: packet {0}, seq {1}",
             //        f.packet.ID, f.flitNr);
-
-            Simulator.stats.inject_flit.Add();
+			
+			Simulator.stats.inject_flit.Add(); 
             if (f.isHeadFlit) Simulator.stats.inject_flit_head.Add();
             if (f.packet != null)
             {
@@ -431,9 +459,17 @@ namespace ICSimulator
         protected void statsEjectFlit(Flit f)
         {
             // per-flit latency stats
-			ulong net_latency = Simulator.CurrentRound - f.injectionTime; //end-to-end delay
-			ulong total_latency = Simulator.CurrentRound - f.packet.creationTime ; // from generation to receive
-            ulong inj_latency = total_latency - net_latency;
+			//Console.Write("Packet {0}.{1} Traverse: ", f.packet.ID, f.flitNr);
+			//foreach (int i in f.roadMap)
+			//	Console.Write (" {0}", i);
+			//Console.WriteLine ();
+			ulong net_latency;
+			ulong total_latency;
+			ulong inj_latency;
+				
+			net_latency = Simulator.CurrentRound - f.injectionTime;
+			total_latency = Simulator.CurrentRound - f.creationTime;
+            inj_latency = total_latency - net_latency;
 
 			Simulator.stats.flit_intf.Add(f.intfCycle);
             Simulator.stats.flit_inj_latency.Add(inj_latency);
@@ -501,15 +537,47 @@ namespace ICSimulator
 
         protected void statsEjectPacket(Packet p)
         {
-			if (p.nrOfFlits == Config.router.addrPacketSize)
-				Simulator.stats.ctrl_pkt.Add();
-			else if (p.nrOfFlits == Config.router.dataPacketSize)
-				Simulator.stats.data_pkt.Add();
-			else
-				throw new Exception ("packet size is undefined, yet received!");
+			ScoreBoard.UnregPacket (ID, p.ID);
 
-			ulong net_latency = Simulator.CurrentRound - p.injectionTime;
-            ulong total_latency = Simulator.CurrentRound - p.creationTime;
+			if (!p.mc) {
+				if (p.nrOfFlits == Config.router.addrPacketSize)
+					Simulator.stats.ctrl_pkt.Add ();
+				else if (p.nrOfFlits == Config.router.dataPacketSize)
+					Simulator.stats.data_pkt.Add ();
+				else
+					throw new Exception ("packet size is undefined, yet received!");
+				
+			} 
+			else {
+
+				if (p.nrOfFlits == 2*Config.router.addrPacketSize)
+					Simulator.stats.ctrl_pkt.Add ();
+				else if (p.nrOfFlits == 2*Config.router.dataPacketSize)
+					Simulator.stats.data_pkt.Add ();
+				else
+					throw new Exception ("packet size is undefined, yet received!");
+			}
+
+			ulong net_latency;
+			ulong total_latency;
+			if (p.mc) {
+				if (p.creationTimeMC [ID] == p.creationTime) { // if true, this is a master copy, not replciated. 
+					net_latency = Simulator.CurrentRound - p.injectionTime;
+					total_latency = Simulator.CurrentRound - p.creationTime;
+				} else {
+					net_latency = Simulator.CurrentRound - p.creationTimeMC[ID];
+					total_latency = net_latency; // for replicated packet, injection_latency = 0;
+				}
+			}
+
+			else {
+				net_latency = Simulator.CurrentRound - p.injectionTime;
+				total_latency = Simulator.CurrentRound - p.creationTime;
+			}
+
+			bool stop = false;
+			if (total_latency > 120)
+				stop = true;
 
 			Simulator.stats.packet_intf.Add(p.intfCycle);
             Simulator.stats.net_latency.Add(net_latency);
