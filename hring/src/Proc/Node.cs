@@ -227,7 +227,7 @@ namespace ICSimulator
 			{
 				Packet p = packetization ();
 				queuePacket(p);
-				Console.WriteLine ("Packet {0} is generated @ Time {1} Router {2}", p.ID, Simulator.CurrentRound, coord.ID);
+				//Console.WriteLine ("Packet {0} is generated @ Time {1} Router {2}", p.ID, Simulator.CurrentRound, coord.ID);
 				ScoreBoard.RegPacket (p.dest.ID, p.ID);
 				Simulator.stats.generate_packet.Add ();
 				if (record) {
@@ -251,7 +251,7 @@ namespace ICSimulator
 
 			if (Simulator.rand.NextDouble () < mc_rate) {
 				mc_degree = Simulator.rand.Next (Config.mc_degree - 2) + 2; // multicast; generate index 2-15
-				Console.WriteLine ("TIME={0} Node {1} send {2} MC_PKT", Simulator.CurrentRound, m_coord.ID, mc_degree);
+				//Console.WriteLine ("TIME={0} Node {1} send {2} MC_PKT", Simulator.CurrentRound, m_coord.ID, mc_degree);
 			}
 			else
 				mc_degree = 1;

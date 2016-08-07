@@ -23,7 +23,6 @@ namespace ICSimulator
 
 	public class Router_BLESS_MC: Router_Flit
 	{
-		int MC_MODE = 2; // TODO: FIX_ME
 
 		Queue<Flit>	[] ejectBuffer;
 		protected int [,] mcMask;
@@ -139,9 +138,9 @@ namespace ICSimulator
 							break;
 						}
 					numFlitIn++;	
-					//#if DEBUG
+					#if DEBUG
 					Console.WriteLine ("#1 InjectToRouter: Time {0}: Inject @ Router {1} {2}", Simulator.CurrentRound, ID, m_injectSlot.ToString());
-					//#endif
+					#endif
 					statsInjectFlit (m_injectSlot);
 					m_injectSlot = null;
 				}
@@ -245,12 +244,20 @@ namespace ICSimulator
 			if (f2 == null) return -1;
 
 			int c0 = 0;
-			/*
-			if (f1.packet.mc && !f2.packet.mc)
-				c0 = -1;
-			else if (!f1.packet.mc && f2.packet.mc)
+
+			//promoting MC packet is not a good idea!
+			//Reason to demote MC packet:
+			// 1) MC packet is likely to have multiple productive directions.
+			if (f1.replicateNeed && !f2.replicateNeed)
 				c0 = 1;
-			*/
+			else if (!f1.replicateNeed && f2.replicateNeed)
+				c0 = -1;
+			
+			//if (f1.packet.mc && !f2.packet.mc)
+			//	c0 = 1;
+			//else if (!f1.packet.mc && f2.packet.mc)
+			//	c0 = -1;
+			
 			int c1 = 0, c2 = 0;
 			if (f1.packet != null && f2.packet != null)
 			{
@@ -335,9 +342,9 @@ namespace ICSimulator
 				else if (i == 1) f2 = eject;
 				if (eject != null) {
 					acceptFlit (eject); 	// Eject flit	
-				//#if DEBUG
+				#if DEBUG
 				Console.WriteLine ("#6 Time {0}: Eject @ node {1} {2}", Simulator.CurrentRound,coord.ID, eject.ToString());
-				//#endif
+				#endif
 				}
 			}
 			// Profile dual ejection effect
@@ -509,14 +516,14 @@ namespace ICSimulator
 
 		protected override void _doStep(){
 
-			bool stop;
+			//bool stop;
 
-			if (Simulator.CurrentRound == 258 && ID == 7)
-				stop = true;		
+			//if (Simulator.CurrentRound == 258 && ID == 7)
+			//	stop = true;		
 
 			Clear ();
 
-			PrintFlitIn ();
+			//PrintFlitIn ();
 
 			BufferWrite ();
 
@@ -537,7 +544,7 @@ namespace ICSimulator
 
 			SAPlusST ();
 
-			PrintFlitOut ();
+			//PrintFlitOut ();
 		} // called from Network
 
 

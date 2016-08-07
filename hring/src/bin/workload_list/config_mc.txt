@@ -9,7 +9,7 @@ mc_degree = 16
 //barrier = 3
 //trace_wraparound = true
 
-finish = packet 100000
+finish = packet 1000000
 
 //finish = cycle 1100000
 //warmup_cyc = 100000

@@ -23,6 +23,16 @@ def get_pkt_lat_net (stat):
   pkt_lat_tot = [searchObj.group(1), searchObj.group(2)]
   return pkt_lat_tot
 
+def get_throughput (stat):
+  searchObj = re.search(r'(?:throughput: (.*?) flits per cycle)',stat)
+  throughput = searchObj.group(1)
+  return throughput
+
+def get_deflect (stat):
+  searchObj = re.search(r'(?:deflection rate (.*?)\%)',stat)
+  deflect = searchObj.group(1)
+  return deflect
+
 def get_l1miss (stat):
   searchObj = re.search(r'(?:"L1_misses_persrc":\[(.*?)])',stat)
   splitObj = re.split('\W+',searchObj.group(1))

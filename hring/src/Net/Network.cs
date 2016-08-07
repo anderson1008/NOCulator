@@ -554,7 +554,7 @@ namespace ICSimulator
                     return Simulator.CurrentBarrier >= (ulong)Config.barrier;
 
 				case FinishMode.packet:
-					return Simulator.stats.generate_packet.Count == m_finishCount && ScoreBoard.ScoreBoardisClean() && (Simulator.stats.inject_flit.Count == Simulator.stats.eject_flit.Count);
+					return Simulator.stats.generate_packet.Count >= m_finishCount && ScoreBoard.ScoreBoardisClean() && (Simulator.stats.inject_flit.Count == Simulator.stats.eject_flit.Count);
 				
 				
             }
