@@ -149,6 +149,38 @@ namespace ICSimulator
 			}
 		}
 
+
+		protected void Merge () {
+			int priority_inv = 0;
+
+			for (int i = 0; i < 4; i++) {
+				if (inputBuffer [i] == null)
+					continue;
+				for (int j = i+1; j < 4; j++) {
+					if (inputBuffer [j] == null)
+						continue;
+					if (inputBuffer [i].packet.gather && inputBuffer [j].packet.gather &&
+						(inputBuffer [i].flitNr == inputBuffer[j].flitNr) &&
+					    (inputBuffer [i].packet.requesterID == inputBuffer [j].packet.requesterID) 
+						// This way also allow MC traffic being merged. But need to set dst
+					) {
+						if (inputBuffer[i].packet.request != null && inputBuffer [j].packet.request != null) 
+							if (inputBuffer [i].packet.request.mshr != inputBuffer [j].packet.request.mshr)
+								continue;
+
+						if (priority_inv == 0) {
+							inputBuffer [i].ackCount++;
+							inputBuffer [j] = null;
+						} else if (priority_inv == 1) { // reverse the priority for selecting the flit being dropped.
+							inputBuffer [j].ackCount++;
+							inputBuffer [i] = null;
+						}
+					}
+				}
+			}
+
+		}
+
 		protected void Clear () {
 
 			for (int i = 0; i < 4; i++) 
@@ -200,6 +232,20 @@ namespace ICSimulator
 				
 			} else {
 				f.preferredDirVector = determineDirection (f, coord, mcMask);
+			}
+		}
+
+		// TODO: TBD; Do not perform full-fledged merging to reduce complexity.
+		protected void MergeFlitTagging () {
+			// benefit of merging: reduce the flits in the network, increase throughput, increase the chance of replication
+
+			for (int dir = 0; dir < 4; dir++) {
+				if (inputBuffer [dir] == null)
+					continue;
+
+
+
+
 			}
 		}
 
@@ -379,6 +425,7 @@ namespace ICSimulator
 			int[] routeOrder = new int[4] {1,3,0,2};
 			int dir;
 
+
 			for (int i = 0; i < 4; i++) {
 
 				if (inputBuffer[i] == null)
@@ -527,6 +574,9 @@ namespace ICSimulator
 
 			BufferWrite ();
 
+			// Merge 
+			Merge ();
+
 			for (int i = 0; i < 4; i++) 
 				RouteCompute (inputBuffer [i]); // each flit contains a preferred 5 bits diection vector.
 
@@ -538,10 +588,11 @@ namespace ICSimulator
 			ejection ();
 
 			// inject
+			// TODO: can add merge support
 			InjectToRouter (); // RC of local injected flit is computed inside 
 
 			// arbitration and switch traversal
-
+			// Flit replication and merging take place here
 			SAPlusST ();
 
 			//PrintFlitOut ();

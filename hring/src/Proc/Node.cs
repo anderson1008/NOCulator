@@ -178,13 +178,24 @@ namespace ICSimulator
 				case SynthTrafficPattern.TR:  // TODO: Check if correct
 					c = new Coord (m_coord.y, m_coord.x);
 					break;
+				case SynthTrafficPattern.HS:
+					Simulator.network.pickHotSpot (); // pick a hot spot when N-1 Mergeable packets destined to hotspot node
+					if ((Simulator.rand.NextDouble () < Config.hotspot_prob) && (Simulator.network.hsReqPerNode[m_coord.ID] < Config.hotSpotReqPerNode)) {
+						dest = Simulator.network.hotSpotNode;
+						Simulator.network.hsReqPerNode [m_coord.ID] ++;
+						Simulator.network.hotSpotGenCount++;
+					}
+					else
+						dest = Simulator.rand.Next (Config.N);
+					c = new Coord (dest);
+					break;
 				}
 			}
 			return c;
 		}
 
 
-		int PickPktSize (bool mc)
+		int PickPktSize (bool mc, bool gather)
 		{
 			// decide packet size
 			int packet_size;
@@ -202,16 +213,29 @@ namespace ICSimulator
 
 			if (mc == true)
 				return packet_size * 2; // each packet only contains half of original payload.
+			else if (gather == true)
+				return Config.router.addrPacketSize;
 			else
 			    return packet_size;
 		}
 
 		Packet packetization ()
 		{
-			Coord c = PickDst ();
-			int packet_size = PickPktSize (false);
 
-			Packet p = new Packet(null,0,packet_size,m_coord, c);
+			int oldHsReq = Simulator.network.hsReqPerNode [m_coord.ID]; // use to determine if a hot spot packet is generated. Place it before PickDst()
+			Coord c = PickDst ();
+			bool gather = false;
+			int packet_size;
+			Packet p;
+
+			if (oldHsReq == (Simulator.network.hsReqPerNode [m_coord.ID]-1))
+				gather = true;
+
+			packet_size = PickPktSize (false, gather);
+			if (gather)
+				p = new Packet (null,0,packet_size,m_coord, c, true);
+			else
+				p = new Packet(null,0,packet_size,m_coord, c);
 
 #if PACKETDUMP
 			Console.WriteLine ("#1 Time {0}, @ node {1} {2}", Simulator.CurrentRound, m_coord.ID, p.ToString());
@@ -258,7 +282,7 @@ namespace ICSimulator
 
 			if (mc_degree == 1) {
 				// This is a unicast packet
-				packet_size = PickPktSize (false); 
+				packet_size = PickPktSize (false, false); 
 				unicastSynthGen (false, true);
 				return;
 			}
@@ -275,7 +299,7 @@ namespace ICSimulator
 				sharerList.Add(dst);
 				mc_degree--;
 			}
-			packet_size = PickPktSize (true); 
+			packet_size = PickPktSize (true, false); 
 			Packet p = new Packet(null,0,packet_size,m_coord, sharerList);
 			queuePacket(p);
 			foreach (Coord dest in sharerList) {

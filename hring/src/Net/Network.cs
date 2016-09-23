@@ -34,6 +34,11 @@ namespace ICSimulator
         public bool[] endOfTraceBarrier;
         public bool canRewind;
 
+		// Use to emulate M-to-1 traffic (i.e. ACK)
+		public int hotSpotNode;
+		public int hotSpotGenCount; // number of ACK generated which destines to the hot spot
+		public int [] hsReqPerNode; // hotspot node lock, set to true to ensure only one hotspot packet is generated from each node.
+
         // finish mode
 		public enum FinishMode { app, insn, packet, cycle, barrier };
         FinishMode m_finish;
@@ -64,6 +69,16 @@ namespace ICSimulator
             X = dimX;
             Y = dimY;
         }
+
+		public void pickHotSpot ()
+		{
+			if ((hotSpotGenCount == Config.N - 1) || hotSpotNode == -1) {
+				hotSpotGenCount = 0;
+				hotSpotNode = Simulator.rand.Next (Config.N);
+				for (int i = 0; i < Config.N; i++)
+					hsReqPerNode [i] = 0;
+			}
+		}
 
         public bool endOfTraceAllDone()
         {
@@ -99,7 +114,10 @@ namespace ICSimulator
             cache = new CmpCache();
 
             endOfTraceBarrier = new bool[Config.N];
+			hsReqPerNode = new int[Config.N];
             canRewind = false;
+			hotSpotNode = -1;
+			hotSpotGenCount = 0;
 
             ParseFinish(Config.finish);
 
@@ -116,6 +134,7 @@ namespace ICSimulator
                 nodes[n].setRouter(routers[n]);
                 routers[n].setNode(nodes[n]);
                 endOfTraceBarrier[n] = false;
+				hsReqPerNode [n] = 0;
 				#if DEBUG
 				Console.WriteLine ("*******This is Node {0} **********", n);
 				((Router_BLESS_MC)nodes [n].router).PrintMask ();

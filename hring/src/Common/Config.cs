@@ -84,7 +84,8 @@ namespace ICSimulator
 	{
 		UR, // Uniform Random
 		BC, // Bit
-		TR // Tornado
+		TR, // Tornado
+		HS, // Hot Spot
 	}
 	
     public enum Topology
@@ -133,8 +134,11 @@ namespace ICSimulator
 		public static bool multicast = false;
 		public static int mc_degree = N; // number of packets send out; N: broadcast; 1: unicast;
 		public static double mc_rate = 0.05;
-		public static SynthTrafficPattern synthPattern = SynthTrafficPattern.UR;
+		public static SynthTrafficPattern synthPattern = SynthTrafficPattern.HS;
 		public static bool scoreBoardDisable = false; // enable for to speed up simulation
+		public static double hotspot_prob = 0.1;
+		public static int hotSpotReqPerNode = 1;
+		//public static double hotspot_prob = Config.hotspot_multiplier * Config.unhotspot_prob;
 
 		// --- Carpool: NoC with Gather-Scatter Support
 

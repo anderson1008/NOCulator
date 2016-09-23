@@ -522,8 +522,9 @@ namespace ICSimulator
 					Simulator.stats.flitL1Global.Add(1);
 			}
 
-            Simulator.stats.eject_flit.Add();
-            Simulator.stats.eject_flit_bydest[f.packet.dest.ID].Add();
+
+			Simulator.stats.eject_flit.Add(f.ackCount);
+			Simulator.stats.eject_flit_bydest[f.packet.dest.ID].Add(f.ackCount);
 
             int minpath = Math.Abs(f.packet.dest.x - f.packet.src.x) + Math.Abs(f.packet.dest.y - f.packet.src.y);
             Simulator.stats.minpath.Add(minpath);
@@ -537,9 +538,9 @@ namespace ICSimulator
 
         protected void statsEjectPacket(Packet p)
         {
-			ScoreBoard.UnregPacket (ID, p.ID);
+			ScoreBoard.UnregPacket (ID, p.ID); // TODO: merged packet may cause issue.
 
-			if (!p.mc) {
+			if (!p.mc && !p.gather) {
 				if (p.nrOfFlits == Config.router.addrPacketSize)
 					Simulator.stats.ctrl_pkt.Add ();
 				else if (p.nrOfFlits == Config.router.dataPacketSize)
@@ -547,7 +548,9 @@ namespace ICSimulator
 				else
 					throw new Exception ("packet size is undefined, yet received!");
 				
-			} 
+			} else if (p.gather) {
+				Simulator.stats.ctrl_pkt.Add ();
+			}
 			else {
 
 				if (p.nrOfFlits == 2*Config.router.addrPacketSize)
