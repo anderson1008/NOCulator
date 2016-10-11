@@ -128,15 +128,16 @@ namespace ICSimulator
 		// --- Synthetic Traffic Simulation --- //
 		public static bool synthGen = true; // will not generate CPU instance if it is true
 		public static double synth_rate = 0.4; // injection rate in packet/cycle/node
+		public static double mc_rate = 0.05;
+		public static double hs_rate = 0.5;
 		public static int synthQueueLimit = 1000;
 		public static bool uniform_size_enable = true;
 		public static int uniform_size = 1;
-		public static bool multicast = false;
+		public static bool multicast = true;
 		public static int mc_degree = N; // number of packets send out; N: broadcast; 1: unicast;
-		public static double mc_rate = 0.05;
 		public static SynthTrafficPattern synthPattern = SynthTrafficPattern.HS;
+		public static bool mergeEnable = true;
 		public static bool scoreBoardDisable = false; // enable for to speed up simulation
-		public static double hotspot_prob = 0.1;
 		public static int hotSpotReqPerNode = 1;
 		//public static double hotspot_prob = Config.hotspot_multiplier * Config.unhotspot_prob;
 

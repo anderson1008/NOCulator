@@ -448,7 +448,7 @@ namespace ICSimulator
             hasFlitArrived = false;
             this.Deflected = false;
 			this.Bypassed = false;
-			this.ackCount = 0;
+			this.ackCount = 1;
 			this.creationTime = Simulator.CurrentRound;
             //deflections = new bool[100];
             //deflectionsIndex = 0;

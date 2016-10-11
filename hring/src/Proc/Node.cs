@@ -180,12 +180,16 @@ namespace ICSimulator
 					break;
 				case SynthTrafficPattern.HS:
 					Simulator.network.pickHotSpot (); // pick a hot spot when N-1 Mergeable packets destined to hotspot node
-					if ((Simulator.rand.NextDouble () < Config.hotspot_prob) && (Simulator.network.hsReqPerNode[m_coord.ID] < Config.hotSpotReqPerNode)) {
+					if ((Simulator.rand.NextDouble () < Config.hs_rate) && 
+						// use to control the number of mergable request from each node
+						(Simulator.network.hsReqPerNode[m_coord.ID] < Config.hotSpotReqPerNode))  
+					{
 						dest = Simulator.network.hotSpotNode;
 						Simulator.network.hsReqPerNode [m_coord.ID] ++;
 						Simulator.network.hotSpotGenCount++;
+						Simulator.stats.generate_hs_packet.Add ();
 					}
-					else
+					else  // otherwide gnerate a normal uniform random packet
 						dest = Simulator.rand.Next (Config.N);
 					c = new Coord (dest);
 					break;

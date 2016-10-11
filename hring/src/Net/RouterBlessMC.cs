@@ -161,6 +161,7 @@ namespace ICSimulator
 						continue;
 					if (inputBuffer [i].packet.gather && inputBuffer [j].packet.gather &&
 						(inputBuffer [i].flitNr == inputBuffer[j].flitNr) &&
+						(inputBuffer [i].dest.ID == inputBuffer[j].dest.ID) &&
 					    (inputBuffer [i].packet.requesterID == inputBuffer [j].packet.requesterID) 
 						// This way also allow MC traffic being merged. But need to set dst
 					) {
@@ -169,12 +170,15 @@ namespace ICSimulator
 								continue;
 
 						if (priority_inv == 0) {
-							inputBuffer [i].ackCount++;
+							inputBuffer [i].ackCount=inputBuffer[i].ackCount + inputBuffer[j].ackCount;
+							ScoreBoard.UnregPacket (inputBuffer[j].packet.dest.ID, inputBuffer[j].packet.ID); 
 							inputBuffer [j] = null;
 						} else if (priority_inv == 1) { // reverse the priority for selecting the flit being dropped.
-							inputBuffer [j].ackCount++;
+							inputBuffer [j].ackCount=inputBuffer[i].ackCount + inputBuffer[j].ackCount;
+							ScoreBoard.UnregPacket (inputBuffer[i].packet.dest.ID, inputBuffer[i].packet.ID); 
 							inputBuffer [i] = null;
 						}
+						Simulator.stats.merge_flit.Add ();;
 					}
 				}
 			}
@@ -575,7 +579,8 @@ namespace ICSimulator
 			BufferWrite ();
 
 			// Merge 
-			Merge ();
+			if (Config.mergeEnable)
+				Merge ();
 
 			for (int i = 0; i < 4; i++) 
 				RouteCompute (inputBuffer [i]); // each flit contains a preferred 5 bits diection vector.

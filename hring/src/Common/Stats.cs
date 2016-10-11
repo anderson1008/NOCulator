@@ -12,7 +12,9 @@ namespace ICSimulator
 		// By Xiyue: for coherent packet profiling
 		//public SampledStat[] avg_slowdown_error;
 
-		public AccumStat generate_packet, generate_mc_packet, generate_uc_packet;
+		public AccumStat generate_packet, generate_mc_packet, generate_uc_packet, generate_hs_packet;
+		public AccumStat merge_flit;
+
 		public PeriodicAccumStat[] L1miss_persrc_period;
 		public AccumStat [] throttle_down_profile; 
 		public AccumStat [] cpu_stall_throttle;
