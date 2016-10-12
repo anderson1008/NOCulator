@@ -27,6 +27,7 @@ namespace ICSimulator
         public Router[] neigh = new Router[4];
         public int neighbors;
 		public int RouterType = -1;
+		public int starveCount = 0;
 
         protected string routerName;
         protected Node m_n;

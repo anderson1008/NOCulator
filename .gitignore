@@ -13,3 +13,4 @@ Makefile*
 /Mono/*
 /hring/src/.DS_Store
 .DS_Store
+/hring/src/Script/carpool/

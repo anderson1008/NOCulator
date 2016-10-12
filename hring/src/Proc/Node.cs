@@ -189,7 +189,7 @@ namespace ICSimulator
 						Simulator.network.hotSpotGenCount++;
 						Simulator.stats.generate_hs_packet.Add ();
 					}
-					else  // otherwide gnerate a normal uniform random packet
+					else  // otherwide generate a normal uniform random packet
 						dest = Simulator.rand.Next (Config.N);
 					c = new Coord (dest);
 					break;
@@ -348,9 +348,15 @@ namespace ICSimulator
 
 			if (!Config.multicast && Simulator.rand.NextDouble () < uc_rate)
 				unicastSynthGen (false, true);
+			// Enable adaptiveInj to make it adaptive
 			else if (Config.multicast && Simulator.rand.NextDouble () < uc_rate)
  			{				
-				if (Config.router.algorithm == RouterAlgorithm.DR_FLIT_SW_OF_MC)
+				// Console.WriteLine ("Starvation rate is {0}", m_router.starveCount/(float)Config.starveResetEpoch);
+				if ((Config.router.algorithm == RouterAlgorithm.DR_FLIT_SW_OF_MC && Config.scatterEnable) && 
+					(Config.adaptiveInj == true && m_router.starveCount < Config.starveThreshold)
+					//using starveCount is better than stat.starve_flit.Rate and stat.starve_flit.Count.
+					//It may react quickly when the execution changes phase.
+				)
 					multicastSynthGenMultiDst ();
 				else
 					multicastSynthGenNaive ();

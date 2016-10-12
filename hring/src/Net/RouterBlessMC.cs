@@ -115,6 +115,7 @@ namespace ICSimulator
 
 				Simulator.controller.reportStarve(coord.ID);
 				statsStarve(starvedFlit);
+				starveCount++;
 			}
 			if (canInject && wantToInject)
 			{				
@@ -191,6 +192,8 @@ namespace ICSimulator
 				inputBuffer [i] = null;
 			
 			numFlitIn = 0;
+
+			resetStarveCounter ();
 		}
 
 		protected void BufferWrite (){
@@ -562,7 +565,11 @@ namespace ICSimulator
 
 			}
 
+		}
 
+		protected void resetStarveCounter () {
+			if (Simulator.CurrentRound % Config.starveResetEpoch == 0) 
+				starveCount = 0;
 		}
 
 		protected override void _doStep(){
