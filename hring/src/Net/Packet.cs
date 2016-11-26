@@ -114,6 +114,7 @@ namespace ICSimulator
         private Coord _dest;
 		public List <Coord> destList;
 		public bool mc, gather; // multicast, gather-able packet
+		public int hsFlowID;
 		public int [] nrOfArrivedFlitsMC;
 		public ulong [] creationTimeMC;
 		public int nrMCPacket;
@@ -184,6 +185,7 @@ namespace ICSimulator
 			requesterID = -1;
 			mc = false;
 			gather = _gather;
+			hsFlowID = Simulator.network.hsFlowID;
 			initialize (Simulator.CurrentRound, nrOfFlits);// Flitization of each packet;
 		}
 
@@ -204,6 +206,7 @@ namespace ICSimulator
 			if (request != null)
 				request.setCarrier (this);
 			requesterID = -1;
+			hsFlowID = -1;
 			mc = true;
 			gather = false;
 			initialize (Simulator.CurrentRound, nrOfFlits);// Flitization of each packet;
@@ -375,7 +378,6 @@ namespace ICSimulator
         public ulong nrOfDeflections;
         public int virtualChannel; // to which virtual channel the packet should go in the next router. 
         public bool sortnet_winner;
-		public List <int> roadMap;
 		public int ackCount;
 
         public int currentX;
@@ -443,7 +445,6 @@ namespace ICSimulator
         {
             this.packet = packet;
             this.flitNr = flitNr;
-			roadMap = new List <int> ();
 
             hasFlitArrived = false;
             this.Deflected = false;

@@ -10,6 +10,7 @@ import get
 
 
 
+
 def get_batch_stat (path, numSim):
 
   pkt_lat_tot_avg_array = []
@@ -39,83 +40,19 @@ def get_batch_stat (path, numSim):
   return pkt_lat_tot_avg_array, pkt_lat_net_avg_array, throughput_array, deflect_array
 
 
+
+
+result_dir = "/Users/Anderson/GoogleDrive/NOCulator/hring/src/Script/carpool/preliminary/synthSweep/uc/"
 title = '{:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10}'.format("injRate", "myTotAvgLat", "bsTotAvgLat", "myNetAvgLat", "bsToAvgLat", "my_throughput", "bs_throughput", "my_deflect", "bs_deflect")
 
-[my_tot_lat_avg, my_net_lat_avg, my_throughput, my_deflect] = get_batch_stat("../preliminary/mcnoc/uc/mc_0.01/", 15)
-[bs_tot_lat_avg, bs_net_lat_avg, bs_throughput, bs_deflect] = get_batch_stat("../preliminary/naive/uc/mc_0.01/", 15)
+#path should has "/" in the end
+[my_tot_lat_avg, my_net_lat_avg, my_throughput, my_deflect] = get_batch_stat(result_dir+"scatter/mc_0.1/", 15)
+[bs_tot_lat_avg, bs_net_lat_avg, bs_throughput, bs_deflect] = get_batch_stat(result_dir+"no_scatter/mc_0.1/", 15)
 inj_rate = 0
-print "mc_rate=0.01, sweep uc_rate"
+print "hs_rate=0.2, sweep uc_rate"
 print title
 for a0, a1, b0, b1, c0, c1, d0, d1 in zip(my_tot_lat_avg, bs_tot_lat_avg, my_net_lat_avg, bs_net_lat_avg, my_throughput, bs_throughput, my_deflect, bs_deflect):
   inj_rate = inj_rate + 0.02
   print '{:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10}'.format(inj_rate, a0, a1, b0, b1, c0, c1, d0, d1)
 
-[my_tot_lat_avg, my_net_lat_avg, my_throughput, my_deflect] = get_batch_stat("../preliminary/mcnoc/uc/mc_0.02/", 15)
-[bs_tot_lat_avg, bs_net_lat_avg, bs_throughput, bs_deflect] = get_batch_stat("../preliminary/naive/uc/mc_0.02/", 15)
-inj_rate = 0
-print "mc_rate=0.02, sweep uc_rate"
-print title
-for a0, a1, b0, b1, c0, c1, d0, d1 in zip(my_tot_lat_avg, bs_tot_lat_avg, my_net_lat_avg, bs_net_lat_avg, my_throughput, bs_throughput, my_deflect, bs_deflect):
-  inj_rate = inj_rate + 0.02
-  print '{:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10}'.format(inj_rate, a0, a1, b0, b1, c0, c1, d0, d1)
-
-
-[my_tot_lat_avg, my_net_lat_avg, my_throughput, my_deflect] = get_batch_stat("../preliminary/mcnoc/uc/mc_0.05/", 10)
-[bs_tot_lat_avg, bs_net_lat_avg, bs_throughput, bs_deflect] = get_batch_stat("../preliminary/naive/uc/mc_0.05/", 10)
-inj_rate = 0
-print "mc_rate=0.05, sweep uc_rate"
-print title
-for a0, a1, b0, b1, c0, c1, d0, d1 in zip(my_tot_lat_avg, bs_tot_lat_avg, my_net_lat_avg, bs_net_lat_avg, my_throughput, bs_throughput, my_deflect, bs_deflect):
-  inj_rate = inj_rate + 0.02
-  print '{:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10}'.format(inj_rate, a0, a1, b0, b1, c0, c1, d0, d1)
-
-
-[my_tot_lat_avg, my_net_lat_avg, my_throughput, my_deflect] = get_batch_stat("../preliminary/mcnoc/uc/mc_0.1/", 10)
-[bs_tot_lat_avg, bs_net_lat_avg, bs_throughput, bs_deflect] = get_batch_stat("../preliminary/naive/uc/mc_0.1/", 10)
-inj_rate = 0
-print "mc_rate=0.1, sweep uc_rate"
-print title
-for a0, a1, b0, b1, c0, c1, d0, d1 in zip(my_tot_lat_avg, bs_tot_lat_avg, my_net_lat_avg, bs_net_lat_avg, my_throughput, bs_throughput, my_deflect, bs_deflect):
-  inj_rate = inj_rate + 0.02
-  print '{:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10}'.format(inj_rate, a0, a1, b0, b1, c0, c1, d0, d1)
-
-
-[my_tot_lat_avg, my_net_lat_avg, my_throughput, my_deflect] = get_batch_stat("../preliminary/mcnoc/mc/uc_0.1/", 25)
-[bs_tot_lat_avg, bs_net_lat_avg, bs_throughput, bs_deflect] = get_batch_stat("../preliminary/naive/mc/uc_0.1/", 25)
-inj_rate = 0
-print "uc_rate=0.1, sweep mc_rate"
-print title
-for a0, a1, b0, b1, c0, c1, d0, d1 in zip(my_tot_lat_avg, bs_tot_lat_avg, my_net_lat_avg, bs_net_lat_avg, my_throughput, bs_throughput, my_deflect, bs_deflect):
-  inj_rate = inj_rate + 0.01
-  print '{:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10}'.format(inj_rate, a0, a1, b0, b1, c0, c1, d0, d1)
-
-
-[my_tot_lat_avg, my_net_lat_avg, my_throughput, my_deflect] = get_batch_stat("../preliminary/mcnoc/mc/uc_0.2/", 10)
-[bs_tot_lat_avg, bs_net_lat_avg, bs_throughput, bs_deflect] = get_batch_stat("../preliminary/naive/mc/uc_0.2/", 10)
-inj_rate = 0
-print "uc_rate=0.2, sweep mc_rate"
-print title
-for a0, a1, b0, b1, c0, c1, d0, d1 in zip(my_tot_lat_avg, bs_tot_lat_avg, my_net_lat_avg, bs_net_lat_avg, my_throughput, bs_throughput, my_deflect, bs_deflect):
-  inj_rate = inj_rate + 0.01
-  print '{:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10}'.format(inj_rate, a0, a1, b0, b1, c0, c1, d0, d1)
-
-
-[my_tot_lat_avg, my_net_lat_avg, my_throughput, my_deflect] = get_batch_stat("../preliminary/mcnoc/mc/uc_0.3/", 10)
-[bs_tot_lat_avg, bs_net_lat_avg, bs_throughput, bs_deflect] = get_batch_stat("../preliminary/naive/mc/uc_0.3/", 10)
-inj_rate = 0
-print "uc_rate=0.3, sweep mc_rate"
-print title
-for a0, a1, b0, b1, c0, c1, d0, d1 in zip(my_tot_lat_avg, bs_tot_lat_avg, my_net_lat_avg, bs_net_lat_avg, my_throughput, bs_throughput, my_deflect, bs_deflect):
-  inj_rate = inj_rate + 0.01
-  print '{:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10}'.format(inj_rate, a0, a1, b0, b1, c0, c1, d0, d1)
-
-
-[my_tot_lat_avg, my_net_lat_avg, my_throughput, my_deflect] = get_batch_stat("../preliminary/mcnoc/mc/uc_0.4/", 10)
-[bs_tot_lat_avg, bs_net_lat_avg, bs_throughput, bs_deflect] = get_batch_stat("../preliminary/naive/mc/uc_0.4/", 10)
-inj_rate = 0
-print "uc_rate=0.4, sweep mc_rate"
-print title
-for a0, a1, b0, b1, c0, c1, d0, d1 in zip(my_tot_lat_avg, bs_tot_lat_avg, my_net_lat_avg, bs_net_lat_avg, my_throughput, bs_throughput, my_deflect, bs_deflect):
-  inj_rate = inj_rate + 0.01
-  print '{:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10}'.format(inj_rate, a0, a1, b0, b1, c0, c1, d0, d1)
 

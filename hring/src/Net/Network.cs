@@ -38,6 +38,7 @@ namespace ICSimulator
 		public int hotSpotNode;
 		public int hotSpotGenCount; // number of ACK generated which destines to the hot spot
 		public int [] hsReqPerNode; // hotspot node lock, set to true to ensure only one hotspot packet is generated from each node.
+		public int hsFlowID; // can be used to uniquely identify the mergable flow, including synchronization and ACKs.
 
         // finish mode
 		public enum FinishMode { app, insn, packet, cycle, barrier };
@@ -75,6 +76,7 @@ namespace ICSimulator
 			if ((hotSpotGenCount == Config.N - 1) || hotSpotNode == -1) {
 				hotSpotGenCount = 0;
 				hotSpotNode = Simulator.rand.Next (Config.N);
+				hsFlowID++;
 				for (int i = 0; i < Config.N; i++)
 					hsReqPerNode [i] = 0;
 			}
@@ -118,6 +120,7 @@ namespace ICSimulator
             canRewind = false;
 			hotSpotNode = -1;
 			hotSpotGenCount = 0;
+			hsFlowID = 0;
 
             ParseFinish(Config.finish);
 

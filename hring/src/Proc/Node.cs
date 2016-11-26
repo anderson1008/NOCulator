@@ -186,7 +186,7 @@ namespace ICSimulator
 					{
 						dest = Simulator.network.hotSpotNode;
 						Simulator.network.hsReqPerNode [m_coord.ID] ++;
-						Simulator.network.hotSpotGenCount++;
+						Simulator.network.hotSpotGenCount++; // clear for every Config.N-1 hs packets. Then pick a new hot spot.
 						Simulator.stats.generate_hs_packet.Add ();
 					}
 					else  // otherwide generate a normal uniform random packet
@@ -218,7 +218,7 @@ namespace ICSimulator
 			if (mc == true)
 				return packet_size * 2; // each packet only contains half of original payload.
 			else if (gather == true)
-				return Config.router.addrPacketSize;
+				return packet_size * 2;
 			else
 			    return packet_size;
 		}
@@ -232,7 +232,7 @@ namespace ICSimulator
 			int packet_size;
 			Packet p;
 
-			if (oldHsReq == (Simulator.network.hsReqPerNode [m_coord.ID]-1))
+			if (Simulator.network.hsReqPerNode [m_coord.ID] == oldHsReq + 1)
 				gather = true;
 
 			packet_size = PickPktSize (false, gather);
@@ -352,8 +352,15 @@ namespace ICSimulator
 			else if (Config.multicast && Simulator.rand.NextDouble () < uc_rate)
  			{				
 				// Console.WriteLine ("Starvation rate is {0}", m_router.starveCount/(float)Config.starveResetEpoch);
-				if ((Config.router.algorithm == RouterAlgorithm.DR_FLIT_SW_OF_MC && Config.scatterEnable) && 
-					(Config.adaptiveInj == true && m_router.starveCount < Config.starveThreshold)
+
+				// Using the naive mc method when the starvation rate is higher than the threshold.
+				if ((Config.adaptiveMC == true && m_router.starveCount < Config.starveThreshold) &&
+					Config.router.algorithm == RouterAlgorithm.DR_FLIT_SW_OF_MC && Config.scatterEnable
+					//using starveCount is better than stat.starve_flit.Rate and stat.starve_flit.Count.
+					//It may react quickly when the execution changes phase.
+				)
+					multicastSynthGenMultiDst ();
+				if (Config.router.algorithm == RouterAlgorithm.DR_FLIT_SW_OF_MC && Config.scatterEnable && Config.adaptiveMC == false 
 					//using starveCount is better than stat.starve_flit.Rate and stat.starve_flit.Count.
 					//It may react quickly when the execution changes phase.
 				)

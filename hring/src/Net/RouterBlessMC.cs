@@ -149,11 +149,11 @@ namespace ICSimulator
 					throw new Exception("what???inject null flits??");
 			}
 		}
-
-
+			
 		protected void Merge () {
 			int priority_inv = 0;
 
+			// merge as much as possible. May compare the flit only on certain channels to reduce the number of comparator.
 			for (int i = 0; i < 4; i++) {
 				if (inputBuffer [i] == null)
 					continue;
@@ -163,22 +163,19 @@ namespace ICSimulator
 					if (inputBuffer [i].packet.gather && inputBuffer [j].packet.gather &&
 						(inputBuffer [i].flitNr == inputBuffer[j].flitNr) &&
 						(inputBuffer [i].dest.ID == inputBuffer[j].dest.ID) &&
-					    (inputBuffer [i].packet.requesterID == inputBuffer [j].packet.requesterID) 
-						// This way also allow MC traffic being merged. But need to set dst
+						(inputBuffer [i].packet.hsFlowID == inputBuffer[j].packet.hsFlowID) //hsFlowID is used for synthetic traffic
 					) {
-						if (inputBuffer[i].packet.request != null && inputBuffer [j].packet.request != null) 
-							if (inputBuffer [i].packet.request.mshr != inputBuffer [j].packet.request.mshr)
-								continue;
 
 						if (priority_inv == 0) {
 							inputBuffer [i].ackCount=inputBuffer[i].ackCount + inputBuffer[j].ackCount;
-							ScoreBoard.UnregPacket (inputBuffer[j].packet.dest.ID, inputBuffer[j].packet.ID); 
+							ScoreBoard.UnregPacket (inputBuffer[j].packet.dest.ID, inputBuffer[j].packet.ID);
 							inputBuffer [j] = null;
 						} else if (priority_inv == 1) { // reverse the priority for selecting the flit being dropped.
 							inputBuffer [j].ackCount=inputBuffer[i].ackCount + inputBuffer[j].ackCount;
 							ScoreBoard.UnregPacket (inputBuffer[i].packet.dest.ID, inputBuffer[i].packet.ID); 
 							inputBuffer [i] = null;
 						}
+						numFlitIn--; // This will increase the probability of flit replication, as it is used to prevent deadlock during replication
 						Simulator.stats.merge_flit.Add ();;
 					}
 				}
@@ -207,15 +204,12 @@ namespace ICSimulator
 					#endif
 					numFlitIn++;
 					inputBuffer[dir] = linkIn[dir].Out;  // c: # of incoming flits
-					inputBuffer[dir].roadMap.Add(ID);
 					inputBuffer[dir].inDir = dir;  // May use for MCmask table look up 
 					inputBuffer[dir].ClearRoutingInfo();
 					linkIn[dir].Out = null;
 				}
 		}
-
-	
-
+			
 		protected void RouteCompute(Flit f) {
 			
 			PreferredDirection pd;
@@ -242,20 +236,6 @@ namespace ICSimulator
 			}
 		}
 
-		// TODO: TBD; Do not perform full-fledged merging to reduce complexity.
-		protected void MergeFlitTagging () {
-			// benefit of merging: reduce the flits in the network, increase throughput, increase the chance of replication
-
-			for (int dir = 0; dir < 4; dir++) {
-				if (inputBuffer [dir] == null)
-					continue;
-
-
-
-
-			}
-		}
-
 		protected void ReplicaFlitTagging () {
 			
 			int numMC;
@@ -271,7 +251,8 @@ namespace ICSimulator
 						numMC++;
 
 				if (numMC > 1 | (inputBuffer [dir].preferredDirVector[4] && inputBuffer[dir].packet.mc && inputBuffer[dir].destList.Count > 1)) {
-					inputBuffer [dir].replicateNeed = true;
+					if (starveCount < Config.starveThreshold)
+						inputBuffer [dir].replicateNeed = true;
 				}
 
 
@@ -301,10 +282,11 @@ namespace ICSimulator
 			//promoting MC packet is not a good idea!
 			//Reason to demote MC packet:
 			// 1) MC packet is likely to have multiple productive directions.
-			if (f1.replicateNeed && !f2.replicateNeed)
-				c0 = 1;
-			else if (!f1.replicateNeed && f2.replicateNeed)
-				c0 = -1;
+			// However, doing this will cause livelock for those MC flits.
+			//if (f1.replicateNeed && !f2.replicateNeed)
+			//	c0 = 1;
+			//else if (!f1.replicateNeed && f2.replicateNeed)
+			//	c0 = -1;
 			
 			//if (f1.packet.mc && !f2.packet.mc)
 			//	c0 = 1;
@@ -609,7 +591,6 @@ namespace ICSimulator
 
 			//PrintFlitOut ();
 		} // called from Network
-
 
 		void PrintFlitIn() {
 			

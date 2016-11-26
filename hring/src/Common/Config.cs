@@ -131,15 +131,15 @@ namespace ICSimulator
 		public static double mc_rate = 0.16;
 		public static double hs_rate = 0.5;
 		public static int synthQueueLimit = 1000;
-		public static int starveThreshold = 10000;
-		public static ulong starveResetEpoch = 1000000; // the starvation rate = starveThreshold / starveResetEpoch
+		public static int starveThreshold = 1000;
+		public static ulong starveResetEpoch = 100000; // the starvation rate = starveThreshold / starveResetEpoch
 		public static bool uniform_size_enable = true;
 		public static int uniform_size = 1;
 		public static bool multicast = true;
 		public static int mc_degree = N-1; // number of packets send out; N: broadcast; 1: unicast;
-		public static SynthTrafficPattern synthPattern = SynthTrafficPattern.HS;
-		public static bool mergeEnable = false;
-		public static bool adaptiveInj = false;
+		public static SynthTrafficPattern synthPattern = SynthTrafficPattern.UR;
+		public static bool mergeEnable = true;
+		public static bool adaptiveMC = false;
 		public static bool scatterEnable = true;
 		public static bool scoreBoardDisable = false; // enable for to speed up simulation
 		public static int hotSpotReqPerNode = 1;
