@@ -127,9 +127,13 @@ namespace ICSimulator
 					for (int j = 0; j < 4; j++)  // DO NOT check local bit
 						if (m_injectSlot.preferredDirVector [j] && m_injectSlot.packet.mc)
 							numMC++;
-
-					if (numMC > 1) 
-						m_injectSlot.replicateNeed = true;
+					if (Config.adaptiveMC) {
+						if (starveCount < Config.starveThreshold && numMC > 1)
+							m_injectSlot.replicateNeed = true;
+					} else {
+						if (numMC > 1)
+							m_injectSlot.replicateNeed = true;
+					}
 
 					 // This injection require flits to be fully sorted.
 				
@@ -250,8 +254,10 @@ namespace ICSimulator
 					if (inputBuffer [dir].preferredDirVector [j] && inputBuffer[dir].packet.mc)
 						numMC++;
 
+				if (Config.adaptiveMC && starveCount >= Config.starveThreshold && !inputBuffer [dir].preferredDirVector[4])
+					continue;
+				
 				if (numMC > 1 | (inputBuffer [dir].preferredDirVector[4] && inputBuffer[dir].packet.mc && inputBuffer[dir].destList.Count > 1)) {
-					if (starveCount < Config.starveThreshold)
 						inputBuffer [dir].replicateNeed = true;
 				}
 
@@ -336,7 +342,8 @@ namespace ICSimulator
 				}
 					
 			if (bestDir != -1) {
-				if (!inputBuffer [bestDir].replicateNeed) {
+				if (!inputBuffer [bestDir].packet.mc || 
+					inputBuffer [bestDir].packet.mc && !inputBuffer [bestDir].replicateNeed) {
 					inputBuffer [bestDir] = null;
 					numFlitIn--;
 				} else {
@@ -392,6 +399,9 @@ namespace ICSimulator
 		// accept one ejected flit into rxbuf
 		protected void acceptFlit(Flit f)
 		{
+			bool stop = false;
+			if (f.packet.ID == 861888 && m_n.coord.ID == 0)
+				stop = true;
 			statsEjectFlit(f);
 			if (f.packet.mc) {
 				if (f.packet.nrOfArrivedFlitsMC[ID] + 1 == f.packet.nrOfFlits)

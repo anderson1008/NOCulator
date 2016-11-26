@@ -38,6 +38,7 @@ namespace ICSimulator
 			bool clean = true;
 
 			foreach (List<ulong> sublist in inFlightFlit) {
+
 				if (sublist.Count != 0) {
 					clean = false;
 					break;
