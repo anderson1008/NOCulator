@@ -85,6 +85,7 @@ namespace ICSimulator
 					linkIn[dir].Out = null;
 					vcFlit vcFlit = getFreeSlot(f);
 					m_buf[dir, f.packet.getClass()].Enqueue(vcFlit);
+					Simulator.stats.vc_buf_wr.Add ();
 				}
 			}
 		}
@@ -120,7 +121,11 @@ namespace ICSimulator
 		// Do not need to call explictly in a router
 		public override void InjectFlit(Flit f) {
 			vcFlit slot = getFreeSlot (f);
+
+			// TODO: Set LTB, RTB Here
+
 			m_buf [4, f.packet.getClass ()].Enqueue (slot);
+			Simulator.stats.vc_buf_wr.Add ();
 		}
 
 		public override bool canInjectFlit(Flit f)
@@ -144,11 +149,14 @@ namespace ICSimulator
 				for (int vnet = 0; vnet < Config.vnets; vnet++) {
 					if (m_buf [pc, vnet].Count > 0) {
 						vcFlit top = m_buf [pc, vnet].Peek ();
+						Simulator.stats.vc_buf_rd.Add ();  // read buffer once. Do not need to read it again for switch allocation
+						Simulator.stats.vc_vc_arb.Add ();
+
 						PreferredDirection pd = determineDirection (top.flit, coord);
 						int outdir = (pd.xDir != Simulator.DIR_NONE) ? pd.xDir : pd.yDir;
 						if (outdir == Simulator.DIR_NONE)
 							outdir = 4; // local ejection
-
+			
 						// check the downstream vc credit
 						if (outdir != 4) {
 							Router_VC nrouter = (Router_VC)neigh [outdir];
@@ -185,6 +193,7 @@ namespace ICSimulator
 							top = requesters [req];
 							top_indir = req;
 						}
+						Simulator.stats.vc_sw_arb.Add ();
 					}
 				}
 
@@ -198,11 +207,15 @@ namespace ICSimulator
 					if (top_indir == 4)
 						statsInjectFlit(top.flit);
 
+					Simulator.stats.vc_sw_traversal.Add ();
+
 					// propagate to next router (or eject)
 					if (outdir == 4)
-						acceptFlit(top.flit);
-					else
-						linkOut[outdir].In = top.flit;
+						acceptFlit (top.flit);
+					else {
+						linkOut [outdir].In = top.flit;
+						Simulator.stats.vc_link_traversal.Add();
+					}
 
 					returnFreeSlot(top);
 				}

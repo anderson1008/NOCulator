@@ -379,6 +379,8 @@ namespace ICSimulator
         public int virtualChannel; // to which virtual channel the packet should go in the next router. 
         public bool sortnet_winner;
 		public int ackCount;
+		public bool LTB_N, LTB_E, LTB_S, LTB_W;
+		public bool RTB_N, RTB_E, RTB_S, RTB_W;
 
         public int currentX;
         public int currentY;
