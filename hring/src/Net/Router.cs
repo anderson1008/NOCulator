@@ -579,9 +579,6 @@ namespace ICSimulator
 				total_latency = Simulator.CurrentRound - p.creationTime;
 			}
 
-			bool stop = false;
-			if (total_latency > 120)
-				stop = true;
 
 			Simulator.stats.packet_intf.Add(p.intfCycle);
             Simulator.stats.net_latency.Add(net_latency);

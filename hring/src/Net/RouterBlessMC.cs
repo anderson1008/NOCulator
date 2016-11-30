@@ -399,9 +399,6 @@ namespace ICSimulator
 		// accept one ejected flit into rxbuf
 		protected void acceptFlit(Flit f)
 		{
-			bool stop = false;
-			if (f.packet.ID == 861888 && m_n.coord.ID == 0)
-				stop = true;
 			statsEjectFlit(f);
 			if (f.packet.mc) {
 				if (f.packet.nrOfArrivedFlitsMC[ID] + 1 == f.packet.nrOfFlits)

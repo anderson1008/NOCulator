@@ -17,9 +17,8 @@ namespace ICSimulator
     public enum RouterAlgorithm
     {
 		BLESS_BYPASS, // bufferless with bypass
-
 		DR_FLIT_SW_OF_MC, // deflection router, flit switched, oldest first, multicast
-
+		VC_OF_BUFFER, // conventional virtual channel router
 
         OLDEST_FIRST_DO_ROUTER,
         ROUND_ROBIN_DO_ROUTER,

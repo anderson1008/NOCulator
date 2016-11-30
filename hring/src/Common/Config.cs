@@ -135,12 +135,12 @@ namespace ICSimulator
 		public static ulong starveResetEpoch = 100000; // the starvation rate = starveThreshold / starveResetEpoch
 		public static bool uniform_size_enable = true;
 		public static int uniform_size = 1;
-		public static bool multicast = true;
+		public static bool multicast = false;
 		public static int mc_degree = N-1; // number of packets send out; N: broadcast; 1: unicast;
 		public static SynthTrafficPattern synthPattern = SynthTrafficPattern.UR;
-		public static bool mergeEnable = false;
-		public static bool adaptiveMC = true;
-		public static bool scatterEnable = true;
+		public static bool mergeEnable = true;
+		public static bool adaptiveMC = false;
+		public static bool scatterEnable = false;
 		public static bool scoreBoardDisable = false; // enable for to speed up simulation
 		public static int hotSpotReqPerNode = 1;
 		//public static double hotspot_prob = Config.hotspot_multiplier * Config.unhotspot_prob;
@@ -148,7 +148,10 @@ namespace ICSimulator
 		// --- Carpool: NoC with Gather-Scatter Support
 
 
-		// ----
+		// --- Conventional VC router
+		public static int vnets = 4;
+		public static int vnetsDepth = 8;
+
 		// By Xiyue
 		public static bool preempt = false;
 		public static bool slowdown_aware = false;

@@ -658,10 +658,13 @@ namespace ICSimulator
         {
             switch (Config.router.algorithm)
             {
-		case RouterAlgorithm.DR_FLIT_SW_OF_MC:
-		    return new Router_BLESS_MC (c);
+				case RouterAlgorithm.DR_FLIT_SW_OF_MC:
+		    		return new Router_BLESS_MC (c);
 
-		case RouterAlgorithm.BLESS_BYPASS:
+				case RouterAlgorithm.VC_OF_BUFFER:
+					return new Router_VC (c);
+
+				case RouterAlgorithm.BLESS_BYPASS:
                     return new Router_BLESS_BYPASS(c);
 
                 case RouterAlgorithm.DR_AFC:
@@ -713,9 +716,10 @@ namespace ICSimulator
 			case 1: return "E"; 
 			case 2: return "S"; 
 			case 3: return "W";
+			case 4: return "Local";
 
 			default:
-				return "Warning: network::portMap only map port 0-3. Need to extend it for high-radix router."; 
+				return "Warning: network::portMap only map port 0-4. Need to extend it for high-radix router."; 
 			}
 
 		}

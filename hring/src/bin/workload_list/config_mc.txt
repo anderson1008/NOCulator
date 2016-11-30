@@ -9,7 +9,7 @@ mc_degree = 63
 //barrier = 3
 //trace_wraparound = true
 
-finish = packet 5000000
+finish = packet 500000
 
 //finish = cycle 1100000
 //warmup_cyc = 100000
@@ -19,7 +19,8 @@ finish = packet 5000000
 //multicast = true
 topology = Mesh
 //router.algorithm = DR_FLIT_SWITCHED_OLDEST_FIRST 
-router.algorithm = DR_FLIT_SW_OF_MC
+//router.algorithm = DR_FLIT_SW_OF_MC
+router.algorithm = VC_OF_BUFFER
 //afc_force = true 
 //afc_force_buffered = true 
 //afc_buf_per_vnet = 4
@@ -40,7 +41,7 @@ sh_cache_assoc = 4
 sh_cache_perfect = true
 
 idealnet = false
-router.linkLatency = 1
+router.linkLatency = 2
 edge_loop = false 
 
 shcache_buf = 16
