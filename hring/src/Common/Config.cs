@@ -131,7 +131,7 @@ namespace ICSimulator
 		public static double mc_rate = 0.01;
 		public static double hs_rate = 0.5;
 		public static int synthQueueLimit = 1000;
-		public static int starveThreshold = 1000;
+		public static int starveThreshold = 100000;
 		public static ulong starveResetEpoch = 100000; // the starvation rate = starveThreshold / starveResetEpoch
 		public static bool uniform_size_enable = true;
 		public static int uniform_size = 1;
