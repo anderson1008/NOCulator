@@ -56,7 +56,7 @@ namespace ICSimulator
                 return vn;
             }
             else
-                return Simulator.rand.Next(Config.afc_vnets);
+                return Simulator.rand.Next(Config.vnets);
         }
     }
 

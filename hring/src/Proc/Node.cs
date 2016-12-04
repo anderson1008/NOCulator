@@ -215,9 +215,9 @@ namespace ICSimulator
 				else  packet_size = Config.router.dataPacketSize;
 			}
 
-			if (mc == true)
+			if (mc == true && Config.halfDataChannel)
 				return packet_size * 2; // each packet only contains half of original payload.
-			else if (gather == true)
+			else if (gather == true && Config.halfDataChannel)
 				return packet_size * 2;
 			else
 			    return packet_size;
@@ -278,7 +278,7 @@ namespace ICSimulator
 			//Coord[] destArray = new Coord[] { };
 
 			if (Simulator.rand.NextDouble () < mc_rate) {
-				mc_degree = Simulator.rand.Next (Config.mc_degree - 2) + 2; // multicast; generate index 2-15
+				mc_degree = Simulator.rand.Next (Config.mc_degree - 1) + 1; // multicast; generate index 2-Config.N-1
 				//Console.WriteLine ("TIME={0} Node {1} send {2} MC_PKT", Simulator.CurrentRound, m_coord.ID, mc_degree);
 			}
 			else
@@ -322,7 +322,7 @@ namespace ICSimulator
 			bool mc;
 
 			if (Simulator.rand.NextDouble () < mc_rate) {
-				mc_degree = Simulator.rand.Next (Config.mc_degree - 2) + 2; // multicast
+				mc_degree = Simulator.rand.Next (Config.mc_degree - 1) + 1; // multicast
 				mc = true;
 				//Console.WriteLine ("TIME={0} Node {1} send {2} MC_PKT", Simulator.CurrentRound, m_coord.ID, mc_degree);
 			} else {
@@ -354,7 +354,8 @@ namespace ICSimulator
 				// Console.WriteLine ("Starvation rate is {0}", m_router.starveCount/(float)Config.starveResetEpoch);
 
 				// Using the naive mc method when the starvation rate is higher than the threshold.
-				if (Config.router.algorithm == RouterAlgorithm.DR_FLIT_SW_OF_MC && Config.scatterEnable
+				if ((Config.router.algorithm == RouterAlgorithm.DR_FLIT_SW_OF_MC || Config.router.algorithm == RouterAlgorithm.VC_OF_BUFFER) 
+					&& Config.scatterEnable
 					//using starveCount is better than stat.starve_flit.Rate and stat.starve_flit.Count.
 					//It may react quickly when the execution changes phase.
 				) {
@@ -529,7 +530,7 @@ namespace ICSimulator
 			if (Config.naive_rx_buf)
 				m_rxbuf_naive.acceptFlit (f);
 			else {
-				if (Config.router.algorithm == RouterAlgorithm.DR_FLIT_SW_OF_MC)
+				if (Config.router.algorithm == RouterAlgorithm.DR_FLIT_SW_OF_MC || Config.router.algorithm == RouterAlgorithm.VC_OF_BUFFER)
 					receiveFlit_noBuf_mc (f);
 				else
 					receiveFlit_noBuf (f);

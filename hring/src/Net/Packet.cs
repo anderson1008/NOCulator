@@ -119,6 +119,7 @@ namespace ICSimulator
 		public ulong [] creationTimeMC;
 		public int nrMCPacket;
 		public int nrArrivedMCPacket;
+		public int virtualChannel;
 
         public ulong ID { get { return _ID; } }
         private ulong _ID;
@@ -184,6 +185,7 @@ namespace ICSimulator
 				request.setCarrier (this);
 			requesterID = -1;
 			mc = false;
+			virtualChannel = Simulator.rand.Next (Config.vnets);
 			gather = _gather;
 			hsFlowID = Simulator.network.hsFlowID;
 			initialize (Simulator.CurrentRound, nrOfFlits);// Flitization of each packet;
@@ -209,6 +211,7 @@ namespace ICSimulator
 			hsFlowID = -1;
 			mc = true;
 			gather = false;
+			virtualChannel = Simulator.rand.Next (Config.vnets);
 			initialize (Simulator.CurrentRound, nrOfFlits);// Flitization of each packet;
 		}
 
@@ -226,6 +229,7 @@ namespace ICSimulator
             requesterID = -1;
 			mc = false;
 			gather = false;
+			virtualChannel = Simulator.rand.Next (Config.vnets);
             initialize(Simulator.CurrentRound, nrOfFlits);
         }
 
@@ -244,6 +248,7 @@ namespace ICSimulator
 			if (request != null)
 				request.setCarrier(this);
 			requesterID = -1;
+			virtualChannel = getClass ();
 			initialize(Simulator.CurrentRound, nrOfFlits);
 			this.txn = txn;
 			this.critical = critical;
@@ -311,6 +316,7 @@ namespace ICSimulator
 					flits[i].destList = new List <Coord> (destList);
                 flits[i].hasFlitArrived = false;
                 flits[i].nrOfDeflections = 0;
+				flits [i].virtualChannel = virtualChannel;
             }
 
             /* This is needed for wormhole routing in bidirectional ring.
@@ -379,8 +385,9 @@ namespace ICSimulator
         public int virtualChannel; // to which virtual channel the packet should go in the next router. 
         public bool sortnet_winner;
 		public int ackCount;
-		public bool LTB_N, LTB_E, LTB_S, LTB_W;
-		public bool RTB_N, RTB_E, RTB_S, RTB_W;
+		public bool LTB, RTB;
+		public bool drop;
+
 
         public int currentX;
         public int currentY;
@@ -453,6 +460,7 @@ namespace ICSimulator
 			this.Bypassed = false;
 			this.ackCount = 1;
 			this.creationTime = Simulator.CurrentRound;
+
             //deflections = new bool[100];
             //deflectionsIndex = 0;
             if (packet != null)

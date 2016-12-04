@@ -523,7 +523,6 @@ namespace ICSimulator
 					Simulator.stats.flitL1Global.Add(1);
 			}
 
-
 			Simulator.stats.eject_flit.Add(f.ackCount);
 			Simulator.stats.eject_flit_bydest[f.packet.dest.ID].Add(f.ackCount);
 
@@ -541,7 +540,7 @@ namespace ICSimulator
         {
 			ScoreBoard.UnregPacket (ID, p.ID); // TODO: merged packet may cause issue.
 
-			if (!p.mc && !p.gather) {
+			if ((!p.mc && !p.gather) | Config.halfDataChannel == false) {
 				if (p.nrOfFlits == Config.router.addrPacketSize)
 					Simulator.stats.ctrl_pkt.Add ();
 				else if (p.nrOfFlits == Config.router.dataPacketSize)
