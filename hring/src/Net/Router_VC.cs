@@ -80,12 +80,12 @@ namespace ICSimulator
 		public Router_VC (Coord myCoord) : base (myCoord)
 		{
 			m_vcFlitSlots = new Queue<vcFlit> ();
-			m_buf = new MinHeap<vcFlit>[5, Config.vnets]; //m_buf [Config.vnets] can be used to hold master hs flit
+			m_buf = new MinHeap<vcFlit>[5, Config.vnets+1]; //m_buf [Config.vnets] can be used to hold master hs flit
 			LTB = new bool[4];
 			RTB = new bool[4];
 
 			for (int pc = 0; pc < 5; pc++)
-				for (int i = 0; i < Config.vnets; i++)
+				for (int i = 0; i < Config.vnets+1; i++)
 				{
 					m_buf[pc, i] = new MinHeap<vcFlit>();
 				}
@@ -318,6 +318,40 @@ namespace ICSimulator
 			m_n.receiveFlit(f);
 		}
 
+		protected bool merging (Flit f, int indir) {
+			// return true if merged or stored in master hs vc; 
+
+			vcFlit vcflit, master;
+
+			if (f.packet.gather) {
+				// compare with other master hs flits
+				for (int i = 0; i < 5; i++) {
+					if (m_buf [i, Config.vnets].Count < 1)
+						continue;
+					master = m_buf [i, Config.vnets].Peek ();
+
+					// merge
+					if (f.packet.gather && (f.flitNr == master.flit.flitNr) &&
+						(f.dest.ID == master.flit.dest.ID) && (f.packet.hsFlowID == master.flit.packet.hsFlowID)) {
+						master.flit.ackCount += f.ackCount;
+						ScoreBoard.UnregPacket (f.packet.dest.ID, f.packet.ID);
+						Simulator.stats.merge_flit.Add ();;
+						return true;
+					}
+				}
+
+				// If not merged, put into m_buf[indir, Config.vnets] if possible
+				if (m_buf [indir, Config.vnets].Count < 1) {
+					vcflit = getFreeSlot(f);
+					m_buf [indir, Config.vnets].Enqueue (vcflit);
+					Simulator.stats.vc_buf_wr.Add ();
+					return true;
+				}
+			}
+			return false;
+
+		}
+
 		protected void bufferWrite () {
 
 			bool stop = false;
@@ -325,6 +359,8 @@ namespace ICSimulator
 			{
 				stop = true;
 			}
+
+			vcFlit vcflit;
 
 			// grab inputs into buffers
 			for (int dir = 0; dir < 4; dir++)
@@ -335,8 +371,11 @@ namespace ICSimulator
 					f.inDir = dir;
 					linkIn[dir].Out = null;
 					f.ClearRoutingInfo ();	
-					vcFlit vcFlit = getFreeSlot(f);
-					m_buf[dir, f.virtualChannel].Enqueue(vcFlit);
+					bool merged = merging (f, dir); // perform merging
+					if (merged) 
+						continue;
+					vcflit = getFreeSlot(f);
+					m_buf[dir, f.virtualChannel].Enqueue(vcflit);
 					Simulator.stats.vc_buf_wr.Add ();
 				}
 			}
@@ -390,10 +429,12 @@ namespace ICSimulator
 			// inject into router
 			f.inDir = 4;
 			statsInjectFlit (f);
+			bool merged = merging (f, 4);
+			if (merged)
+				return;
 			vcFlit slot = getFreeSlot (f);
 			m_buf [4, f.virtualChannel].Enqueue (slot);
 			Simulator.stats.vc_buf_wr.Add ();
-
 		}
 
 		public override bool canInjectFlit(Flit f)
@@ -419,7 +460,7 @@ namespace ICSimulator
 				stop = true;
 			}
 			for (int pc = 0; pc < 5; pc++)
-				for (int vc = 0; vc < Config.vnets; vc++)
+				for (int vc = 0; vc < Config.vnets+1; vc++)
 					if (m_buf [pc, vc].Count > 0) {
 						determineDirection (m_buf [pc, vc].Peek().flit);
 						Simulator.stats.vc_buf_rd.Add ();  // read buffer once. Do not need to read it again for switch allocation
@@ -438,7 +479,7 @@ namespace ICSimulator
 				winner = null;
 				for (int outvc = 0; outvc < Config.vnets; outvc++) {
 					for (int indir = 0; indir < 5; indir++) {
-						for (int invc = 0; invc < Config.vnets; invc++) {
+						for (int invc = 0; invc < Config.vnets+1; invc++) {
 							if (m_buf [indir, invc].Count > 0) {
 								vcFlit top = m_buf [indir, invc].Peek ();
 								Simulator.stats.vc_vc_arb.Add ();
@@ -480,7 +521,7 @@ namespace ICSimulator
 			for (int indir = 0; indir < 5; indir++) {
 				noReq = true; // by default, this flit has no port request
 				winner = null; // winner can keep the allocated port. 
-				for (int vc = 0; vc < Config.vnets; vc++) {
+				for (int vc = 0; vc < Config.vnets+1; vc++) {
 					if (m_buf [indir, vc].Count > 0) {
 						top = m_buf [indir, vc].Peek ();
 						Simulator.stats.vc_sw_arb.Add ();
@@ -532,7 +573,7 @@ namespace ICSimulator
 			// 3) manage dest list; 
 
 			for (int indir = 0; indir < 5; indir++) {
-				for (int vc = 0; vc < Config.vnets; vc++) {
+				for (int vc = 0; vc < Config.vnets+1; vc++) {
 					outflit = null;
 					replicaNeed = -1; // start from -1; so if a flit only travel to one direction, no replica is created
 					replicaCreate = 0;
@@ -625,7 +666,7 @@ namespace ICSimulator
 		protected  void nullifyBuffer () {
 			bool nullify;
 			for (int indir = 0; indir < 5; indir++) {
-				for (int vc = 0; vc < Config.vnets; vc++) {
+				for (int vc = 0; vc < Config.vnets+1; vc++) {
 					if (m_buf [indir, vc].Count > 0) {
 						vcFlit flit = m_buf [indir, vc].Peek ();
 						nullify = true;
@@ -656,7 +697,7 @@ namespace ICSimulator
 
 			getInitLoad (); // for debug
 
-			//printFlitIn (); // for debug
+			printFlitIn (); // for debug
 
 			routerCompute ();
 
@@ -668,7 +709,7 @@ namespace ICSimulator
 
 			compareLoad (); // for debug
 			
-			//printFlitOut (); // for debug
+			printFlitOut (); // for debug
 
 		}
 
@@ -686,7 +727,7 @@ namespace ICSimulator
 
 			// interate through PC and VC, print out every flits
 			for (int pc = 0; pc < 5; pc++)
-				for (int vc = 0; vc < Config.vnets; vc++) {
+				for (int vc = 0; vc < Config.vnets+1; vc++) {
 					for (int i = 1; i < m_buf [pc, vc].Count+1; i++) {
 						f = m_buf [pc, vc].Peek (i);
 						
@@ -731,7 +772,7 @@ namespace ICSimulator
 		int getLoad() {
 			int load = 0;
 			for (int pc = 0; pc < 5; pc++)
-				for (int vc = 0; vc < Config.vnets; vc++) {
+				for (int vc = 0; vc < Config.vnets+1; vc++) {
 					load = load + m_buf [pc, vc].Count;
 				}
 			return load;

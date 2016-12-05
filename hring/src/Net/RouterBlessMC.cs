@@ -171,7 +171,7 @@ namespace ICSimulator
 					) {
 
 						if (priority_inv == 0) {
-							inputBuffer [i].ackCount=inputBuffer[i].ackCount + inputBuffer[j].ackCount;
+							inputBuffer [i].ackCount=inputBuffer[i].ackCount + inputBuffer[j].ackCount; // TODO: need to track the exact sender
 							ScoreBoard.UnregPacket (inputBuffer[j].packet.dest.ID, inputBuffer[j].packet.ID);
 							inputBuffer [j] = null;
 						} else if (priority_inv == 1) { // reverse the priority for selecting the flit being dropped.
