@@ -1,14 +1,14 @@
 // for evaluation of 4x4 network
 
-network_nrX = 4
-network_nrY = 4
+network_nrX = 8
+network_nrY = 8
 //finish = app
 //insns = 1000000
 //finish = barrier
 //barrier = 3
 //trace_wraparound = true
 
-finish = packet 1000000
+finish = packet 100000
 
 //finish = cycle 1100000
 //warmup_cyc = 100000

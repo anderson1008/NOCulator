@@ -10,8 +10,21 @@ using System.Linq;
 namespace ICSimulator
 {
 
-	// optimization 1:
-	// Each flit now has a destination list to support MC and pruning the multicast tree
+	// optimization 
+	// 1. Each flit now has a destination list to support MC and pruning the multicast tree
+	// 2. Each port has three lists: straight, left-turn, and right-turn
+	// 3. The hotspot flits do not use "whirl routing" as merging in our case is performed for both ACK and Sync pkt
+	// 4. Merging 1: Holding all master flits require additional storage. So, instead of holding master flits and wait, we perform 
+	//    opportunistic merging. All incoming hs flits are compared with each other. 
+	//    Merging 2: one possible way is to add a heap to each port (like an additional vc) to store master hs flits.
+	//      The incoming hs flit will compare with all hs flits before buffer write. 
+	//      The hs vc will perform VA and SA as normal flits.
+	//      We can also control the wait time.
+	//      The hs flit will skip the BW if merged. Other perform BW as usual.
+	//      We will use vc = Config.vnet to hold the master hs flits. Each master hs flit vc has only 1 entry.
+
+	// Missing function:
+	// Deadlock avoidance: partitioning the VC
 
 	// Define a flit type just for VC router
 	public class vcFlit : IComparable
@@ -45,9 +58,6 @@ namespace ICSimulator
 		 * indir+1: turn left
 		 * indir+2: go straight
 		 * indir+3 turn right
-		 * 
-		 * 
-		 * 
 		 * */
 
 
@@ -70,7 +80,7 @@ namespace ICSimulator
 		public Router_VC (Coord myCoord) : base (myCoord)
 		{
 			m_vcFlitSlots = new Queue<vcFlit> ();
-			m_buf = new MinHeap<vcFlit>[5, Config.vnets];
+			m_buf = new MinHeap<vcFlit>[5, Config.vnets]; //m_buf [Config.vnets] can be used to hold master hs flit
 			LTB = new bool[4];
 			RTB = new bool[4];
 
@@ -418,7 +428,7 @@ namespace ICSimulator
 			
 		// find a winner for each downstream output port
 		//    arbitrate among flit requesting the same output port 
-		//    a flit will back off if the downstream VC is full
+		//    a flit will back off if the downstream VC is full, but it can still claim the output port if other vc has available credit.
 		protected void vcArbitration () {
 
 			vcFlit winner;
@@ -631,7 +641,6 @@ namespace ICSimulator
 						if (nullify) {
 							returnFreeSlot (flit);
 							m_buf [indir, vc].Dequeue ();
-							//m_load--;
 							flit = null;
 						}
 					}
@@ -645,9 +654,9 @@ namespace ICSimulator
 
 			bufferWrite ();
 
-			getInitLoad ();
+			getInitLoad (); // for debug
 
-			//printFlitIn ();
+			//printFlitIn (); // for debug
 
 			routerCompute ();
 
@@ -657,9 +666,9 @@ namespace ICSimulator
 
 			swTraversal ();
 
-			compareLoad ();
+			compareLoad (); // for debug
 			
-			//printFlitOut ();
+			//printFlitOut (); // for debug
 
 		}
 

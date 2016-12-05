@@ -137,7 +137,7 @@ namespace ICSimulator
 		public static int uniform_size = 1;
 		public static bool multicast = true;
 		public static int mc_degree = N-1; // number of packets send out; N: broadcast; 1: unicast;
-		public static SynthTrafficPattern synthPattern = SynthTrafficPattern.UR;
+		public static SynthTrafficPattern synthPattern = SynthTrafficPattern.HS;
 		public static bool mergeEnable = true;
 		public static bool adaptiveMC = false;
 		public static bool scatterEnable = true;
@@ -151,7 +151,7 @@ namespace ICSimulator
 
 		// --- Conventional VC router
 		public static int vnets = 4;
-		public static int vnetsDepth = 8;
+		public static int vnetsDepth = 4;
 
 		// By Xiyue
 		public static bool preempt = false;
