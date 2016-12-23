@@ -261,8 +261,8 @@ namespace ICSimulator
 
 							if (nodeStraight [dir, dest.ID] == 1 ) {
 								f.preferredDirVector [dir] = true;
-								f.LTB = LTB [dir];
-								f.RTB = RTB [dir];
+								f.LTB = LTB [dir]; // is it necessary?
+								f.RTB = RTB [dir]; // is it necessary?
 							}
 							if (nodeLeft [dir, dest.ID] == 1 && LTB [dir]) {
 								f.preferredDirVector [dir] = true;
