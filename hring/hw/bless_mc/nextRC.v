@@ -21,6 +21,7 @@
 
 `include "global.vh"
 
+`ifdef CARPOOL_LK_AHEAD_RC_PS
 module nextRC(
     dst,
     dstList,
@@ -83,3 +84,4 @@ module nextRC(
                      {`NUM_PORT'h0, w_ppv_1, w_ppv_2, w_ppv_3};
            
 endmodule
+`endif // CARPOOL_LK_AHEAD_RC_PS

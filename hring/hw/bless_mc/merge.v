@@ -21,7 +21,13 @@
 
 `include "global.vh"
 
+`ifdef CARPOOL_LK_AHEAD_RC_PS
+    `define HAS_MERGE
+`elsif CARPOOL
+    `define HAS_MERGE
+`endif
 
+`ifdef HAS_MERGE
 module merge(
     hs_0,
     srcList_0,
@@ -111,3 +117,4 @@ module merge(
     assign srcList_new_4 = srcList_4;
 
 endmodule
+`endif // Merge

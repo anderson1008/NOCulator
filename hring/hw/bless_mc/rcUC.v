@@ -22,6 +22,12 @@
 `include "global.vh"
 
 `ifdef CARPOOL
+    `define DIMENTION_ORDER
+`elsif BLESS
+    `define DIMENTION_ORDER
+`endif
+
+`ifdef DIMENTION_ORDER
 module rcUC(
     dst,
     preferPortVector
@@ -42,7 +48,7 @@ module rcUC(
     assign preferPortVector [4] = (dst_x == `CURR_X) && (dst_y == `CURR_Y);    
     
 endmodule
-`endif  // CARPOOL
+`endif  // DIMENTION_ORDER
 
 `ifdef CARPOOL_LK_AHEAD_RC_PS
 

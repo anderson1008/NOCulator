@@ -20,6 +20,23 @@
 //////////////////////////////////////////////////////////////////////////////////
 `include "global.vh"
 
+`ifdef BLESS
+module rc(
+    dst,
+    preferPortVector
+    );
+    
+    input [`DST_WIDTH-1:0] dst;
+    output [`NUM_PORT-1:0] preferPortVector;
+     
+    rcUC rcUC(
+    .dst     (dst),
+    .preferPortVector (preferPortVector)
+    );
+    
+endmodule    
+`endif // BLESS
+
 
 `ifdef CARPOOL
 module rc(

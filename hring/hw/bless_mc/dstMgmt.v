@@ -21,14 +21,19 @@
 
 `include "global.vh"
 
+`ifdef CARPOOL_LK_AHEAD_RC_PS
+    `define DST_MGMT
+`elsif CARPOOL
+    `define DST_MGMT
+`endif
 
+`ifdef DST_MGMT
 module dstMgmt(
     allocPV,
     dstList_in,
     dstList_out
     );
     
-
     input [`NUM_PORT-1:0] allocPV;
     input [`DST_LIST_WIDTH-1:0] dstList_in;
     output [`DST_LIST_WIDTH-1:0] dstList_out;
@@ -75,3 +80,4 @@ module dstMgmt(
         assign dstList_out = dstList_in & (replica ? `W_MASK : mask_out_port);
     
 endmodule
+`endif // DST_MGMT
