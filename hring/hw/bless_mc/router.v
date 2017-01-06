@@ -152,9 +152,7 @@ module router(
     dff_async_reset #(`PC_INDEX_WIDTH) st1_buf_numFlit (num_flit, clk, n_rst, r_st1_num_flit);
 
     wire [`NUM_PORT-2:0] allocPV [3:0];   
-    swAlloc #(
-    .PARALLEL (1'b0)  // Parallel port allocation is NOT implemented
-    ) swAlloc(
+    swAlloc swAlloc(
     .numFlit_in     (r_st1_num_flit), 
     .ppv_0          (r_st1_ppv[0]),
     .ppv_1          (r_st1_ppv[1]),
@@ -385,9 +383,7 @@ module router(
     dff_async_reset #(`NUM_PORT-1) st1_buf_mc (sorted_mc, clk, n_rst, r_st1_sorted_mc);
 
     wire [`NUM_PORT-2:0] allocPV [3:0];   
-    swAlloc #(
-    .PARALLEL (`PARALLEL_PA)
-    ) swAlloc(
+    swAlloc swAlloc(
     .mc_0           (r_st1_sorted_mc[0]),
     .mc_1           (r_st1_sorted_mc[1]),
     .mc_2           (r_st1_sorted_mc[2]),

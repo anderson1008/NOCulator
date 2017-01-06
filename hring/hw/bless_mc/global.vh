@@ -1,9 +1,9 @@
 `timescale 1ns / 1ps
 
 // Change me to select the DUT
-`define     CONFIG_0  // BLESS + SPA      
+//`define     CONFIG_0  // BLESS + SPA      
 //`define     CONFIG_1  // CARPOOL + SPA
-//`define     CONFIG_2  // CARPOOL + PPA
+`define     CONFIG_2  // CARPOOL + PPA
 
 
 // ---------------------  Gloabl Parameter Define Start Here  -------------------------- //

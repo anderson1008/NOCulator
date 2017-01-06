@@ -24,7 +24,7 @@
 
 `ifdef BLESS
 // To enable parallel port allocator, set PARALLEL_PA in global.vh
-module swAlloc # (parameter PARALLEL = 1'b0) (
+module swAlloc (
     numFlit_in,
     ppv_0,
     ppv_1,
@@ -41,7 +41,7 @@ module swAlloc # (parameter PARALLEL = 1'b0) (
     output [`NUM_PORT-2:0] allocPV_0, allocPV_1, allocPV_2, allocPV_3; 
 
     generate
-    if (PARALLEL == 1'b0) begin : seqAlloc
+    if (`PARALLEL_PA == 1'b0) begin : seqAlloc
         wire [`NUM_PORT-2:0] w_availPort [1:3];
         wire [`PC_INDEX_WIDTH-1:0] w_numFlit [1:3];
      
@@ -96,7 +96,7 @@ endmodule
 
 `ifdef CARPOOL
 // To enable parallel port allocator, set PARALLEL_PA in global.vh
-module swAlloc # (parameter PARALLEL = 1'b0) (
+module swAlloc (
     mc_0,
     mc_1,
     mc_2,
@@ -118,7 +118,7 @@ module swAlloc # (parameter PARALLEL = 1'b0) (
     output [`NUM_PORT-2:0] allocPV_0, allocPV_1, allocPV_2, allocPV_3; 
 
     generate
-    if (PARALLEL == 1'b0) begin : seqAlloc
+    if (`PARALLEL_PA == 1'b0) begin : seqAlloc
         wire [`NUM_PORT-2:0] w_availPort [1:3];
         wire [`PC_INDEX_WIDTH-1:0] w_numFlit [1:3];
      
