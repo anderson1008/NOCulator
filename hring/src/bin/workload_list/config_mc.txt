@@ -1,13 +1,13 @@
 // for evaluation of 4x4 network
 
-network_nrX = 8
-network_nrY = 8
-mc_degree = 63
-//finish = app
-//insns = 1000000
-//finish = barrier
-//barrier = 3
-//trace_wraparound = true
+network_nrX = 4
+network_nrY = 4
+mc_degree = 15
+finish = app
+insns = 1000000
+finish = barrier
+barrier = 3
+trace_wraparound = true
 
 finish = packet 5000000
 

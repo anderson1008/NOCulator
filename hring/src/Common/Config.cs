@@ -126,7 +126,7 @@ namespace ICSimulator
 		// ------------------DO NOT MOVE End------------------------//
 
 		// --- Synthetic Traffic Simulation --- //
-		public static bool synthGen = true; // will not generate CPU instance if it is true
+		public static bool synthGen = false; // will not generate CPU instance if it is true
 		public static double synth_rate = 0.16; // injection rate in packet/cycle/node
 		public static double mc_rate = 0.01;
 		public static double hs_rate = 0.5;

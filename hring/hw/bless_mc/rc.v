@@ -20,6 +20,37 @@
 //////////////////////////////////////////////////////////////////////////////////
 `include "global.vh"
 
+
+`ifdef CARPOOL
+module rc(
+    dst,
+    dstList,
+    mc,
+    preferPortVector
+    );
+    
+    input [`DST_WIDTH-1:0] dst;
+    input [`DST_LIST_WIDTH-1:0] dstList;
+    input mc;
+    output [`NUM_PORT-1:0] preferPortVector;
+    
+    wire [`NUM_PORT-1:0] ppv_uc, ppv_mc;
+
+    rcMC rcMC(
+    .dstList (dstList),
+    .preferPortVector (ppv_mc)
+    );
+    
+    rcUC rcUC(
+    .dst     (dst),
+    .preferPortVector (ppv_uc)
+    );
+    
+    assign preferPortVector = mc ? ppv_mc : ppv_uc;
+endmodule    
+`endif // CARPOOL
+
+`ifdef CARPOOL_LK_AHEAD_RC_PS
 module rc(
     dst,
     dstList,
@@ -51,3 +82,5 @@ module rc(
     assign preferPortVector = mc ? ppv_mc : ppv_uc;
     
 endmodule
+
+`endif

@@ -28,8 +28,7 @@ module dstMgmt(
     dstList_out
     );
     
-    // TODO: Should consider if local ejection fails
-    // need to preserve the destinatio
+
     input [`NUM_PORT-1:0] allocPV;
     input [`DST_LIST_WIDTH-1:0] dstList_in;
     output [`DST_LIST_WIDTH-1:0] dstList_out;
@@ -38,37 +37,41 @@ module dstMgmt(
     
     wire [`DST_LIST_WIDTH-1:0] mask_out_port;
     wire replica;
-    wire w_replica [0:OUTDIR+1];
-    
+    wire [`NUM_PORT-1:0] w_replica;
+    wire [`NUM_PORT-1:0] first;
+  
+  
+    assign w_replica[0] = 1'b0;
+    assign first[0] = 1'b1;
+    //assign forked[0] = 1'b0;  
     genvar i;
     generate
-        // construct the mask for mc flit
-        assign mask_out_port =~((allocPV[0] ? `N_MASK : 'h0) | 
-                                (allocPV[1] ? `E_MASK : 'h0) |
-                                (allocPV[2] ? `S_MASK : 'h0) |
-                                (allocPV[3] ? `W_MASK : 'h0) |
-                                (allocPV[4] ? `L_MASK : 'h0));
-        
-        assign w_replica[0] = 1'b0;
 
-        for (i=0; i<OUTDIR+1; i=i+1) begin: flit_is_replica
+        for (i=0; i<`NUM_PORT-1; i=i+1) begin: flit_is_replica
             // determine if the flit is a replica
-            assign w_replica[i+1] = w_replica [i] || allocPV[i];
+            // the flit on the first allocated port is not a replica
+            assign first [i+1] = first [i] ? ~allocPV[i] : 1'b0;
+            assign w_replica[i+1] = first [i+1] ? 1'b0 : (w_replica [i] || allocPV[i]);
         end
         
-        assign replica = w_replica[OUTDIR+1];
-        
-        if (OUTDIR == 0)
-            assign dstList_out = dstList_in & (replica ? ~(`N_MASK) : mask_out_port);
-        else if (OUTDIR == 1)
-            assign dstList_out = dstList_in & (replica ? ~(`E_MASK) : mask_out_port);
-        else if (OUTDIR == 2)
-            assign dstList_out = dstList_in & (replica ? ~(`S_MASK) : mask_out_port);
-        else if (OUTDIR == 3)
-            assign dstList_out = dstList_in & (replica ? ~(`W_MASK) : mask_out_port);
-    
     endgenerate
     
+    assign replica = w_replica[OUTDIR];
+
+    // construct the mask for mc flit
+    assign mask_out_port =~((w_replica[0] ? `N_MASK : 'h0) | 
+                          (w_replica[1] ? `E_MASK : 'h0) |
+                          (w_replica[2] ? `S_MASK : 'h0) |
+                          (w_replica[3] ? `W_MASK : 'h0) |
+                          (w_replica[4] ? `L_MASK : 'h0));
     
+    if (OUTDIR == 0)
+        assign dstList_out = dstList_in & (replica ? `N_MASK : mask_out_port);
+    else if (OUTDIR == 1)
+        assign dstList_out = dstList_in & (replica ? `E_MASK : mask_out_port);
+    else if (OUTDIR == 2)
+        assign dstList_out = dstList_in & (replica ? `S_MASK : mask_out_port);
+    else if (OUTDIR == 3)
+        assign dstList_out = dstList_in & (replica ? `W_MASK : mask_out_port);
     
 endmodule

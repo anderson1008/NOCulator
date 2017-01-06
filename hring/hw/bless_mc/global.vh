@@ -1,5 +1,94 @@
 `timescale 1ns / 1ps
+// In the paper, dpv (desired port vector) is equivalent to ppv (productive port vector)
 
+
+//`define		BLESS
+`define		CARPOOL
+//`define		CARPOOL_LK_AHEAD_RC_PS
+//`define		CARPOOL_LK_AHEAD_RC
+
+`ifdef BLESS
+
+
+`endif  //end BLESS
+
+
+
+`ifdef		CARPOOL
+
+`define     NETWORK_SIZE    64
+`define     NUM_PORT        5
+`define     CURR_X          3
+`define     CURR_Y          3
+`define     PC_INDEX_WIDTH  3
+`define     NULL_PC         5
+
+
+`define     X_COORD         5:3
+`define     Y_COORD         2:0
+
+`define     N_MASK          `NETWORK_SIZE'hF0F0_F0F0_F000_0000
+`define     E_MASK          `NETWORK_SIZE'h0F0F_0F0F_0000_0000
+`define     S_MASK          `NETWORK_SIZE'h0000_0000_0707_0707
+`define     W_MASK          `NETWORK_SIZE'h0000_0000_00F8_F8F8
+`define     L_MASK          `NETWORK_SIZE'h0000_0000_0800_0000
+
+
+// Flit format
+// | ------------------------------  Header  ------------------------------------------ | ---------------  Payload ---------------------- |
+// timestamp hs, mc, requesterID, mshrID, pktSize, flitSeqNum, dst/(sectorID, reserved), dstList/srcList, memaddr, RESEVED, pktType, valid 
+//    8       1   1   6            6       3/4      3/4         6/4                       64               42 		13		  8        1
+// we conservatively assume pktSize and flitSeqNum are 4-bit and sectorID is also 4-bit
+// the last bit of payload is used as valid bit (which is usually contained in the cache line)
+// time is advanced signals
+
+`define     DATA_WIDTH      `HEADER_WIDTH+`PAYLOAD_WIDTH
+`define     HEADER_WIDTH    36 // 4-bit are conservatively provisioned. Also for ease of programming
+`define     PAYLOAD_WIDTH   128
+`define     IR_DATA_WIDTH   `DATA_WIDTH
+`define     SRC_LIST_WIDTH  `NETWORK_SIZE
+`define     DST_LIST_WIDTH  `NETWORK_SIZE
+`define     MEM_ADDR_WIDTH  42
+
+`define     VALID_POS       0 // just use the last bit of payload a
+`define     MEM_ADDR_POS    63:64-`MEM_ADDR_WIDTH
+`define     SRC_LIST_POS    64+`NETWORK_SIZE-1:64 
+`define     SRC_END         64+`NETWORK_SIZE
+`define     DST_LIST_START  64       
+`define     DST_LIST_POS    `SRC_LIST_POS  
+`define     DST_LIST_END    127  
+`define     LO_PAYLOAD_POS  63:0
+`define     DST_POS         133:128
+`define     DST_Y_COORD     130:128
+`define     DST_X_COORD     133:131
+`define     DST_WIDTH       6
+`define     FLIT_NUM_POS    137:134
+`define     PKT_SIZE_POS    141:138
+`define     NUM_FLIT_WDITH  4
+`define     MSHR_POS        147:142
+`define     REQ_ID_POS      153:148
+`define     MC_POS          154
+`define     HS_POS          155
+`define     TIME_WIDTH      8           // width of the time stamp
+`define     TIME_POS        163:156
+`define     MAX_TIME        255
+
+// Component Config
+// Permutation Network
+`define     PERM_WIDTH      2 + `TIME_WIDTH + `NUM_PORT-1 + 1 + 1// 2-bit indir + time width + PPV_WITDH-1 + EjectBit + mcbit
+//Xbar
+`define     DATA_WIDTH_XBAR `IR_DATA_WIDTH
+
+`endif
+
+
+`ifdef		CARPOOL_LK_AHEAD_RC
+
+
+`endif
+
+
+`ifdef		CARPOOL_LK_AHEAD_RC_PS
 
 `define     NETWORK_SIZE    64
 `define     NUM_PORT        5
@@ -54,6 +143,7 @@
 // we conservatively assume pktSize and flitSeqNum are 4-bit and sectorID is also 4-bit
 // the last bit of payload is used as valid bit (which is usually contained in the cache line)
 // time is advanced signals
+
 `define     DATA_WIDTH      `HEADER_WIDTH+`PAYLOAD_WIDTH
 `define     HEADER_WIDTH    43 // 4-bit are conservatively provisioned. Also for ease of programming
 `define     PAYLOAD_WIDTH   128
@@ -96,4 +186,4 @@
 `define     PERM_WIDTH      2 + `TIME_WIDTH // 2-bit indir + time width
 //Xbar
 `define     DATA_WIDTH_XBAR `IR_DATA_WIDTH
-
+`endif  // ifdef sequential
