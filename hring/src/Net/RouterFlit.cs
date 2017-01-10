@@ -115,6 +115,15 @@ namespace ICSimulator
 			}				
 		}
 
+		protected void _partialSort(ref Flit[] input)
+		{
+			// only sort the first 4 flits;
+			_swap (ref input[0],ref input[1], false);
+			_swap (ref input[2],ref input[3], false);
+			_swap (ref input[0],ref input[2], false);
+			_swap (ref input[1],ref input[3], false);
+		}
+
 		protected void _fullSort(ref Flit[] input)
 		{
 			// only sort the first 4 flits;
