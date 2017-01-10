@@ -200,6 +200,7 @@ namespace ICSimulator
 			destList = f.destList;
 			foreach (Coord dest in destList) {
 				nodeID = dest.ID;
+				// U-Turn is disabled to avoid livelock
 				if (mcMask [Simulator.DIR_UP, nodeID] == 1 && preferredDirVector [Simulator.DIR_UP] != true && f.inDir != Simulator.DIR_UP)
 					preferredDirVector [Simulator.DIR_UP] = true;
 				if (mcMask [Simulator.DIR_RIGHT, nodeID] == 1 && preferredDirVector [Simulator.DIR_RIGHT] != true && f.inDir != Simulator.DIR_RIGHT)
@@ -212,6 +213,7 @@ namespace ICSimulator
 					preferredDirVector [Simulator.DIR_LOCAL] = true;
 				//else
 				//	Debug.Assert (false, "ERROR: Direction doesn't exist\n");
+
 			}
 			return preferredDirVector;
 		}

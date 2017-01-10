@@ -126,7 +126,7 @@ namespace ICSimulator
 		// ------------------DO NOT MOVE End------------------------//
 
 		// --- Synthetic Traffic Simulation --- //
-		public static bool synthGen = false; // will not generate CPU instance if it is true
+		public static bool synthGen = true; // will not generate CPU instance if it is true
 		public static double synth_rate = 0.16; // injection rate in packet/cycle/node
 		public static double mc_rate = 0.01;
 		public static double hs_rate = 0.5;
@@ -137,12 +137,14 @@ namespace ICSimulator
 		public static int uniform_size = 1;
 		public static bool multicast = true;
 		public static int mc_degree = N-1; // number of packets send out; N: broadcast; 1: unicast;
-		public static SynthTrafficPattern synthPattern = SynthTrafficPattern.UR;
-		public static bool mergeEnable = false;
+		public static SynthTrafficPattern synthPattern = SynthTrafficPattern.HS;
+		public static bool mergeEnable = true;
 		public static bool adaptiveMC = true;
 		public static bool scatterEnable = true;
 		public static bool scoreBoardDisable = false; // enable for to speed up simulation
 		public static int hotSpotReqPerNode = 1;
+		public static int swAllocMode = 0; // 0: sequential; 1: parallel
+		public static int sortMode = 1; // 0:full sort; 1: partial sort
 		//public static double hotspot_prob = Config.hotspot_multiplier * Config.unhotspot_prob;
 
 		// --- Carpool: NoC with Gather-Scatter Support
