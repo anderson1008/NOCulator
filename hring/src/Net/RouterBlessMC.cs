@@ -111,16 +111,16 @@ namespace ICSimulator
 			// Check merge
 
 			for (int j = 0; j < 4; j++) {
-				if (Config.mergeEnable != false)
+				if (Config.mergeEnable == false)
 					break;
-				if (inputBuffer [j] == null)
+				if (inputBuffer [j] == null || m_injectSlot == null)
 					continue;
 				if (inputBuffer [j].packet.gather && m_injectSlot.packet.gather && 
 					inputBuffer[j].packet.dest.ID == m_injectSlot.packet.dest.ID &&
 					inputBuffer[j].flitNr == m_injectSlot.flitNr &&
 					inputBuffer[j].packet.hsFlowID == m_injectSlot.packet.hsFlowID
 				) {
-					inputBuffer [j].ackCount=inputBuffer[j].ackCount + inputBuffer[j].ackCount;
+					inputBuffer [j].ackCount=inputBuffer[j].ackCount + 1;
 					ScoreBoard.UnregPacket (m_injectSlot.packet.dest.ID, m_injectSlot.packet.ID); // merged flit is removed from the score board right away
 					Simulator.stats.merge_flit.Add ();
 					#if DEBUG
