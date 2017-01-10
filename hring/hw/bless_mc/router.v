@@ -184,13 +184,12 @@ module router(
     .out_2          (xbar_out[2]),
     .out_3          (xbar_out[3])
     );
-        
-    assign data_out_0 = xbar_out [0];
-    assign data_out_1 = xbar_out [1];
-    assign data_out_2 = xbar_out [2];
-    assign data_out_3 = xbar_out [3];
-
     
+    dff_async_reset #(`DATA_WIDTH) st2_buf_data_0 (xbar_out[0], clk, n_rst, data_out_0);
+    dff_async_reset #(`DATA_WIDTH) st2_buf_data_1 (xbar_out[1], clk, n_rst, data_out_1);
+    dff_async_reset #(`DATA_WIDTH) st2_buf_data_2 (xbar_out[2], clk, n_rst, data_out_2);
+    dff_async_reset #(`DATA_WIDTH) st2_buf_data_3 (xbar_out[3], clk, n_rst, data_out_3);
+
 endmodule
 
 `endif // BLESS
@@ -443,12 +442,11 @@ module router(
     end
 
     endgenerate
-    
-    assign data_out_0 = data_out [0];
-    assign data_out_1 = data_out [1];
-    assign data_out_2 = data_out [2];
-    assign data_out_3 = data_out [3];
 
+    dff_async_reset #(`DATA_WIDTH) st2_buf_data_0 (data_out[0], clk, n_rst, data_out_0);
+    dff_async_reset #(`DATA_WIDTH) st2_buf_data_1 (data_out[1], clk, n_rst, data_out_1);
+    dff_async_reset #(`DATA_WIDTH) st2_buf_data_2 (data_out[2], clk, n_rst, data_out_2);
+    dff_async_reset #(`DATA_WIDTH) st2_buf_data_3 (data_out[3], clk, n_rst, data_out_3);
     
 endmodule
 `endif // end CARPOOL

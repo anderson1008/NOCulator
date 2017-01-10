@@ -50,7 +50,7 @@ module paraPortAlloc_st2 # (parameter CH_INDEX = 2'd3) (
         wire d1, d2;
         assign d1 = ~| (ppv_p_1 & ~apv_p_0 & ~apv_p_2 & ~apv_p_3 & ~ppv_p_0 | apv_p_1);
         assign d2 = ~| (ppv_p_2 & ~apv_p_0 & ~apv_p_1 & ~apv_p_3 & ~ppv_p_0 & ~ppv_p_1 | apv_p_2);
-        wire [1:0] numDeflect;
+        wire [1:0] numDeflect; // check numDeflect in lower channel is critical, as the port is available doesn't mean it is not taken by deflected flit.j
         assign numDeflect = d1 + d2;
         
         wire [3:0] deflectIs0, deflectIs1, deflectIs2;
