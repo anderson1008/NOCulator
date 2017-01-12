@@ -23,7 +23,8 @@
 
 `ifdef CARPOOL_LK_AHEAD_RC_PS
     `define DST_MGMT
-`elsif CARPOOL
+`endif
+`ifdef CARPOOL
     `define DST_MGMT
 `endif
 

@@ -23,7 +23,8 @@
 
 `ifdef CARPOOL_LK_AHEAD_RC_PS
     `define HAS_MERGE
-`elsif CARPOOL
+`endif
+`ifdef CARPOOL
     `define HAS_MERGE
 `endif
 
