@@ -127,23 +127,23 @@ namespace ICSimulator
 
 		// --- Synthetic Traffic Simulation --- //
 		public static bool synthGen = true; // will not generate CPU instance if it is true
-		public static double synth_rate = 0.16; // injection rate in packet/cycle/node
-		public static double mc_rate = 0.01;
-		public static double hs_rate = 0.5;
+		public static double synth_rate = 0.1; // injection rate in packet/cycle/node
+		public static double mc_rate = 0.05;
+		public static double hs_rate = 0.0;
 		public static int synthQueueLimit = 1000;
-		public static int starveThreshold = 100000;
-		public static ulong starveResetEpoch = 100000; // the starvation rate = starveThreshold / starveResetEpoch
+		public static int starveThreshold = 1;
+		public static ulong starveResetEpoch = 20000; // the starvation rate = starveThreshold / starveResetEpoch
 		public static bool uniform_size_enable = true;
 		public static int uniform_size = 1;
 		public static bool multicast = true;
 		public static int mc_degree = N-1; // number of packets send out; N: broadcast; 1: unicast;
-		public static SynthTrafficPattern synthPattern = SynthTrafficPattern.HS;
-		public static bool mergeEnable = true;
-		public static bool adaptiveMC = true;
-		public static bool scatterEnable = true;
+		public static SynthTrafficPattern synthPattern = SynthTrafficPattern.UR;
+		public static bool mergeEnable = false;
+		public static bool adaptiveMC = false;
+		public static bool scatterEnable = false;
 		public static bool scoreBoardDisable = false; // enable for to speed up simulation
 		public static int hotSpotReqPerNode = 1;
-		public static int swAllocMode = 0; // 0: sequential; 1: parallel
+		public static int swAllocMode = 1; // 0: sequential; 1: parallel
 		public static int sortMode = 1; // 0:full sort; 1: partial sort
 		//public static double hotspot_prob = Config.hotspot_multiplier * Config.unhotspot_prob;
 

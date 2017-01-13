@@ -503,8 +503,10 @@ namespace ICSimulator
 				if (inputBuffer [i] == null)
 					continue;
 				isFirst = true;
-				if (inputBuffer [i].packet.mc == false || lowerChannelHasMC) {
+				if (inputBuffer [i].packet.mc == false || lowerChannelHasMC || (Config.adaptiveMC==true && starveCount >= Config.starveThreshold)) {
 					// uc only keep one ppv
+					if (Config.adaptiveMC==true && starveCount >= Config.starveThreshold )
+						Simulator.stats.denyFork.Add();
 					for (j=0; j<4; j++) {
 						dir = routeOrder [j];
 						if (apv[i,dir]==1 && isFirst && linkOut [dir] != null) // output link must exists
