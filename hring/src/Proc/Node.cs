@@ -358,7 +358,8 @@ namespace ICSimulator
 				) {
 					//using starveCount is better than stat.starve_flit.Rate and stat.starve_flit.Count.
 					//It may react quickly when the execution changes phase.
-					if ((Config.adaptiveMC == true && (m_router.starveCount < Config.starveThreshold)) || Config.adaptiveMC == false)
+					//if ((Config.adaptiveMC == true && (m_router.starveCount < Config.starveThreshold)) || Config.adaptiveMC == false)
+					if ((Config.adaptiveMC == true && (m_router.starveCount/(double)Config.starveResetEpoch < Config.starveRateThreshold)) || Config.adaptiveMC == false)
 						multicastSynthGenMultiDst ();
 				}
 				else

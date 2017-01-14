@@ -13,13 +13,9 @@ finish = packet 1000000
 
 //finish = cycle 1100000
 //warmup_cyc = 100000
-mergeEnable = true
-mc_rate = 0.05
-synth_rate = 0.1
-multicast = true
 topology = Mesh
-//router.algorithm = DR_FLIT_SWITCHED_OLDEST_FIRST 
-router.algorithm = DR_FLIT_SW_OF_MC
+router.algorithm = DR_FLIT_SWITCHED_OLDEST_FIRST 
+//router.algorithm = DR_FLIT_SW_OF_MC
 //afc_force = true 
 //afc_force_buffered = true 
 //afc_buf_per_vnet = 4

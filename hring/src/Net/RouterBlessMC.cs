@@ -155,7 +155,8 @@ namespace ICSimulator
 						if (m_injectSlot.preferredDirVector [j] && m_injectSlot.packet.mc)
 							numMC++;
 					if (Config.adaptiveMC) {
-						if (starveCount < Config.starveThreshold && numMC > 1)
+						//if (starveCount < Config.starveThreshold && numMC > 1)
+						if (starveCount/(double)Config.starveResetEpoch < Config.starveRateThreshold && numMC > 1)
 							m_injectSlot.replicateNeed = true;
 					} else {
 						if (numMC > 1)
@@ -294,8 +295,9 @@ namespace ICSimulator
 				for (int j = 0; j < 4; j++)  // DO check local bit
 					if (inputBuffer [dir].preferredDirVector [j] && inputBuffer[dir].packet.mc)
 						numMC++;
-
-				if (Config.adaptiveMC && starveCount >= Config.starveThreshold && !inputBuffer [dir].preferredDirVector[4])
+				
+				//if (Config.adaptiveMC && starveCount >= Config.starveThreshold && !inputBuffer [dir].preferredDirVector[4]
+				if (Config.adaptiveMC && (starveCount/(double)Config.starveResetEpoch >= Config.starveRateThreshold) && !inputBuffer [dir].preferredDirVector[4])
 					continue;
 				
 				if (numMC > 1 | (inputBuffer [dir].preferredDirVector[4] && inputBuffer[dir].packet.mc && inputBuffer[dir].destList.Count > 1)) {
@@ -503,9 +505,11 @@ namespace ICSimulator
 				if (inputBuffer [i] == null)
 					continue;
 				isFirst = true;
-				if (inputBuffer [i].packet.mc == false || lowerChannelHasMC || (Config.adaptiveMC==true && starveCount >= Config.starveThreshold)) {
+				//if (inputBuffer [i].packet.mc == false || lowerChannelHasMC || (Config.adaptiveMC==true && starveCount >= Config.starveThreshold)) {
+				if (inputBuffer [i].packet.mc == false || lowerChannelHasMC || (Config.adaptiveMC==true && (starveCount/(double)Config.starveResetEpoch >= Config.starveRateThreshold))) {
 					// uc only keep one ppv
-					if (Config.adaptiveMC==true && starveCount >= Config.starveThreshold )
+					//if (Config.adaptiveMC==true && starveCount >= Config.starveThreshold )
+					if (Config.adaptiveMC==true && (starveCount/(double)Config.starveResetEpoch >= Config.starveRateThreshold) )
 						Simulator.stats.denyFork.Add();
 					for (j=0; j<4; j++) {
 						dir = routeOrder [j];
