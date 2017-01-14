@@ -143,7 +143,7 @@ namespace ICSimulator
 		public static SynthTrafficPattern synthPattern = SynthTrafficPattern.HS;  // to enable hotspot flit, change to HS
 		public static bool mergeEnable = true;
 		public static bool adaptiveMC = false;
-		public static bool scatterEnable = true; // disable to run baseline (BLESS+MC) - the naive approach; Enable to run Carpool
+		public static bool scatterEnable = false; // disable to run baseline (BLESS+MC) - the naive approach; Enable to run Carpool
 		public static bool scoreBoardDisable = false; // enable for to speed up simulation
 		public static int hotSpotReqPerNode = 64; // the number of hotspot flit can be generated before previous ones are received.
 		public static int swAllocMode = 1; // 0: sequential; 1: parallel

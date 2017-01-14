@@ -897,10 +897,11 @@ namespace ICSimulator
 				tw.WriteLine("network: {0}-{1}x{2}",Config.topology.ToString(),Config.network_nrX,Config.network_nrY);
 			else
 				tw.WriteLine("network: {0}-{3}-{1}x{2}",Config.topology.ToString(),Config.network_nrX,Config.network_nrY, Config.sub_net);
+			
+			tw.WriteLine("router: {0}", Config.router.algorithm.ToString());
 			if (!Config.scatterEnable)
-				tw.WriteLine("router: {0}", Config.router.algorithm.ToString());
-			else
-				tw.WriteLine("router: BLESS_MC");
+				tw.WriteLine("Running in Naive mode");
+			
 			
 
 			if (Config.bypass_enable)
