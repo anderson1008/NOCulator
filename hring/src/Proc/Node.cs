@@ -356,9 +356,7 @@ namespace ICSimulator
 				// Using the naive mc method when the starvation rate is higher than the threshold.
 				if (Config.router.algorithm == RouterAlgorithm.DR_FLIT_SW_OF_MC && Config.scatterEnable
 				) {
-					//using starveCount is better than stat.starve_flit.Rate and stat.starve_flit.Count.
-					//It may react quickly when the execution changes phase.
-					//if ((Config.adaptiveMC == true && (m_router.starveCount < Config.starveThreshold)) || Config.adaptiveMC == false)
+
 					if ((Config.adaptiveMC == true && (m_router.starveCount/(double)Config.starveResetEpoch < Config.starveRateThreshold)) || Config.adaptiveMC == false)
 						multicastSynthGenMultiDst ();
 				}

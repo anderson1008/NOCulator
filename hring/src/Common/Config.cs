@@ -140,12 +140,12 @@ namespace ICSimulator
 		public static int uniform_size = 1;
 		public static bool multicast = true;
 		public static int mc_degree = N-1; // number of packets send out; N: broadcast; 1: unicast;
-		public static SynthTrafficPattern synthPattern = SynthTrafficPattern.UR;
-		public static bool mergeEnable = false;
+		public static SynthTrafficPattern synthPattern = SynthTrafficPattern.HS;  // to enable hotspot flit, change to HS
+		public static bool mergeEnable = true;
 		public static bool adaptiveMC = false;
-		public static bool scatterEnable = true;
+		public static bool scatterEnable = true; // disable to run baseline (BLESS+MC) - the naive approach; Enable to run Carpool
 		public static bool scoreBoardDisable = false; // enable for to speed up simulation
-		public static int hotSpotReqPerNode = 1;
+		public static int hotSpotReqPerNode = 64; // the number of hotspot flit can be generated before previous ones are received.
 		public static int swAllocMode = 1; // 0: sequential; 1: parallel
 		public static int sortMode = 1; // 0:full sort; 1: partial sort
 		//public static double hotspot_prob = Config.hotspot_multiplier * Config.unhotspot_prob;
@@ -216,7 +216,7 @@ namespace ICSimulator
 		public static bool bypass_enable = true;
 		public static bool bridge_subnet = true;
 		public static bool partial_sort = true;
-		public static bool randomize_defl = true; // false: static deflection; true: randomized deflection
+		public static bool randomize_defl = false; // false: static deflection; true: randomized deflection
 		public static bool subnet_sel_rand = false;
 		public static ulong subnet_reset_period = 500;
 

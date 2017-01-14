@@ -12,9 +12,35 @@ namespace ICSimulator
 		// By Xiyue: for coherent packet profiling
 		//public SampledStat[] avg_slowdown_error;
 
+
+		// Carpool starts
 		public AccumStat generate_packet, generate_mc_packet, generate_uc_packet, generate_hs_packet;
-		public AccumStat merge_flit;
-		public AccumStat denyFork;
+		public AccumStat merge_flit, fork_flit, denyFork;
+		// c_buf: triggerred by each input flit. Each c_buf is equivalent to 3 buffer operations as each channel has
+		//         3 pipeline register (not modeled in the simulator for simplicity)
+		// c_local =  xbar: (conservative) all flits transfer trggier local module.
+		// c_portAlloc = xbar
+		// c_sort = permute (already declared): each permuater block is tracked separately. So, the op power = 1/4 of partial permuation block (from RTL) 
+		// c_merge counts the number of overall merge operation. Each input flit may trigger multiple comparison. 
+		//     The power of each  comparison is obtained as Merge Unit Power / # of comparators (i.e., 9)
+		// c_dstMgmt: triggered by the mc flit
+		/// <summary>
+		///  We track c_buf, c_rc, c_merge, c_sort, c_xbar, c_dstMgmt.
+		///  Each unit power obtained from RTL synthesis is devided by the normalizing factors
+		///  RTL unit power normalizing factor:
+		///     c_sort:        4  (4 permuter block)
+		///     c_merge:       9  (9 comparators)
+		///     c_local:       4  (4 channels)
+		///     c_portAlloc:   4  (4 channels)
+		///     c_xbar:        4  (4 channels)
+		/// </summary>
+		public AccumStat c_buf, c_rc, c_merge, c_sort, c_local, c_portAlloc, c_xbar, c_dstMgmt;
+
+		// Carpool end
+
+
+
+
 
 		public PeriodicAccumStat[] L1miss_persrc_period;
 		public AccumStat [] throttle_down_profile; 
@@ -866,16 +892,43 @@ namespace ICSimulator
 			tw.WriteLine();
 			tw.WriteLine("---------------   major configurations   ---------------------");
 			tw.WriteLine();
+
 			if (Config.topology != Topology.Mesh_Multi)
 				tw.WriteLine("network: {0}-{1}x{2}",Config.topology.ToString(),Config.network_nrX,Config.network_nrY);
 			else
 				tw.WriteLine("network: {0}-{3}-{1}x{2}",Config.topology.ToString(),Config.network_nrX,Config.network_nrY, Config.sub_net);
-			tw.WriteLine("router: {0}", Config.router.algorithm.ToString());
+			if (!Config.scatterEnable)
+				tw.WriteLine("router: {0}", Config.router.algorithm.ToString());
+			else
+				tw.WriteLine("router: BLESS_MC");
+			
+
 			if (Config.bypass_enable)
 				tw.WriteLine("number of bypass port: {0}", Config.num_bypass);
 			else
 				tw.WriteLine("Bypass is disabled");
+
+			if (Config.router.algorithm == RouterAlgorithm.DR_FLIT_SW_OF_MC) {
+				if (Config.synthGen) {
+					tw.WriteLine ("synth_rate: {0}", Config.synth_rate);
+					if (Config.multicast)
+						tw.WriteLine ("mc_rate: {0}; mc_degree: {1}; forkEnable: {2}; adaptiveFork: {3}; starveRateThreshold: {4:0.000}", Config.mc_rate, Config.mc_degree, Config.scatterEnable, Config.adaptiveMC, Config.starveRateThreshold);
+					if (Config.synthPattern == SynthTrafficPattern.HS) // to enable hotspot flit, change to HS
+						tw.WriteLine ("hs_rate: {0}; mergeEnable: {1}; hotSpotReqPerNode: {2}", Config.hs_rate, Config.mergeEnable, Config.hotSpotReqPerNode);
+				}
+				if (Config.swAllocMode == 1)
+					tw.WriteLine ("Port Allocation: Parallel");
+				else
+					tw.WriteLine ("Port Allocation: Sequential");
+				if (Config.sortMode == 1)
+					tw.WriteLine ("Sort: Partial Permutation Network");
+				else
+					tw.WriteLine ("Sort: Full Permutation Network");
+				
+			}
+
 			tw.WriteLine("packet size (ctrl/data): {0}/{1} flits", Config.router.addrPacketSize, Config.router.dataPacketSize);
+
 			tw.WriteLine();
 			tw.WriteLine("---------------   Report   ---------------------");
 			tw.WriteLine("  simulation cycles: {0}", m_finishtime);
@@ -900,8 +953,8 @@ namespace ICSimulator
 			             deflect_flit.Count, deflect_flit.Rate, deflect_flit.Rate / inject_flit.Rate);
 			tw.WriteLine("      bypass: {0} (rate {1:0.00} per cycle, each flit is bypassed for {2:0.00} times)", 
 			             bypass_flit.Count, bypass_flit.Rate, bypass_flit.Rate / inject_flit.Rate);
-			tw.WriteLine("      unproductive deflection: {0} (fraction {1:0.00%} of total deflection)",
-			             unprod_flit.Count, (double)unprod_flit.Count/deflect_flit.Count);
+			//tw.WriteLine("      unproductive deflection: {0} (fraction {1:0.00%} of total deflection)",
+			//             unprod_flit.Count, (double)unprod_flit.Count/deflect_flit.Count);
 			tw.WriteLine("      starvations: {0} (rate {1:0.00} starved flits per cycle, each flit is starved for {2:0.00} times)",
 			             starve_flit.Count, starve_flit.Rate, starve_flit.Rate / inject_flit.Rate);
 			tw.WriteLine("      rank level: {0:0.00} | MAX {1:0.00}", net_decisionLevel.Avg, net_decisionLevel.Max);

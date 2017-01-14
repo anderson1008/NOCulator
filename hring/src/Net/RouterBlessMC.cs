@@ -115,6 +115,7 @@ namespace ICSimulator
 					break;
 				if (inputBuffer [j] == null || m_injectSlot == null)
 					continue;
+				Simulator.stats.c_merge.Add ();
 				if (inputBuffer [j].packet.gather && m_injectSlot.packet.gather && 
 					inputBuffer[j].packet.dest.ID == m_injectSlot.packet.dest.ID &&
 					inputBuffer[j].flitNr == m_injectSlot.flitNr &&
@@ -148,8 +149,9 @@ namespace ICSimulator
 			{				
 				if (m_injectSlot != null)
 				{
+					
 					RouteCompute (m_injectSlot);
-
+					Simulator.stats.c_rc.Add ();
 					int numMC = 0;
 					for (int j = 0; j < 4; j++)  // DO NOT check local bit
 						if (m_injectSlot.preferredDirVector [j] && m_injectSlot.packet.mc)
@@ -158,6 +160,8 @@ namespace ICSimulator
 						//if (starveCount < Config.starveThreshold && numMC > 1)
 						if (starveCount/(double)Config.starveResetEpoch < Config.starveRateThreshold && numMC > 1)
 							m_injectSlot.replicateNeed = true;
+						else if (starveCount/(double)Config.starveResetEpoch >= Config.starveRateThreshold && numMC > 1)
+							Simulator.stats.denyFork.Add ();
 					} else {
 						if (numMC > 1)
 							m_injectSlot.replicateNeed = true;
@@ -168,6 +172,7 @@ namespace ICSimulator
 					for (int i = 0; i < 4; i++)
 						if (inputBuffer [i] == null) {
 							inputBuffer [i] = m_injectSlot;
+							Simulator.stats.c_buf.Add ();
 							break;
 						}
 					numFlitIn++;	
@@ -211,9 +216,11 @@ namespace ICSimulator
 							inputBuffer [i] = null;
 						}
 						numFlitIn--; // This will increase the probability of flit replication, as it is used to prevent deadlock during replication
-						Simulator.stats.merge_flit.Add ();;
+						Simulator.stats.merge_flit.Add ();
 					}
+					Simulator.stats.c_merge.Add ();
 				}
+
 			}
 
 		}
@@ -242,6 +249,7 @@ namespace ICSimulator
 					inputBuffer[dir].inDir = dir;  // May use for MCmask table look up 
 					inputBuffer[dir].ClearRoutingInfo();
 					linkIn[dir].Out = null;
+					Simulator.stats.c_buf.Add ();
 				}
 		}
 			
@@ -280,6 +288,8 @@ namespace ICSimulator
 			} else {
 				f.preferredDirVector = determineDirection (f, coord, mcMask);
 			}
+
+			Simulator.stats.c_rc.Add ();
 		}
 
 		protected void ReplicaFlitTagging () {
@@ -297,8 +307,11 @@ namespace ICSimulator
 						numMC++;
 				
 				//if (Config.adaptiveMC && starveCount >= Config.starveThreshold && !inputBuffer [dir].preferredDirVector[4]
-				if (Config.adaptiveMC && (starveCount/(double)Config.starveResetEpoch >= Config.starveRateThreshold) && !inputBuffer [dir].preferredDirVector[4])
+				if (Config.adaptiveMC && (starveCount / (double)Config.starveResetEpoch >= Config.starveRateThreshold) && !inputBuffer [dir].preferredDirVector [4]) {
+					Simulator.stats.denyFork.Add ();
 					continue;
+
+				}
 				
 				if (numMC > 1 | (inputBuffer [dir].preferredDirVector[4] && inputBuffer[dir].packet.mc && inputBuffer[dir].destList.Count > 1)) {
 						inputBuffer [dir].replicateNeed = true;
@@ -544,6 +557,7 @@ namespace ICSimulator
 					dir = routeOrder [j];
 
 					if (apv[i,dir]==1) {
+						Simulator.stats.c_xbar.Add ();
 						for (k=0; k<4; k++)
 							inputBuffer[i].preferredDirVector[k]=false;
 					}
@@ -566,8 +580,10 @@ namespace ICSimulator
 					for (i = 0; i < 4; i++) {
 						dir = routeOrder [i];
 						apv [0, dir] = (inputBuffer [0].preferredDirVector [dir] & linkOut [dir] != null) ? 1 : 0;
-						if (apv [0, dir] == 1)
+						if (apv [0, dir] == 1) {
+							Simulator.stats.c_xbar.Add ();
 							break;
+						}
 					}
 				// it is possible that flit 0 does not have any productive port.
 				// e.g., its productive port is U-turn, however, U-turn is not allowed. 
@@ -578,6 +594,8 @@ namespace ICSimulator
 						availPV [j] = !(apv [0, j] == 1 | apv [1, j] == 1 | apv [2, j] == 1 | apv [3, j] == 1);
 						if (availPV [j] && linkOut[j] != null) {
 							apv [0, j] = 1;
+							Simulator.stats.c_xbar.Add ();
+							Simulator.stats.deflect_flit.Add ();
 							break;
 						}
 					}
@@ -595,9 +613,18 @@ namespace ICSimulator
 				if (numDef == 0)
 					for (j = 0; j < 4; j++) {
 						dir = routeOrder [j];
-						apv [i, dir] = (availPV [dir] & inputBuffer [i].preferredDirVector [dir] | apv [i, dir] == 1 & linkOut [dir] != null) ? 1 : 0;
-						if (apv [i, dir] == 1)
+
+						if (availPV [dir] & inputBuffer [i].preferredDirVector [dir] & linkOut [dir] != null) {
+							if (apv [i, dir] != 1)
+								Simulator.stats.c_xbar.Add ();
+							
+							apv [i, dir] = 1;
+						}
+						//apv [i, dir] = (availPV [dir] & inputBuffer [i].preferredDirVector [dir] | apv [i, dir] == 1 & linkOut [dir] != null) ? 1 : 0;
+
+						if (apv [i, dir] == 1) {
 							break;
+						}
 					}
 
 				// In hardware, we will take the numDef-th available port.
@@ -607,6 +634,9 @@ namespace ICSimulator
 						if (availPV[j] && linkOut [j] != null) {
 							apv[i,j] = 1;
 							numDef++; // this can be computed at each stage, however, tracked here directly to avoid redudant coding.
+							if (!inputBuffer [i].preferredDirVector [j])
+								Simulator.stats.deflect_flit.Add ();
+							Simulator.stats.c_xbar.Add ();
 							break;
 						}
 					}
@@ -632,7 +662,7 @@ namespace ICSimulator
 					if (linkOut [j].In != null)
 						throw new Exception (String.Format("Port {0} is assigned to multiple flits", j));
 					// Check if need to update the destination list
-					if (outDir == -1)
+					if (outDir == -1) 
 						linkOut [j].In = inputBuffer [i];
 					else {
 						if (inputBuffer [i].packet.mc!=true)
@@ -655,10 +685,13 @@ namespace ICSimulator
 
 							}
 						}
+						Simulator.stats.fork_flit.Add ();
 						numReplica++;
 						linkOut [j].In = f;
 					}
-						
+					if (linkOut[j].In.packet.mc)
+						Simulator.stats.c_dstMgmt.Add ();
+
 					outDir = j;
 					numOutFlit++;
 
@@ -708,6 +741,7 @@ namespace ICSimulator
 							#endif
 							linkOut [dir].In = inputBuffer [i];
 							outDir = dir;
+							Simulator.stats.c_xbar.Add ();
 							break; 
 						} else
 							continue; // Next port
@@ -753,12 +787,17 @@ namespace ICSimulator
 										f.packet.creationTimeMC [dstID] = Simulator.CurrentRound;
 										inputBuffer [i].destList.Remove (c);
 
+									
 									}
 								}
 									
 								linkOut [dir].In = f;
 								maxReplica--;
+								Simulator.stats.fork_flit.Add ();
+
 							}
+							Simulator.stats.c_dstMgmt.Add ();
+							Simulator.stats.c_xbar.Add ();
 							outDir = dir;
 						}
 					}
@@ -769,10 +808,10 @@ namespace ICSimulator
 					continue;
 
 				// unprodutive port allocation
-				inputBuffer [i].Deflected = true;
+				//inputBuffer [i].Deflected = true;
 				defDir = 0;
-				if (Config.randomize_defl)
-					defDir = Simulator.rand.Next (4); // randomize deflection dir (so no bias)
+				//if (Config.randomize_defl) //THIS MAKE A BIG DIFFERENCE, but it is not implemented in hardware because of the complexity. Also, parallel PA does not supprot it.
+				//	defDir = Simulator.rand.Next (4); // randomize deflection dir (so no bias)
 				for (int count = 0; count < 4; count++, defDir = (defDir + 1) % 4) {
 					if (linkOut [defDir] != null && linkOut [defDir].In == null) {
 						#if DEBUG
@@ -781,6 +820,11 @@ namespace ICSimulator
 						linkOut [defDir].In = inputBuffer [i];
 						//linkOut [defDir].In.ClearRoutingInfo ();
 						outDir = defDir;
+						Simulator.stats.c_xbar.Add ();
+						// For unicase and hotspot flits, compare with the original port request to determine if a flit is deflected or not.
+						// For multicast flit, it is definitely deflected, if reach here.
+						if (!inputBuffer[i].preferredDirVector[outDir])
+							Simulator.stats.deflect_flit.Add();
 						break;
 					}
 				}
