@@ -128,8 +128,8 @@ namespace ICSimulator
 		// --- Synthetic Traffic Simulation --- //
 		public static bool synthGen = true; // will not generate CPU instance if it is true
 		public static double synth_rate = 0.1; // injection rate in packet/cycle/node
-		public static double mc_rate = 0.05;
-		public static double hs_rate = 0.1;
+		public static double mc_rate = 0.01;
+		public static double hs_rate = 0.01;
 		public static int synthQueueLimit = 1000;
 		public static int starveThreshold = 1; //not used
 		public static ulong starveResetEpoch = 2^14; // the starvation rate = starveThreshold / starveResetEpoch
@@ -145,7 +145,7 @@ namespace ICSimulator
 		public static bool adaptiveMC = false;
 		public static bool scatterEnable = false; // disable to run baseline (BLESS+MC) - the naive approach; Enable to run Carpool
 		public static bool scoreBoardDisable = false; // enable for to speed up simulation
-		public static int hotSpotReqPerNode = 64; // the number of hotspot flit can be generated before previous ones are received.
+		public static int hotSpotReqPerNode = 1; // the number of hotspot flit can be generated before previous ones are received.
 		public static int swAllocMode = 1; // 0: sequential; 1: parallel
 		public static int sortMode = 1; // 0:full sort; 1: partial sort
 		//public static double hotspot_prob = Config.hotspot_multiplier * Config.unhotspot_prob;
