@@ -13,9 +13,9 @@ namespace ICSimulator
 		//public SampledStat[] avg_slowdown_error;
 
 		public AccumStat generate_packet, generate_mc_packet, generate_uc_packet, generate_hs_packet;
-		public AccumStat merge_flit;
+		public AccumStat merge_flit, fork_flit;
 
-		public AccumStat vc_buf_wr, vc_buf_rd, vc_sw_traversal, vc_vc_arb, vc_sw_arb, vc_link_traversal;
+		public AccumStat vc_buf_wr, vc_buf_rd, vc_sw_traversal, vc_vc_arb, vc_sw_arb, vc_link_traversal, vc_dstMgmt;
 
 		public PeriodicAccumStat[] L1miss_persrc_period;
 		public AccumStat [] throttle_down_profile; 

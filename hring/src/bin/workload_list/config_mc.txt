@@ -40,7 +40,7 @@ sh_cache_assoc = 4
 sh_cache_perfect = true
 
 idealnet = false
-router.linkLatency = 2
+router.linkLatency = 3
 edge_loop = false 
 
 shcache_buf = 16

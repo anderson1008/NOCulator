@@ -596,7 +596,7 @@ namespace ICSimulator
 									outflit.destList = new List <Coord> ();
 									outflit.injectionTime = Simulator.CurrentRound;
 									replicaCreate++;
-
+									Simulator.stats.fork_flit.Add ();
 
 									if (outflit.inDir == 4) {
 										// Must assign LTB and RTB for local flit here!
@@ -629,12 +629,15 @@ namespace ICSimulator
 											} 
 										}
 									}
+
 								} else {
 									outflit = vcflit.flit;
 								}
 
 								// reset the turn bit after each turn, as flit only allows to turn once
 								if (outflit.inDir != 4 && outflit.packet.mc) {
+									Simulator.stats.vc_dstMgmt.Add ();
+
 									if ((outflit.inDir + 1) % 4 == outdir) {
 										outflit.LTB = false;
 										outflit.RTB = false;
@@ -697,7 +700,7 @@ namespace ICSimulator
 
 			getInitLoad (); // for debug
 
-			printFlitIn (); // for debug
+			//printFlitIn (); // for debug
 
 			routerCompute ();
 
@@ -709,7 +712,7 @@ namespace ICSimulator
 
 			compareLoad (); // for debug
 			
-			printFlitOut (); // for debug
+			//printFlitOut (); // for debug
 
 		}
 

@@ -127,9 +127,9 @@ namespace ICSimulator
 
 		// --- Synthetic Traffic Simulation --- //
 		public static bool synthGen = true; // will not generate CPU instance if it is true
-		public static double synth_rate = 0.16; // injection rate in packet/cycle/node
-		public static double mc_rate = 0.01;
-		public static double hs_rate = 0.5;
+		public static double synth_rate = 0.2; // injection rate in packet/cycle/node
+		public static double mc_rate = 0.05;
+		public static double hs_rate = 0.1;
 		public static int synthQueueLimit = 1000;
 		public static int starveThreshold = 1000;
 		public static ulong starveResetEpoch = 100000; // the starvation rate = starveThreshold / starveResetEpoch
@@ -142,8 +142,8 @@ namespace ICSimulator
 		public static bool adaptiveMC = false;
 		public static bool scatterEnable = true;
 		public static bool scoreBoardDisable = false; // enable for to speed up simulation
-		public static int hotSpotReqPerNode = 1;
-		public static bool halfDataChannel = false;
+		public static int hotSpotReqPerNode = 64;
+		public static bool halfDataChannel = true;
 		//public static double hotspot_prob = Config.hotspot_multiplier * Config.unhotspot_prob;
 
 		// --- Carpool: NoC with Gather-Scatter Support
@@ -151,7 +151,7 @@ namespace ICSimulator
 
 		// --- Conventional VC router
 		public static int vnets = 4;
-		public static int vnetsDepth = 4;
+		public static int vnetsDepth = 1;
 
 		// By Xiyue
 		public static bool preempt = false;
