@@ -8,7 +8,7 @@ network_nrY = 8
 //barrier = 3
 //trace_wraparound = true
 
-finish = packet 100000
+finish = packet 500000
 
 //finish = cycle 1100000
 //warmup_cyc = 100000
