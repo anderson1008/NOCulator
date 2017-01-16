@@ -88,6 +88,7 @@ namespace ICSimulator
 		private Dictionary <string, int> m_inheritance_dict;
 
         private Router m_router;
+		private ulong m_last_retired_synth;
 
         private IPrioPktPool m_inj_pool;
         private Queue<Flit> m_injQueue_flit, m_injQueue_evict;
@@ -538,8 +539,9 @@ namespace ICSimulator
 					receiveFlit_noBuf_mc (f);
 				else
 					receiveFlit_noBuf (f);
-
 			}
+			m_last_retired_synth = Simulator.CurrentRound;
+
        }
 
 		void receiveFlit_noBuf_mc (Flit f){
@@ -641,7 +643,9 @@ namespace ICSimulator
         { get { return (m_cpu != null) ? m_cpu.Finished : false; } }
 
         public bool Livelocked
-        { get { return (m_cpu != null) ? m_cpu.Livelocked : false; } }
+		{ get { return (m_cpu != null) ? m_cpu.Livelocked : 
+				(Simulator.CurrentRound - m_last_retired_synth) > Config.livelock_thresh; } 
+		}
 
         public void visitFlits(Flit.Visitor fv)
         {
