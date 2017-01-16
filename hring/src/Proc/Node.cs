@@ -359,6 +359,12 @@ namespace ICSimulator
 
 					if ((Config.adaptiveMC == true && (m_router.starveCount/(double)Config.starveResetEpoch < Config.starveRateThreshold)) || Config.adaptiveMC == false)
 						multicastSynthGenMultiDst ();
+					// else
+						// THROTTLED HERE, VERY IMPORTANT
+
+					// Tried the following, but did not see much difference
+					//else
+					//	multicastSynthGenNaive ();
 				}
 				else
 					multicastSynthGenNaive ();
