@@ -42,17 +42,19 @@ module paraPortAlloc_st2 # (parameter CH_INDEX = 2'd3) (
  
     generate
     if (CH_INDEX == 2'd3) begin : CH3
+        // Find out the available ports
         assign availPV = ~(apv_p_0 | apv_p_1 | apv_p_2 | apv_p_3 | ppv_p_0 | ppv_p_1 | ppv_p_2);
          
-        // when more than one flits in the lower channels request a given port, deflection will happen in the lower channel.
         // Check the deflection in lower channel here.
         // ch0 never deflect
+        // when more than one flits in the lower channels request a given port, deflection will happen in the lower channel.
         wire d1, d2;
         assign d1 = ~| (ppv_p_1 & ~apv_p_0 & ~apv_p_2 & ~apv_p_3 & ~ppv_p_0 | apv_p_1);
         assign d2 = ~| (ppv_p_2 & ~apv_p_0 & ~apv_p_1 & ~apv_p_3 & ~ppv_p_0 & ~ppv_p_1 | apv_p_2);
         wire [1:0] numDeflect; // check numDeflect in lower channel is critical, as the port is available doesn't mean it is not taken by deflected flit.j
         assign numDeflect = d1 + d2;
         
+        // Compute all possible port allocations 
         wire [3:0] deflectIs0, deflectIs1, deflectIs2;
         assign deflectIs0 = availPV[0] ? 4'b0001 : 
                             availPV[1] ? 4'b0010 : 
@@ -63,6 +65,8 @@ module paraPortAlloc_st2 # (parameter CH_INDEX = 2'd3) (
                             (availPV == 4'b1001 || availPV == 4'b1010 || availPV == 4'b1100) ? 4'b1000 : 4'b0000;
         assign deflectIs2 = (availPV == 4'b0111) ? 4'b0100 : (availPV == 4'b1011 || availPV == 4'b1101 || availPV == 4'b1110) ? 4'b1000 : 4'b0000;
         
+        //If no deflection happens in lower channels and the requested port is available, then the port request can be granted.
+        //Otherwise, use port assignment computed based on the number of deflection in lower channels and available port vector.
         assign prodAPV = apv_p_3 | (numDeflect ==0 ? (ppv_p_3 & availPV) : 4'b0000);
         assign uprodAPV = numDeflect == 0 ? deflectIs0 : 
                           numDeflect == 1 ? deflectIs1 :

@@ -146,7 +146,7 @@ namespace ICSimulator
 		//public static bool forkEnable = false; // Keep constant injection latency, just disable/enable the forking
 		public static bool scatterEnable = true; // If disabled, using naive injection.
 		public static bool scoreBoardDisable = false; // enable for to speed up simulation
-		public static int hotSpotReqPerNode = 63; // the number of hotspot flit can be generated before previous ones are received.
+		public static int hotSpotReqPerNode = 1; // the number of hotspot flit can be generated before previous ones are received.
 		public static int swAllocMode = 1; // 0: sequential; 1: parallel
 		public static int sortMode = 1; // 0:full sort; 1: partial sort
 		//public static double hotspot_prob = Config.hotspot_multiplier * Config.unhotspot_prob;
