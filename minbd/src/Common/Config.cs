@@ -93,7 +93,7 @@ namespace ICSimulator
         public static MemoryConfig memory  = new MemoryConfig();
         public static RouterConfig router  = new RouterConfig();
 
-        public static bool synthGen = true;
+        public static bool synthGen = false;
         public static double synthRate = 0.1;
         public static int synthQueueLimit = 1000;
         public static SynthTrafficPattern synthPattern = SynthTrafficPattern.UR;
@@ -258,7 +258,7 @@ namespace ICSimulator
         public static bool   gp_rescuers_dummy = false;
         public static bool   gp_adaptive       = false;
         public static bool   dor_only          = false; // dimension-ordered routing only
-        public static bool   edge_loop         = false;
+        public static bool   edge_loop         = true;
         public static bool   torus             = false;
         public static bool   sortnet_twist     = true;
         public static bool   sortnet_full      = false;
@@ -403,7 +403,7 @@ namespace ICSimulator
         public static string solo    = "";
 
         // ------ CHIPPER experiments --------------
-        public static int    ejectCount = 1;
+        public static int    ejectCount = 2;
         
 
         
@@ -422,7 +422,7 @@ namespace ICSimulator
         public static bool reverse_mpki     = false;
 
 		// ------ Resubmit Buffer ------------
-        public static bool resubmitBuffer       = false;
+        public static bool resubmitBuffer       = true;
         public static bool resubmitLineBuffers  = false; // One buffer for each input line (4)
         public static bool middleResubmit	    = false;
 	    public static bool inputResubmitBuffers = false;	

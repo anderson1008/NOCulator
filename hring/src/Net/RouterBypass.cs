@@ -1,5 +1,5 @@
-//#define DEBUG
-//#define PKTDUMP 
+#define DEBUG
+#define PKTDUMP 
 
 using System;
 using System.Collections.Generic;
@@ -8,6 +8,12 @@ using System.Text;
 
 namespace ICSimulator
 {
+
+	/* Parameters
+	 * meshEjectTrial: number of ejection 
+	 * 
+	 * 
+	 */
 	public class MultiMeshRouter : Router
 	{
 		public Router[] subrouter = new Router[Config.sub_net];
@@ -161,7 +167,9 @@ namespace ICSimulator
 	{
 
 		protected Flit m_injectSlot, m_injectSlot2;
-		Queue<Flit>	[] ejectBuffer;
+		protected Queue<Flit>	[] ejectBuffer;
+		protected Flit[] input; // keep this as a member var so we don't
+		// have to allocate on every step
 
 		public Router_BLESS_BYPASS(Coord myCoord)
 			: base(myCoord)
@@ -169,8 +177,12 @@ namespace ICSimulator
 			m_injectSlot = null;
 			m_injectSlot2 = null;
 			ejectBuffer = new Queue<Flit>[4+Config.num_bypass];
-			for (int n = 0; n < 4+Config.num_bypass; n++)
-				ejectBuffer[n] = new Queue<Flit>();
+			input = new Flit[4+Config.num_bypass]; 
+			// grab inputs into a local array so we can sort
+			for (int n = 0; n < 4 + Config.num_bypass; n++) {
+				ejectBuffer [n] = new Queue<Flit> ();
+				input[n] = null;
+			}
 		}
 
 		Flit handleGolden(Flit f)
@@ -224,7 +236,7 @@ namespace ICSimulator
 			m_n.receiveFlit(f);
 		}
 
-		Flit ejectLocal()
+		protected virtual Flit ejectLocal()
 		{
 			// eject locally-destined flit (highest-ranked, if multiple)
 			// bypass channel can also eject to local port
@@ -312,7 +324,7 @@ namespace ICSimulator
 			}
 		}
 
-		protected void _partialSort(ref Flit[] input)
+		virtual protected void _partialSort(ref Flit[] input)
 		{
 			// only sort the first 4 flits; 
 			_swap (ref input[0],ref input[1]);
@@ -331,10 +343,10 @@ namespace ICSimulator
 			_swap (ref input[0],ref input[2]);
 			_swap (ref input[1],ref input[3]);
 		}
-
-		protected void _installFlit(out Flit[] input, out int count)
+			
+		protected virtual void _installFlit(ref Flit[] input, out int count)
 		{
-			input = new Flit[4+Config.num_bypass]; 
+			bool stop = false;
 			for (int i = 0; i < 4+Config.num_bypass; i++) input[i] = null;
 			// grab inputs into a local array so we can sort
 			count = 0;
@@ -344,6 +356,10 @@ namespace ICSimulator
 				for (int dir = 0; dir < 4; dir++)
 					if (linkIn[dir] != null && linkIn[dir].Out != null)
 				{
+					Console.WriteLine("PKT {0}-{1}/{2} ARRIVED at router {3} at time {4}",
+							linkIn[dir].Out.packet.ID, linkIn[dir].Out.flitNr+1, linkIn[dir].Out.packet.nrOfFlits, coord, Simulator.CurrentRound);
+					if (linkIn [dir].Out.packet.ID == 20394 && coord.x == 1 && coord.y == 0 && Simulator.CurrentRound == 22789)
+						stop = true;
 					linkIn[dir].Out.inDir = dir;
 					input[dir] = linkIn[dir].Out;  // c: # of incoming flits
 					count++;
@@ -354,6 +370,8 @@ namespace ICSimulator
 				for (int dir = 0; dir < 4; dir++)
 					if (linkIn[dir] != null && linkIn[dir].Out != null)
 				{
+					Console.WriteLine("PKT {0}-{1}/{2} ARRIVED at router {3} at time {4}",
+						linkIn[dir].Out.packet.ID, linkIn[dir].Out.flitNr+1, linkIn[dir].Out.packet.nrOfFlits, coord, Simulator.CurrentRound);
 					linkIn[dir].Out.inDir = dir;
 					input[count++] = linkIn[dir].Out;  // c: # of incoming flits
 					//linkIn[dir].Out.inDir = dir;  // By Xiyue: what's the point? Seems redundant
@@ -374,12 +392,12 @@ namespace ICSimulator
 		}
 
 
-		protected void _inject (ref int c, out int outCount)
+		protected void _inject (ref int c)
 		{
 			// sometimes network-meddling such as flit-injection can put unexpected
 			// things in outlinks...
 			// outCount: # of the unexpected outstanding flits at the inport of output link, usually, it is 0
-			outCount = 0;
+			int outCount = 0;
 			for (int dir = 0; dir < 4; dir++)
 				if (linkOut[dir] != null && linkOut[dir].In != null)
 					outCount++;
@@ -392,6 +410,7 @@ namespace ICSimulator
 			//bool canInject = (c + outCount) < (neighbors - 1); // conservative inject: # of input < # of port - 1 -> prevent making network more congested.
 			bool canInject = (c + outCount) < neighbors;  // aggressive inject: as long as # of input < # of port
 			bool starved = wantToInject && !canInject;
+			bool stop;
 
 			if (starved)
 			{
@@ -436,8 +455,10 @@ namespace ICSimulator
 					if (Config.partial_sort)
 					{
 						for (int i = 0; i < 4+Config.num_bypass; i++) 
-							if (input[i] == null)
+							if (input[i] == null && linkIn[i] != null)
 						{
+							if (inj.packet.ID == 927 && coord.x == 0 && coord.y == 1 && Simulator.CurrentRound == 1032)
+								stop = true;
 							input[i] = inj;
 							c++;
 							break;
@@ -455,8 +476,7 @@ namespace ICSimulator
 			}
 		}
 
-		Flit[] input; // keep this as a member var so we don't
-		// have to allocate on every step
+	
 
 		protected override void _doStep()
 		{
@@ -537,10 +557,9 @@ namespace ICSimulator
 			// grab inputs into a local array so we can sort
 			//for (int i = 0; i < 4+Config.num_bypass; i++) input[i] = null;
 			int c;
-			int outCount;
-			_installFlit(out input, out c);
+			_installFlit(ref input, out c);
 			_sort();
-			_inject (ref c, out outCount);
+			_inject (ref c);
 
 			// assign outputs
 			for (int i = 0; i < 4+Config.num_bypass; i++)
@@ -650,7 +669,7 @@ namespace ICSimulator
 					                  input[i].packet.ID, input[i].flitNr+1, input[i].packet.nrOfFlits, outDir, coord, subnet, Simulator.CurrentRound);
 				#endif
 				if (outDir == -1) throw new Exception(
-					String.Format("Ran out of outlinks in arbitration at node {0} on input {1} cycle {2} flit {3} c {4} neighbors {5} outcount {6}", coord, i, Simulator.CurrentRound, input[i], c, neighbors, outCount));
+					String.Format("Ran out of outlinks in arbitration at node {0} on input {1} cycle {2} flit {3} c {4} neighbors {5}", coord, i, Simulator.CurrentRound, input[i], c, neighbors));
 			} // end assign output
 		}
 
@@ -682,24 +701,9 @@ namespace ICSimulator
 			if (f1 == null) return 1;
 			if (f2 == null) return -1;
 
-			bool f1_resc = (f1.state == Flit.State.Rescuer) || (f1.state == Flit.State.Carrier);
-			bool f2_resc = (f2.state == Flit.State.Rescuer) || (f2.state == Flit.State.Carrier);
-			bool f1_place = (f1.state == Flit.State.Placeholder);
-			bool f2_place = (f2.state == Flit.State.Placeholder);
+	
 
 			int c0 = 0;
-			if (f1_resc && f2_resc)
-				c0 = 0;
-			else if (f1_resc)
-				c0 = -1;
-			else if (f2_resc)
-				c0 = 1;
-			else if (f1_place && f2_place)
-				c0 = 0;
-			else if (f1_place)
-				c0 = 1;
-			else if (f2_place)
-				c0 = -1;
 
 			int c1 = 0, c2 = 0;
 			if (f1.packet != null && f2.packet != null)
@@ -735,5 +739,613 @@ namespace ICSimulator
 					(ulong)Config.cheap_of;
 		}
 
+
+
+		public override void statsEjectPacket(Packet p) {
+			ScoreBoard.UnregPacket (ID, p.ID); 
+			if (Config.uniform_size_enable == false) {
+				if (p.nrOfFlits == (Config.sub_net * Config.router.addrPacketSize))
+					Simulator.stats.ctrl_pkt.Add ();
+				else if (p.nrOfFlits == (Config.sub_net * Config.router.dataPacketSize))
+					Simulator.stats.data_pkt.Add ();	
+				else
+					throw new Exception ("packet size is undefined, yet received!");
+			}
+
+			ulong net_latency;
+			ulong total_latency;
+			net_latency = Simulator.CurrentRound - p.injectionTime;
+			total_latency = Simulator.CurrentRound - p.creationTime;
+
+			Simulator.stats.net_latency.Add(net_latency);
+			Simulator.stats.total_latency.Add(total_latency);
+			Simulator.stats.net_latency_bysrc[p.src.ID].Add(net_latency);
+			Simulator.stats.net_latency_bydest[p.dest.ID].Add(net_latency);
+			Simulator.stats.total_latency_bysrc[p.src.ID].Add(total_latency);
+			Simulator.stats.total_latency_bydest[p.dest.ID].Add(total_latency);
+
+		}
+
 	}
+
+
+	public class Router_MinBD: Router_BLESS_BYPASS
+	{
+		
+		// have to allocate on every step
+		ResubBuffer rBuf;
+
+		public Router_MinBD(Coord myCoord)
+			: base(myCoord)
+		{
+			m_injectSlot = null;
+			m_injectSlot2 = null;
+			ejectBuffer = new Queue<Flit>[4+Config.num_bypass];
+			for (int n = 0; n < 4+Config.num_bypass; n++)
+				ejectBuffer[n] = new Queue<Flit>();
+			rBuf = new ResubBuffer();
+		}
+
+		protected override void _doStep()
+		{
+
+
+// ----- Put flits into an array/buffers (Buffer write) ----- //
+			int count_bw;
+			bool redirected = false; // either redirect or eject to side buffer before populating on output port
+
+			_installFlit(ref input, out count_bw);
+			if (count_bw < 4)
+				goto Reinject;
+
+// ----- Redirection to side buufer ----- //
+			// if there are 4 incoming flits, and the flit at head of side buffer stays more than threshold duration,
+			// randomly pick one incoming flit and redirect to side buffer
+			// This will make the channel available for reinjecting the flit from the side buffer
+			if (rBuf.isEmpty())
+				goto Reinject;
+			Flit headOfRebuf;
+			headOfRebuf = rBuf.getNextFlit();
+			int timeInRebuf = (int)Simulator.CurrentRound - headOfRebuf.rebufInTime;
+			if (timeInRebuf - Config.timeInRebufThreshold >= 0) {
+				redirected = inputResubmitEjection( ref input );
+				if (redirected)
+					count_bw--;
+			}
+
+
+			// -----  Eject -------//
+
+/*          if (Config.EjectBufferSize != -1)
+			{								
+				for (int dir =0; dir < 4; dir ++)
+					if (linkIn[dir] != null && linkIn[dir].Out != null && linkIn[dir].Out.packet.dest.ID == ID && ejectBuffer[dir].Count < Config.EjectBufferSize)
+					{
+						ejectBuffer[dir].Enqueue(linkIn[dir].Out);
+						linkIn[dir].Out = null;
+					}
+				int bestdir = -1;			
+				for (int dir = 0; dir < 4; dir ++)
+					if (ejectBuffer[dir].Count > 0 && (bestdir == -1 || ejectBuffer[dir].Peek().injectionTime < ejectBuffer[bestdir].Peek().injectionTime))
+						bestdir = dir;				
+				if (bestdir != -1)
+					acceptFlit(ejectBuffer[bestdir].Dequeue());
+			}
+			else 
+			{
+				int flitsTryToEject = 0;
+				for (int dir = 0; dir < 4; dir ++)
+					if (linkIn[dir] != null && linkIn[dir].Out != null && linkIn[dir].Out.dest.ID == ID)
+					{
+						flitsTryToEject ++;
+						if (linkIn[dir].Out.ejectTrial == 0)
+							linkIn[dir].Out.firstEjectTrial = Simulator.CurrentRound;
+						linkIn[dir].Out.ejectTrial ++;
+					}
+				Simulator.stats.flitsTryToEject[flitsTryToEject].Add();            
+
+				Flit f1 = null,f2 = null;
+				for (int i = 0; i < Config.meshEjectTrial; i++)
+				{
+					// Only support dual ejection (MAX.Config.meshEjectTrial = 2)
+					Flit eject = ejectLocal();
+					if (i == 0) f1 = eject; 
+					else if (i == 1) f2 = eject;
+					if (eject != null) {
+
+						acceptFlit (eject); 	// Eject flit	
+						#if DEBUG
+						Console.WriteLine ("#6 Time {0}: Eject @ node {1} {2}", Simulator.CurrentRound,coord.ID, eject.ToString());
+						#endif
+					}
+				}
+				if (f1 != null && f2 != null && f1.packet == f2.packet)
+					Simulator.stats.ejectsFromSamePacket.Add(1);
+				else if (f1 != null && f2 != null)
+					Simulator.stats.ejectsFromSamePacket.Add(0);
+			}
+*/
+
+
+// ----- Reinject flit from side buffer ----  //
+			Reinject:
+			int count_reinjected = 0;
+			if (Config.resubmitBuffer)
+			{
+				if (!rBuf.isEmpty())
+					for (int i = 0; i < 4; i++)
+						if (count_reinjected < Config.rebufInjectCount)
+						{
+							if (input[i] == null && !rBuf.isEmpty() && linkIn[i] != null)
+							{
+								input[i] = rBuf.removeFlit();
+								input[i].nrInRebuf++;
+								count_reinjected++;
+								count_bw++;
+							}
+						}
+			}
+						
+			if (Config.EjectBufferSize != -1)
+			{								
+				for (int dir =0; dir < 4; dir ++)
+					if (linkIn[dir] != null && linkIn[dir].Out != null && linkIn[dir].Out.packet.dest.ID == ID && ejectBuffer[dir].Count < Config.EjectBufferSize)
+					{
+						ejectBuffer[dir].Enqueue(linkIn[dir].Out);
+						linkIn[dir].Out = null;
+					}
+				int bestdir = -1;			
+				for (int dir = 0; dir < 4; dir ++)
+					if (ejectBuffer[dir].Count > 0 && (bestdir == -1 || ejectBuffer[dir].Peek().injectionTime < ejectBuffer[bestdir].Peek().injectionTime))
+						bestdir = dir;				
+				if (bestdir != -1)
+					acceptFlit(ejectBuffer[bestdir].Dequeue());
+			}
+			else 
+			{
+				int flitsTryToEject = 0;
+				for (int dir = 0; dir < 4; dir ++)
+					if (input[dir] != null && input[dir].dest.ID == ID)
+					{
+						flitsTryToEject ++;
+						if (input[dir].ejectTrial == 0)
+							input[dir].firstEjectTrial = Simulator.CurrentRound;
+						input[dir].ejectTrial ++;
+					}
+				Simulator.stats.flitsTryToEject[flitsTryToEject].Add();            
+
+				Flit f1 = null,f2 = null;
+				for (int i = 0; i < Config.meshEjectTrial; i++)
+				{
+					// Only support dual ejection (MAX.Config.meshEjectTrial = 2)
+					Flit eject = ejectLocal();
+					if (i == 0) f1 = eject; 
+					else if (i == 1) f2 = eject;
+					if (eject != null) {
+
+						acceptFlit (eject); 	// Eject flit	
+						#if DEBUG
+						Console.WriteLine ("#6 Time {0}: Eject @ node {1} {2}", Simulator.CurrentRound,coord.ID, eject.ToString());
+						#endif
+					}
+				}
+				if (f1 != null && f2 != null && f1.packet == f2.packet)
+					Simulator.stats.ejectsFromSamePacket.Add(1);
+				else if (f1 != null && f2 != null)
+					Simulator.stats.ejectsFromSamePacket.Add(0);
+			}
+
+// ----- Inject new local flit ---- //
+			_inject (ref count_bw);
+
+			for (int i = 0; i < 4; i++)
+				if (input[i] != null)
+				{
+					PreferredDirection pd = determineDirection(input[i]);
+					if (pd.xDir != Simulator.DIR_NONE)
+						input[i].prefDir = pd.xDir;
+					else
+						input[i].prefDir = pd.yDir;
+				}
+
+// ----- Determine a silver flit --- //
+			assignSilverFlit ( ref input );
+
+// ----- Permutation ---- //
+			partialPermuattion ( ref input );
+
+// ----- Bypass deflected flits to side buffers or put on output link //
+			int startDir = Simulator.rand.Next(4); 
+			int outDir;
+			bool rebuffered = false || redirected;
+			for (int dir = 0; dir < 4; dir++) {
+				outDir = (dir + startDir) % 4;
+				if (input [outDir] != null && linkOut [outDir] == null)
+					throw new Exception ("Attempting to put flit on a non-existed link");
+				if (input [outDir] == null || linkOut [outDir] == null)
+					continue;
+				if (linkOut [outDir].In != null)
+					throw new Exception ("Output link has an unresolved flit");
+				if (input [outDir].prefDir != outDir && rebuffered == false && !rBuf.isFull()) {
+					input [outDir].nrInRebuf++;
+					input [outDir].wasInRebuf = true;
+					rebuffered = true;
+					rBuf.addFlit (input [outDir]);
+					Console.WriteLine("PKT {0}-{1}/{2} Resub Buf of router {3} at time {4}",
+						input[outDir].packet.ID, input[outDir].flitNr+1, input[outDir].packet.nrOfFlits, coord, Simulator.CurrentRound);
+				} else {
+					linkOut [outDir].In = input [outDir];
+					Console.WriteLine("PKT {0}-{1}/{2} TAKE Port {3} router {4} at time {5}",
+						input[outDir].packet.ID, input[outDir].flitNr+1, input[outDir].packet.nrOfFlits, outDir, coord, Simulator.CurrentRound);
+				}
+
+			}
+		}
+
+
+		void partialPermuattion ( ref Flit [] input ) {
+
+			bool swap_0, swap_1;
+
+			// Stage 1 permutation network
+			arbiter (input, 1, out swap_0, out swap_1);
+			swap (swap_0, ref input [0], ref input [1]);
+			swap (swap_1, ref input [2], ref input [3]);
+
+			// Stage 2 permutation network
+			arbiter (input, 2, out swap_0, out swap_1);
+			swap (swap_0, ref input [0], ref input [2]);
+			swap (swap_1, ref input [1], ref input [3]);
+
+		}
+
+		void swap(bool swap_en, ref Flit t0, ref Flit t1) {
+			if (t0 != null || t1 != null)
+				Simulator.stats.permute.Add ();
+			else
+				return;
+			if (swap_en) {
+				Flit t = t0;
+				t0 = t1;
+				t1 = t;
+			}
+		}
+
+		void arbiter (Flit [] channel, int index, out bool swap_0, out bool swap_1)
+		{
+			// Structure of permutation blocks
+			// blk: 1,1 ---- 2,1
+			//          \  / 
+			//           \/ 
+			//           /\
+			//          /  \
+			//         /    \
+			//      1,2 ---- 2,2
+
+			swap_0 = false;
+			swap_1 = false;
+		
+			switch (index)
+			{
+			case 1:
+				// Stage 1: permuter block connected to input[0] and input [1]
+				if (channel [0] == null && channel [1] == null)
+					swap_0 = false;
+				else if (channel [0] != null && channel [1] != null) {
+					if ((rank (channel [0], channel [1]) < 0 && (channel [0].prefDir == Simulator.DIR_RIGHT || channel [0].prefDir == Simulator.DIR_LEFT)) ||
+					    (rank (channel [0], channel [1]) > 0 && ((channel [1].prefDir == Simulator.DIR_UP || channel [1].prefDir == Simulator.DIR_DOWN)))) {
+						swap_0 = true;
+					}
+				} else { // the block only has one input flits 
+
+					// The flit in blk_1_1 must be forwarded to the blk_2_2, if
+					//    1) one of the output link does not exist in blk_2_1, for example, the nodes in the corner and edge have some of links missing for mesh network 
+					//    2) there are two incoming flits in blk_1_2, which implies that one of flit will take the only link available connect to blk_2_1
+					// Implication: oblivious of port preference
+					if (channel [2] != null && channel [3] != null && (linkOut [Simulator.DIR_UP] == null || linkOut [Simulator.DIR_DOWN] == null)) {
+						if (channel [0] != null)
+							swap_0 = true;
+						else if (channel [1] != null)
+							swap_0 = false;
+					}
+					// The flit in blk_1_1 must be forwarded to the blk_2_1, if
+					//    1) one of the output link does not exist in blk_2_2, for example, the nodes in the corner and edge have some of links missing for mesh network 
+					//    2) there are two incoming flits in blk_1_2, which implies that one of flit will take the only link available connect to blk_2_2
+					// Implication: oblivious of port preference
+					else if (channel [2] != null && channel [3] != null && (linkOut [Simulator.DIR_LEFT] == null || linkOut [Simulator.DIR_RIGHT] == null)) {
+						if (channel [0] != null)
+							swap_0 = false;
+						else if (channel [1] != null)
+							swap_0 = true;
+					}
+					// The flit in blk_1_1 must be forwarded to blk_2_1, if 
+					//    1) one of output link does not exist in blk_2_2
+					//    2) knowing the flit in blk_1_2 will take the only link available in blk_2_2
+					// Implication: oblivious of port preference
+					else if (channel [2] != null && (linkOut [Simulator.DIR_LEFT] == null || linkOut [Simulator.DIR_RIGHT] == null)) {
+						if (channel [2].prefDir == Simulator.DIR_LEFT || channel [2].prefDir == Simulator.DIR_RIGHT) {
+							if (channel [0] != null)
+								swap_0 = false;
+							else if (channel [1] != null)
+								swap_0 = true;
+						} else {
+							if ((rank (channel [0], channel [1]) < 0 && (channel [0].prefDir == Simulator.DIR_RIGHT || channel [0].prefDir == Simulator.DIR_LEFT)) ||
+							    (rank (channel [0], channel [1]) > 0 && ((channel [1].prefDir == Simulator.DIR_UP || channel [1].prefDir == Simulator.DIR_DOWN)))) {
+								swap_0 = true;
+							}
+						}
+					} 
+					// The flit in blk_1_1 must be forwarded to blk_2_1, if 
+					//    1) one of output link does not exist in blk_2_2
+					//    2) knowing the flit in blk_1_2 will take the only link available in blk_2_2
+					// Implication: oblivious of port preference
+					else if (channel [3] != null && (linkOut [Simulator.DIR_LEFT] == null || linkOut [Simulator.DIR_RIGHT] == null)) {
+						if (channel [3].prefDir == Simulator.DIR_LEFT || channel [3].prefDir == Simulator.DIR_RIGHT) {
+							if (channel [0] != null)
+								swap_0 = false;
+							else if (channel [1] != null)
+								swap_0 = true;
+						} else {
+							if ((rank (channel [0], channel [1]) < 0 && (channel [0].prefDir == Simulator.DIR_RIGHT || channel [0].prefDir == Simulator.DIR_LEFT)) ||
+							    (rank (channel [0], channel [1]) > 0 && ((channel [1].prefDir == Simulator.DIR_UP || channel [1].prefDir == Simulator.DIR_DOWN)))) {
+								swap_0 = true;
+							}
+						}
+					} else {
+						if ((rank (channel [0], channel [1]) < 0 && (channel [0].prefDir == Simulator.DIR_RIGHT || channel [0].prefDir == Simulator.DIR_LEFT)) ||
+							(rank (channel [0], channel [1]) > 0 && ((channel [1].prefDir == Simulator.DIR_UP || channel [1].prefDir == Simulator.DIR_DOWN)))) {
+							swap_0 = true;
+						}
+					}
+				}
+
+				// Stage 1: permuter block connected to input[2] and input [3]
+				if (channel [2] == null && channel [3] == null)
+					swap_1 = false;
+				else if (channel [2] != null && channel [3] != null) {
+					if ((rank (channel[2], channel[3]) < 0 && (input[2].prefDir == Simulator.DIR_RIGHT || channel[2].prefDir == Simulator.DIR_LEFT)) ||
+						(rank (channel[2], channel[3]) > 0 && ((input[3].prefDir == Simulator.DIR_UP || channel[3].prefDir == Simulator.DIR_DOWN)))) {
+						swap_1 = true;
+					}
+				}
+				else {
+					// The flit in blk_1_2 must be forwarded to the blk_2_1, if
+					//    1) one of the output link does not exist in blk_2_2, for example, the nodes in the corner and edge have some of links missing for mesh network 
+					//    2) there are two incoming flits in blk_1_1, which implies that one of flit will take the only link available connect to blk_2_2
+					// Implication: oblivious of port preference
+					if (channel [0] != null && channel [1] != null && (linkOut [Simulator.DIR_LEFT] == null || linkOut [Simulator.DIR_RIGHT] == null)) {
+						if (channel [2] != null)
+							swap_1 = false;
+						else if (channel [3] != null)
+							swap_1 = true;
+					} 
+					// The flit in blk_1_2 must be forwarded to the blk_2_2, if
+					//    1) one of the output link does not exist in blk_2_1, for example, the nodes in the corner and edge have some of links missing for mesh network 
+					//    2) there are two incoming flits in blk_1_1, which implies that one of flit will take the only link available connect to blk_2_1
+					// Implication: oblivious of port preference
+					else if (channel [0] != null && channel [1] != null && (linkOut [Simulator.DIR_UP] == null || linkOut [Simulator.DIR_DOWN] == null)) {
+						if (channel [2] != null)
+							swap_1 = true;
+						else if (channel [3] != null)
+							swap_1 = false;
+					}
+					// The flit in blk_1_2 must be forwarded to blk_2_2, if 
+					//    1) one of output link does not exist in blk_2_2
+					//    2) knowing the flit in blk_1_1 will take the only link available in blk_2_1
+					// Implication: oblivious of port preference
+					else if (channel [0] != null && (linkOut [Simulator.DIR_UP] == null || linkOut [Simulator.DIR_DOWN] == null)) {
+						if (channel [0].prefDir == Simulator.DIR_UP || channel [0].prefDir == Simulator.DIR_DOWN) {
+							if (channel [2] != null)
+								swap_1 = true;
+							else if (channel [3] != null)
+								swap_1 = false;
+						} else {
+							if ((rank (channel [2], channel [3]) < 0 && (input [2].prefDir == Simulator.DIR_RIGHT || channel [2].prefDir == Simulator.DIR_LEFT)) ||
+							    (rank (channel [2], channel [3]) > 0 && ((input [3].prefDir == Simulator.DIR_UP || channel [3].prefDir == Simulator.DIR_DOWN)))) {
+								swap_1 = true;
+							}
+						}
+					} 
+					// The flit in blk_1_2 must be forwarded to blk_2_2, if 
+					//    1) one of output link does not exist in blk_2_2
+					//    2) knowing the flit in blk_1_1 will take the only link available in blk_2_1
+					// Implication: oblivious of port preference
+					else if (channel [1] != null && (linkOut [Simulator.DIR_UP] == null || linkOut [Simulator.DIR_DOWN] == null)) {
+						if (channel [1].prefDir == Simulator.DIR_UP || channel [1].prefDir == Simulator.DIR_DOWN) {
+							if (channel [2] != null)
+								swap_1 = true;
+							else if (channel [3] != null)
+								swap_1 = false;
+						} else {
+							if ((rank (channel [2], channel [3]) < 0 && (input [2].prefDir == Simulator.DIR_RIGHT || channel [2].prefDir == Simulator.DIR_LEFT)) ||
+							    (rank (channel [2], channel [3]) > 0 && ((input [3].prefDir == Simulator.DIR_UP || channel [3].prefDir == Simulator.DIR_DOWN)))) {
+								swap_1 = true;
+							}
+						}
+					} else {
+						if ((rank (channel [2], channel [3]) < 0 && (input [2].prefDir == Simulator.DIR_RIGHT || channel [2].prefDir == Simulator.DIR_LEFT)) ||
+							(rank (channel [2], channel [3]) > 0 && ((input [3].prefDir == Simulator.DIR_UP || channel [3].prefDir == Simulator.DIR_DOWN)))) {
+							swap_1 = true;
+						}
+					}
+					
+				}
+				break;
+
+			case 2:
+				// Stage 2: permuter block connected to input[0] and input [1]
+				// Note: connection between two stage is done here. 
+				if (linkOut [Simulator.DIR_DOWN] == null) {
+					if (channel [0] == null && channel [2] == null)
+						swap_0 = false;
+					else if (channel[0] != null)
+						swap_0 = false;
+					else if (channel[2] != null)
+						swap_0 = true;
+					else // (t0 != null && t1 != null)
+						throw new Exception ("there are two flits, sth is wrong");
+
+				} else if (linkOut [Simulator.DIR_UP] == null) {
+					if (channel [0] == null && channel [2] == null)
+						swap_0 = false;
+					else if (channel[0] != null)
+						swap_0 = true;
+					else if (channel[2] != null)
+						swap_0 = false;
+					else // (t0 != null && t1 != null)
+						throw new Exception ("there are two flits, sth is wrong");
+				} else { // both output channels exist
+					if ((rank (channel[0], channel[2]) < 0 && (channel[0].prefDir == Simulator.DIR_DOWN || channel[0].prefDir == Simulator.DIR_LEFT)) ||
+						(rank (channel[0], channel[2]) > 0 && ((channel[2].prefDir == Simulator.DIR_UP || channel[2].prefDir == Simulator.DIR_RIGHT)))) {
+						swap_0 = true;
+					}
+				}
+
+				// Stage 2: permuter block connected to input[2] and input [3]
+				if (linkOut [Simulator.DIR_RIGHT] == null) {
+					if (channel [1] == null && channel [3] == null)
+						swap_1 = false;
+					else if (channel[1] != null)
+						swap_1 = true;
+					else if (channel[3] != null)
+						swap_1 = false;
+					else // (t0 != null && t1 != null)
+						throw new Exception ("there are two flits, sth is wrong");
+
+				} else if (linkOut [Simulator.DIR_LEFT] == null) {
+					if (channel [1] == null && channel [3] == null)
+						swap_1 = false;
+					else if (channel[1] != null)
+						swap_1 = false;
+					else if (channel[3] != null)
+						swap_1 = true;
+					else // (t0 != null && t1 != null)
+						throw new Exception ("there are two flits, sth is wrong");
+				} else { // both output channels exist
+					if ((rank (channel[1], channel[3]) < 0 && (channel[1].prefDir == Simulator.DIR_DOWN || channel[1].prefDir == Simulator.DIR_LEFT)) ||
+						(rank (channel[1], channel[3]) > 0 && ((channel[3].prefDir == Simulator.DIR_UP || channel[3].prefDir == Simulator.DIR_RIGHT)))) {
+						swap_1 = true;
+					}
+				}
+				break;
+
+			default:
+				throw new Exception ("Arbiter is not implemented!");
+			}
+
+		}
+
+
+
+		public override int rank(Flit f1, Flit f2)
+		{
+			return Router_Flit_GP._rank(f1, f2);
+		}
+
+		protected override Flit ejectLocal()
+		{
+			// eject locally-destined flit (highest-ranked, if multiple)
+			// bypass channel can also eject to local port
+			Flit ret = null;			
+
+			int bestDir = -1;
+			for (int dir = 0; dir < 4; dir++)
+				if (input[dir] != null && 
+					input[dir].state != Flit.State.Placeholder &&
+					input[dir].dest.ID == ID &&
+					(ret == null || rank(input[dir], ret) < 0))
+				{
+					#if PKTDUMP
+					if (ret != null)
+						Console.WriteLine("PKT {0}-{1}/{2} EJECT FAIL router {3}/{4} at time {5}", 
+							ret.packet.ID, ret.flitNr+1, ret.packet.nrOfFlits, coord, subnet, Simulator.CurrentRound);
+					#endif
+					ret = input[dir];
+					bestDir = dir;
+				}
+
+
+			if (bestDir != -1) input[bestDir] = null;
+
+
+			#if PKTDUMP
+			if (ret != null)
+				Console.WriteLine("PKT {0}-{1}/{2} EJECT from port {3} router {4}/{5} at time {6}", 
+					ret.packet.ID, ret.flitNr+1, ret.packet.nrOfFlits, bestDir, coord, subnet, Simulator.CurrentRound);
+			#endif
+
+			//ret = handleGolden(ret);
+
+			return ret;
+		}
+
+		protected void assignSilverFlit (ref Flit[] newInput) {
+			// If there is no golden flit, randomly pick one flit as sliver flit
+
+			bool hasGolden = false; 
+			int[] flitPositions = new int[4];
+			int  flitCount = 0;
+			for (int i = 0; i < 4; i++)
+			{
+				if (newInput[i] != null)
+				{
+					flitPositions[flitCount] = i;
+					flitCount++;
+					newInput[i].isSilver = false;
+					if (Simulator.network.golden.isGolden(newInput[i]))
+						hasGolden = true;
+				}
+			}
+			if (flitCount != 0)
+			{
+				if (!hasGolden)
+				{
+					switch(Config.silverMode)
+					{
+					case "random": int randNum = flitPositions[Simulator.rand.Next(flitCount)];
+						newInput[randNum].isSilver  = true;
+						newInput[randNum].wasSilver = true;
+						newInput[randNum].nrWasSilver++;
+						break;
+					}
+				}
+			}
+		}
+
+		protected bool inputResubmitEjection(ref Flit[] f)
+		{
+			int dir = Simulator.rand.Next(4);//startInput; 
+
+			for (int i = 0; i < 4; i++)
+			{
+				int curdir = (dir + i) % 4;
+
+				if (f[curdir] != null && i != f[curdir].prefDir && !rBuf.isFull())
+				{
+					bool storeInResubmitBuffer = true;
+					/* If the flit is golden, don't allow it into the buffer */
+					if (Simulator.network.golden.isGolden(f[i])) {
+						storeInResubmitBuffer = false;
+					}
+
+					/* If this flit just came out of the rebuf, should it go back in? */
+					if (f[i].wasInRebuf) {
+						storeInResubmitBuffer = false; 
+					}
+
+
+					if(storeInResubmitBuffer)
+					{
+						rBuf.addFlit(f[curdir]);
+						f[curdir].nrInRebuf++;
+						f[curdir] = null;
+						return true;
+					}
+				}
+			}
+			return false;
+		} // inputResubmitEjection
+
+	}
+
 }

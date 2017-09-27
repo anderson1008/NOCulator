@@ -133,7 +133,7 @@ namespace ICSimulator
 							Link bypass = new Link(0);
 							links.Add(bypass);
 							_routers[n].subrouter[m].bypassLinkOut[pi] = bypass;
-							_routers[n].subrouter[(m+1)%Config.sub_net].bypassLinkIn[pi] = bypass;
+							_routers[n].subrouter[(m+1)%Config.sub_net].bypassLinkIn[pi] = bypass;  // forming a local ring using bypass link
 							_routers [n].subrouter[m].neighbors++;
 							//_routers [n].subrouter [m].neigh [pi] = _routers [n].subrouter [(m+1)%Config.sub_net];
 						}
@@ -141,6 +141,7 @@ namespace ICSimulator
 				
 			}
 
+			// The bypass link connect to the intermediate neighboring router in the X-dimension
 			if (Config.bypass_enable == true && Config.bridge_subnet == false)
 				for (int i = 0; i < Config.sub_net; i++)
 					for (int k = 0; k < Config.network_nrY; k++)
@@ -168,7 +169,7 @@ namespace ICSimulator
 			doStats(); // only record the link utilization. Do not need to override.
 
 			// step the golden controller
-			// golden.doStep();
+			golden.doStep();
 
 			// step the nodes
 

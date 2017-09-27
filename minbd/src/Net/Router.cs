@@ -236,9 +236,9 @@ namespace ICSimulator
             }
             
             Simulator.stats.golden_pernode.Add(goldenCount);
-            Simulator.stats.golden_bycount[goldenCount].Add();
+            //Simulator.stats.golden_bycount[goldenCount].Add();
 
-            Simulator.stats.traversals_pernode[incomingFlits].Add();
+            //Simulator.stats.traversals_pernode[incomingFlits].Add();
             //Simulator.stats.traversals_pernode_bysrc[ID,incomingFlits].Add();
         }
 
@@ -289,9 +289,9 @@ namespace ICSimulator
             }
 
             Simulator.stats.deflect_flit.Add(deflected);
-            Simulator.stats.deflect_flit_byinc[incomingFlits].Add(deflected);
+            //Simulator.stats.deflect_flit_byinc[incomingFlits].Add(deflected);
             Simulator.stats.unprod_flit.Add(unproductive);
-            Simulator.stats.unprod_flit_byinc[incomingFlits].Add(unproductive);
+            //Simulator.stats.unprod_flit_byinc[incomingFlits].Add(unproductive);
             Simulator.stats.flit_traversals.Add(traversals);
 
             int qlen = m_n.RequestQueueLen;

@@ -1,4 +1,4 @@
-﻿//#define EVAL_DEBUG
+﻿#define EVAL_DEBUG
 #define UNPROD_LIST
 
 using System;
@@ -111,8 +111,9 @@ namespace ICSimulator
         private static int[] possibleDests = { -1, 0, 1, 2, 3, 4, 5, 6, 7, 8 };
 #if EVAL_DEBUG
         static int[] possibleDirs = { Simulator.DIR_UP, Simulator.DIR_DOWN, Simulator.DIR_LEFT, Simulator.DIR_RIGHT, Simulator.DIR_NONE };
-        private static string[] desiredDirs = { "UL", "U", "UR", "L", ".", "R", "DL", "D", "DR" };
+        //private static string[] desiredDirs = { "UL", "U", "UR", "L", ".", "R", "DL", "D", "DR" };
         //private static string[] desiredDirs = { "XX", "03", "0", "01", "3", ".", "1", "23", "2", "21" };
+		private static string[] desiredDirs = { "DL", "L", "UL", "S", ".", "U", "DR", "R", "UR" };
 
         private static int[] simpleDests = { 2 };
         private static string[] cardinalDirections = { "N", "E", "S", "W" };
@@ -168,7 +169,7 @@ namespace ICSimulator
 
                 int[] nextConfig = s.GetConfig(i / Config.RouterEvaluationIterations);
 #if EVAL_DEBUG
-                Console.WriteLine("i{0} N{1} S{2} E{3} W{4}", i, nextConfig[0], nextConfig[1], nextConfig[2], nextConfig[3]);
+                Console.WriteLine("i{0} N{1} E{2} S{3} W{4}", i, nextConfig[0], nextConfig[1], nextConfig[2], nextConfig[3]);
 #endif
                 // assign each config direction to its link with a new packet/flit
                 for (int j = 0; j < 4; j++)

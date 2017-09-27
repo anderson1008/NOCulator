@@ -813,7 +813,7 @@ namespace ICSimulator
                 return 1;
             if (f2 == null)
                 return -1;
-
+			/*
             if (f1.state == Flit.State.Carrier && f2.state == Flit.State.Carrier)
                 return f1.dest.ID.CompareTo(f2.dest.ID);
             else if (f1.state == Flit.State.Carrier)
@@ -827,9 +827,9 @@ namespace ICSimulator
                 return -1;
             else if (f2.state == Flit.State.Carrier)
                 return 1;
-
-            if (f1.state == Flit.State.Normal && f2.state == Flit.State.Normal)
-            {
+			*/
+            //if (f1.state == Flit.State.Normal && f2.state == Flit.State.Normal)
+            //{
 
                 bool golden1 = Simulator.network.golden.isGolden(f1),
                      golden2 = Simulator.network.golden.isGolden(f2);
@@ -850,14 +850,14 @@ namespace ICSimulator
                     return 1;
                 else
                     return (Simulator.rand.Next(2) == 1) ? 1 : -1;
-            }
-            else if (f1.state == Flit.State.Normal)
-                return -1;
-            else if (f2.state == Flit.State.Normal)
-                return 1;
-            else
+            //}
+            //else if (f1.state == Flit.State.Normal)
+            //    return -1;
+            //else if (f2.state == Flit.State.Normal)
+            //    return 1;
+            //else
                 // both are placeholders
-                return (Simulator.rand.Next(2) == 1) ? 1 : -1;
+            //    return (Simulator.rand.Next(2) == 1) ? 1 : -1;
         }
 
         public override int rank(Flit f1, Flit f2)

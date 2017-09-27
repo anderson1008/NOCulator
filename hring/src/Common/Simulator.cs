@@ -171,7 +171,16 @@ namespace ICSimulator
 	    		Router.livelockFreedom();
             controller.doStep();
 
-            return !network.isFinished() && (Config.ignore_livelock || !network.isLivelocked());
+			if (!network.isFinished () && (Config.ignore_livelock || !network.isLivelocked ())) {
+				
+				return true;
+			} else {
+				// dump the flits which cause livelock
+				if (!Config.ignore_livelock && network.isLivelocked ()) {
+					ScoreBoard.ScoreBoardDump ();
+				}
+				return false;
+			}
         }
 
         public static void RunSimulation()

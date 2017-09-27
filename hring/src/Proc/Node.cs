@@ -226,22 +226,26 @@ namespace ICSimulator
 
 		Packet packetization ()
 		{
-
-			int oldHsReq = Simulator.network.hsReqPerNode [m_coord.ID]; // use to determine if a hot spot packet is generated. Place it before PickDst()
+			int oldHsReq;
 			Coord c = PickDst ();
 			bool gather = false;
 			int packet_size;
 			Packet p;
+			if (Config.synthPattern == SynthTrafficPattern.HS) {
+				oldHsReq = Simulator.network.hsReqPerNode [m_coord.ID]; // use to determine if a hot spot packet is generated. Place it before PickDst()
+				if (Simulator.network.hsReqPerNode [m_coord.ID] == oldHsReq + 1)
+					gather = true;
+				packet_size = PickPktSize (false, gather);
+				if (gather)
+					p = new Packet (null,0,packet_size,m_coord, c, true);
+				else
+					p = new Packet(null,0,packet_size,m_coord, c);
 
-			if (Simulator.network.hsReqPerNode [m_coord.ID] == oldHsReq + 1)
-				gather = true;
-
-			packet_size = PickPktSize (false, gather);
-			if (gather)
-				p = new Packet (null,0,packet_size,m_coord, c, true);
-			else
+			} else {
+				packet_size = PickPktSize (false, false); // this is a unicast
 				p = new Packet(null,0,packet_size,m_coord, c);
-
+			}	
+				
 #if PACKETDUMP
 			Console.WriteLine ("#1 Time {0}, @ node {1} {2}", Simulator.CurrentRound, m_coord.ID, p.ToString());
 #endif

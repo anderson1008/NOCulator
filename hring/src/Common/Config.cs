@@ -138,9 +138,9 @@ namespace ICSimulator
 		public static double starveRateThreshold = starveThreshold/(double)starveResetEpoch;
 		public static bool uniform_size_enable = true;
 		public static int uniform_size = 1;
-		public static bool multicast = true;
+		public static bool multicast = false;
 		public static int mc_degree = N-1; // number of packets send out; N: broadcast; 1: unicast;
-		public static SynthTrafficPattern synthPattern = SynthTrafficPattern.HS;  // to enable hotspot flit, change to HS
+		public static SynthTrafficPattern synthPattern = SynthTrafficPattern.UR;  // to enable hotspot flit, change to HS
 		public static bool mergeEnable = true;
 		public static bool adaptiveMC = true;
 		//public static bool forkEnable = false; // Keep constant injection latency, just disable/enable the forking
@@ -153,9 +153,20 @@ namespace ICSimulator
 
 		// --- Carpool: NoC with Gather-Scatter Support
 
-
 		// ----
-		// By Xiyue
+
+		// -- MinBD --
+		public static bool resubmitBuffer          = true;
+		public static int  rebufInjectCount        = 1;	 // The number of flits from side buffer being reinjected into network More than 1 doesn't seem to help
+		public static int  timeInRebufThreshold    = 2;
+		public static string silverMode            = "silverMode";
+		public static int  sizeOfRSBuffer           = 16;    // 16 not 8 for chipper, 2 for BLESS
+		public static string RSBuffer_sort            = "fifo";  
+		public static bool   RSBuffer_randomVariant   = false;
+		public static bool isInfiniteRSBuffer       = false; // Overrides size
+
+		// -- End of MinBD --
+
 		public static bool preempt = false;
 		public static bool slowdown_aware = false;
 		public static double preempt_threshold = 8;
@@ -213,7 +224,7 @@ namespace ICSimulator
 		// For Deflection Containment
 		// Many parameters related to the underlying topology
 		public static int sub_net = 2;
-		public static int num_bypass = 1; // not include local; 
+		public static int num_bypass = 0; // not include local; 
 		public static bool bypass_enable = true;
 		public static bool bridge_subnet = true;
 		public static bool partial_sort = true;
@@ -534,8 +545,8 @@ namespace ICSimulator
         public static string fairdata = "";
         public static int simulationDuration = 1000;
         public static bool stopOnEnd = false;
-        public static int network_nrX = 2;
-        public static int network_nrY = 2;
+        public static int network_nrX = 3;
+        public static int network_nrY = 3;
         
         public static int network_loopback = -1;
         public static int network_quantum = -1;
@@ -564,7 +575,8 @@ namespace ICSimulator
 
         // ------ CIF: experiment parameters, new version -----------------
         public static string sources = "all uniformRandom";
-        public static string finish = "cycle 10000000";
+		//public static string finish = "cycle 100000";
+		public static string finish = "packet 100000";
         public static string solo = "";
 
 
@@ -613,7 +625,7 @@ namespace ICSimulator
 		// Place holder number
 		public static int PlaceHolderNum = 0;
 
-		public static int meshEjectTrial = 1;
+		public static int meshEjectTrial = 2;
 		public static int RingEjectTrial = -1;
 		public static int RingInjectTrial = 1;
 		public static int EjectBufferSize = -1;

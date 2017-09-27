@@ -400,6 +400,17 @@ namespace ICSimulator
         public State state;
         public Coord rescuerCoord;
 
+		// MinBD: For resubmisstion buffer
+		// Indicating that it had come out of the rebuf 
+		public bool  wasInRebuf;
+		public ulong nrInRebuf;
+		public int rebufInTime;
+		public int rebufOutTime;
+		public bool  isSilver;
+		public bool  wasSilver;
+		public int   nrWasSilver;
+		public int   priority;
+
 		// For counting the interference cycle of each flit
 		public int intfCycle = 0;
 

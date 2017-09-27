@@ -224,8 +224,8 @@ namespace ICSimulator
                         throw new Exception("what???inject null flits??");
                     input[c++] = inj;
 #if DEBUG
-                    Console.WriteLine("injecting flit {0}.{1} at node {2} cyc {3}",
-                            m_injectSlot.packet.ID, m_injectSlot.flitNr, coord, Simulator.CurrentRound);
+ //                   Console.WriteLine("injecting flit {0}.{1} at node {2} cyc {3}",
+ //                           m_injectSlot.packet.ID, m_injectSlot.flitNr, coord, Simulator.CurrentRound);
 #endif
 #if memD
                     int r=inj.packet.requesterID;
@@ -316,7 +316,7 @@ namespace ICSimulator
                             String.Format("Ran out of outlinks in arbitration at node {0} on input {1} cycle {2} flit {3} c {4} neighbors {5} outcount {6}", coord, i, Simulator.CurrentRound, input[i], c, neighbors, outCount));
                 }
             }
-            /*
+            
             if (Config.resubmitBuffer)
                 sortDeflected(deflected);
             
@@ -339,7 +339,7 @@ namespace ICSimulator
                     }
                 }
             }
-*/
+
         }
 
         public void sortDeflected(int[] deflected)
@@ -626,7 +626,7 @@ namespace ICSimulator
             // 1. Carrier (break ties by dest ID)
             // 2. Rescuer (break ties by dest ID)
             // 3. Golden normal flits (break ties by flit no.)
-            // 4. Non-golden normal flits (break ties arbitrarily)
+            // 4. Non-go3lden normal flits (break ties arbitrarily)
             // 5. Placeholders
 
 			

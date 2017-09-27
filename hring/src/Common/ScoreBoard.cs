@@ -48,6 +48,17 @@ namespace ICSimulator
 			return clean; // list is empty?
 		}
 
+		public static void ScoreBoardDump () {
+			for (int i = 0; i < Config.N; i++) {
+				Console.WriteLine ("Unfinished Flit @ Node {0}", i);
+
+				inFlightFlit[i].ForEach(delegate (ulong pktID) {
+					Console.Write ("{0}  ", pktID);
+				});
+				Console.WriteLine ();
+			}
+		}
+
 	}
 }
 

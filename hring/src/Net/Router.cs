@@ -539,7 +539,7 @@ namespace ICSimulator
 //                Simulator.stats.deflect_perflit_byreq[f.packet.requesterID].Add(f.nrOfDeflections);
         }
 
-        protected void statsEjectPacket(Packet p)
+        public virtual void statsEjectPacket(Packet p)
         {
 			ScoreBoard.UnregPacket (ID, p.ID); // TODO: merged packet may cause issue.
 

@@ -415,7 +415,7 @@ namespace ICSimulator
             doStats();
 
             // step the golden controller
-           // golden.doStep();
+            //golden.doStep();
 
             // step the nodes
             
@@ -658,13 +658,16 @@ namespace ICSimulator
         {
             switch (Config.router.algorithm)
             {
-		case RouterAlgorithm.DR_FLIT_SW_OF_MC:
-		    return new Router_BLESS_MC (c);
+				case RouterAlgorithm.DR_FLIT_SW_OF_MC:
+				    return new Router_BLESS_MC (c);
 
-		case RouterAlgorithm.BLESS_BYPASS:
-                    return new Router_BLESS_BYPASS(c);
-
-                case RouterAlgorithm.DR_AFC:
+				case RouterAlgorithm.BLESS_BYPASS:
+	                return new Router_BLESS_BYPASS(c);
+			
+				case RouterAlgorithm.Router_MinBD:
+					return new Router_MinBD (c);
+	         
+				case RouterAlgorithm.DR_AFC:
                     return new Router_AFC(c);
 
                 case RouterAlgorithm.DR_FLIT_SWITCHED_CTLR:
