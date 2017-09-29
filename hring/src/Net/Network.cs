@@ -415,7 +415,7 @@ namespace ICSimulator
             doStats();
 
             // step the golden controller
-            //golden.doStep();
+            golden.doStep();
 
             // step the nodes
             

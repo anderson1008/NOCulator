@@ -168,9 +168,6 @@ namespace ICSimulator
 
 			doStats(); // only record the link utilization. Do not need to override.
 
-			// step the golden controller
-			golden.doStep();
-
 			// step the nodes
 
 			for (int n = 0; n < Config.N; n++)

@@ -407,53 +407,28 @@ namespace ICSimulator
 			else // By Xiyue: Actual injection into network
             {
                 Packet p = m_inj_pool.next();
+				int selected;
 
 				if (Config.topology == Topology.Mesh_Multi) {
-					// serialize packet to flit and select a subnetwork
-					// assume infinite NI buffer
-					int selected = -1;
-					selected = Simulator.rand.Next(Config.sub_net);
+					
 
 					if (p != null && p.creationTime <= Simulator.CurrentRound)
-						foreach (Flit f in p.flits)
-							m_injQueue_multi_flit[selected].Enqueue(f);
+						foreach (Flit f in p.flits) {
+							// serialize packet to flit and select a subnetwork
+							// assume infinite NI buffer
+							selected = select_subnet ();
+							Simulator.stats.subnet_util[selected].Add();
+							m_injQueue_multi_flit [selected].Enqueue (f);
 
-					//int load = Simulator.stats.inject_flit.Count / Config.N / Simulator.CurrentRound / Config.sub_net;
-					/*
-					int inject_trial = 0;
-					int [] inject_trial_subnet;
-					inject_trial_subnet = new int[Config.sub_net];
-					for (int i = 0 ; i < Config.sub_net; i++)
-						inject_trial_subnet [i] = 0;
-					*/
-
+						}
+					
 					for (int i = 0 ; i < Config.sub_net; i++)
 					{
 						if (m_injQueue_multi_flit[i].Count > 0 && m_router.canInjectFlitMultNet(i, m_injQueue_multi_flit[i].Peek()))
 						{
 							Flit f = m_injQueue_multi_flit[i].Dequeue();
 							m_router.InjectFlitMultNet(i, f);
-							//inject_trial_subnet [i] ++;
 						}
-						/*
-						else if (m_injQueue_multi_flit[i].Count == 0)
-						{
-							// randomly pick a non-empty inject queue, cannot be itself, and each subnet cannot inject more than twice
-							selected = Simulator.rand.Next(Config.sub_net);
-							int find_trial = 0; // only loop 8 times to ensure not stuck there forever.
-							while ((selected == i || m_injQueue_multi_flit[selected].Count == 0 || inject_trial_subnet [selected] >= 2) && (find_trial < 8))
-							{
-								find_trial ++;
-								selected = Simulator.rand.Next(Config.sub_net);
-							}
-							if (m_injQueue_multi_flit[selected].Count > 0 && m_router.canInjectFlitMultNet(i, m_injQueue_multi_flit[selected].Peek()))
-							{
-								Flit f = m_injQueue_multi_flit[selected].Dequeue();
-								m_router.InjectFlitMultNet(i, f);
-								inject_trial_subnet [selected] ++;
-							}
-
-						}*/
 					}
 				}
 				else if (Config.throttle_enable && Config.controller == ControllerType.THROTTLE_QOS)
@@ -533,6 +508,28 @@ namespace ICSimulator
 				}
             }
         }
+
+		protected int select_subnet ()
+		{
+			
+			int selected = -1;
+			double util = double.MaxValue;
+			if (Config.subnet_sel_rand)
+				selected = Simulator.rand.Next(Config.sub_net);
+			else
+				// Inject to the subnet with lower load
+				for (int i = 0; i < Config.sub_net; i++)
+				{
+					if (Simulator.stats.subnet_util[i].Count < util)
+					{
+						selected = i;
+						util = Simulator.stats.subnet_util[i].Count;
+					}
+				}
+
+			if (selected == -1 || selected >= Config.sub_net) throw new Exception("no subnet is selected");
+			return selected;
+		}
 
         public virtual void receiveFlit(Flit f)
         {

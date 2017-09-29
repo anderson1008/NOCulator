@@ -119,15 +119,15 @@ namespace ICSimulator
 		// ---- synth traces
 		public static double synth_reads_fraction = 0.8;
 		//public static double synth_rate = 0.005;
-		public static bool bSynthBitComplement = false;
-		public static bool bSynthTranspose = false;
-		public static bool bSynthHotspot = false;
-		public static bool randomHotspot = false;
+		public static bool bSynthBitComplement = false; // deprecated
+		public static bool bSynthTranspose = false; // deprecated
+		public static bool bSynthHotspot = false; // deprecated
+		public static bool randomHotspot = false; // deprecated
 		// ------------------DO NOT MOVE End------------------------//
 
 		// --- Synthetic Traffic Simulation --- //
 		public static bool synthGen = true; // will not generate CPU instance if it is true
-		public static double synth_rate = 0.1; // injection rate in packet/cycle/node
+		public static double synth_rate = 0.5; // injection rate in packet/cycle/node
 		public static double mc_rate = 0.05;
 		public static double hs_rate = 0.05;
 		public static int synthQueueLimit = 1000;
@@ -223,8 +223,8 @@ namespace ICSimulator
 
 		// For Deflection Containment
 		// Many parameters related to the underlying topology
-		public static int sub_net = 2;
-		public static int num_bypass = 0; // not include local; 
+		public static int sub_net = 4;
+		public static int num_bypass = 1; // not include local; 
 		public static bool bypass_enable = true;
 		public static bool bridge_subnet = true;
 		public static bool partial_sort = true;
@@ -545,8 +545,8 @@ namespace ICSimulator
         public static string fairdata = "";
         public static int simulationDuration = 1000;
         public static bool stopOnEnd = false;
-        public static int network_nrX = 3;
-        public static int network_nrY = 3;
+        public static int network_nrX = 4;
+        public static int network_nrY = 4;
         
         public static int network_loopback = -1;
         public static int network_quantum = -1;
@@ -615,7 +615,8 @@ namespace ICSimulator
 		public static int G2LBufferDepth = 4;
 		public static int L2GBufferDepth = 1;
 		public static bool SingleDirRing = false;
-		public static Topology topology = Topology.Mesh;
+		//public static Topology topology = Topology.Mesh;
+		public static Topology topology = Topology.Mesh_Multi;
 		public static int observerThreshold = 4;
 		public static bool NoPreference = false;
 		public static bool forcePreference = false;

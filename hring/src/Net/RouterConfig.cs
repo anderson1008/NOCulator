@@ -18,10 +18,7 @@ namespace ICSimulator
     {
 		BLESS_BYPASS, // bufferless with bypass
 		Router_MinBD, // minBD
-
 		DR_FLIT_SW_OF_MC, // deflection router, flit switched, oldest first, multicast
-
-
         OLDEST_FIRST_DO_ROUTER,
         ROUND_ROBIN_DO_ROUTER,
         MIN_AD_OLDEST_FIRST_DO_ROUTER,
@@ -30,16 +27,13 @@ namespace ICSimulator
         ROMM_ROUND_ROBIN_DO_ROUTER,
         ROMM_MIN_AD_OLDEST_FIRST_DO_ROUTER,
         ROMM_MIN_AD_ROUND_ROBIN_DO_ROUTER,
-
         STC_DO_ROUTER,
-
         DR_FLIT_SWITCHED_CLOSEST_FIRST,
         DR_FLIT_SWITCHED_OLDEST_FIRST,
         DR_FLIT_SWITCHED_FURTHEST_FIRST,
         DR_FLIT_SWITCHED_MOSTDEFS_FIRST,
         DR_FLIT_SWITCHED_ROUNDROBIN,
         DR_FLIT_SWITCHED_MIXED_RR_OLDESTFIRST,
-
         DR_FLIT_SWITCHED_CTLR,
 
         // DR_BUFFERLESS_PURE_WORMHOLE_CLOSEST_FIRST,
@@ -77,7 +71,7 @@ namespace ICSimulator
         public int addrPacketSize = 1;
         public int dataPacketSize = 4;
         public int maxPacketSize = 4;
-		public RouterAlgorithm algorithm = RouterAlgorithm.Router_MinBD;
+		public RouterAlgorithm algorithm = RouterAlgorithm.BLESS_BYPASS;
         public string options = "";
         public double throttleparam = 1.0;
         public int extraLatency = 0;

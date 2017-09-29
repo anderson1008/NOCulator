@@ -1,5 +1,5 @@
-#define DEBUG
-#define PKTDUMP 
+//#define DEBUG
+//#define PKTDUMP 
 
 using System;
 using System.Collections.Generic;
@@ -25,86 +25,38 @@ namespace ICSimulator
 
 		}
 
-		// only determine if can or cannot inject
 		public override bool canInjectFlit (Flit f)
 		{
-			bool can = false;
-			for (int i = 0; i < Config.sub_net; i++) 
-			{
-				can = can | subrouter [i].canInjectFlit (f);
-			}
-			return can;
+			// just to fool the complier
+			return false;
 		}
 
+		public override void InjectFlit (Flit f){
+			// just to fool the complier
+		}
 
-		public override bool canInjectFlitMultNet (int subnet, Flit f)
+		// only determine if can or cannot inject
+		public bool canInjectFlit (int subnet, Flit f)
 		{
 			return subrouter [subnet].canInjectFlit (f);
+		}
+			
+		public override bool canInjectFlitMultNet (int subnet, Flit f)
+		{
+			return canInjectFlit (subnet, f);
 		}
 
 		public override void InjectFlitMultNet (int subnet, Flit f)
 		{	
 			subrouter [subnet].InjectFlit (f);
-			Simulator.stats.subnet_util[subnet].Add();
+
+			#if PKTDUMP
+			//	Console.WriteLine("PKT {0}-{1}/{2} aclaim the injection slot at subnet {3} router {4} at time {5}", 
+			//                  f.packet.ID, f.flitNr+1, f.packet.nrOfFlits, selected, coord, Simulator.CurrentRound);
+			#endif
+
+		}
 			
-		}
-
-		// if more than one subrouter can inject, select one randomly
-		// or inject to the available one.
-		// Otherwise throttle the injection.
-		public override void InjectFlit (Flit f)
-		{
-
-			Router [] availSubrouter = new Router [Config.sub_net];
-			int count = 0;
-
-			for (int i = 0; i < Config.sub_net; i++) 
-			{
-				if (subrouter [i].canInjectFlit (f)) 
-				{
-					availSubrouter [count] = subrouter [i];
-					count++;
-				}
-			}
-
-			if (count <= 0)
-				throw new Exception ("no subrouter is available for injection.");
-			else 
-			{
-				int selected;
-				select_subnet (count, out selected);
-
-				Simulator.stats.subnet_util[selected].Add();
-				availSubrouter [selected].InjectFlit (f);
-
-				#if PKTDUMP
-				//	Console.WriteLine("PKT {0}-{1}/{2} aclaim the injection slot at subnet {3} router {4} at time {5}", 
-				//                  f.packet.ID, f.flitNr+1, f.packet.nrOfFlits, selected, coord, Simulator.CurrentRound);
-				#endif
-			}
-
-		}
-
-		protected void select_subnet (int count, out int selected)
-		{
-			selected = -1;
-			double util = double.MaxValue;
-			if (Config.subnet_sel_rand)
-				selected = Simulator.rand.Next(count);
-			else
-				for (int i = 0; i < count; i++)
-			{
-				if (Simulator.stats.subnet_util[i].Count < util)
-				{
-					selected = i;
-					util = Simulator.stats.subnet_util[i].Count;
-				}
-			}
-
-			if (selected == -1 || selected >= count) throw new Exception("no subnet is selected");
-
-		}
-
 		public MultiMeshRouter (Coord c):base(c)
 		{
 			for (int i=0; i<Config.sub_net; i++) 
@@ -356,8 +308,11 @@ namespace ICSimulator
 				for (int dir = 0; dir < 4; dir++)
 					if (linkIn[dir] != null && linkIn[dir].Out != null)
 				{
+					#if PKTDUMP
+
 					Console.WriteLine("PKT {0}-{1}/{2} ARRIVED at router {3} at time {4}",
 							linkIn[dir].Out.packet.ID, linkIn[dir].Out.flitNr+1, linkIn[dir].Out.packet.nrOfFlits, coord, Simulator.CurrentRound);
+					#endif
 					if (linkIn [dir].Out.packet.ID == 20394 && coord.x == 1 && coord.y == 0 && Simulator.CurrentRound == 22789)
 						stop = true;
 					linkIn[dir].Out.inDir = dir;
@@ -370,8 +325,10 @@ namespace ICSimulator
 				for (int dir = 0; dir < 4; dir++)
 					if (linkIn[dir] != null && linkIn[dir].Out != null)
 				{
+					#if PKTDUMP
 					Console.WriteLine("PKT {0}-{1}/{2} ARRIVED at router {3} at time {4}",
 						linkIn[dir].Out.packet.ID, linkIn[dir].Out.flitNr+1, linkIn[dir].Out.packet.nrOfFlits, coord, Simulator.CurrentRound);
+					#endif
 					linkIn[dir].Out.inDir = dir;
 					input[count++] = linkIn[dir].Out;  // c: # of incoming flits
 					//linkIn[dir].Out.inDir = dir;  // By Xiyue: what's the point? Seems redundant
@@ -392,7 +349,7 @@ namespace ICSimulator
 		}
 
 
-		protected void _inject (ref int c)
+		public virtual void _inject (ref int c)
 		{
 			// sometimes network-meddling such as flit-injection can put unexpected
 			// things in outlinks...
@@ -455,7 +412,9 @@ namespace ICSimulator
 					if (Config.partial_sort)
 					{
 						for (int i = 0; i < 4+Config.num_bypass; i++) 
-							if (input[i] == null && linkIn[i] != null)
+							//if (input[i] == null && linkIn[i] != null)
+							if (input[i] == null)
+								
 						{
 							if (inj.packet.ID == 927 && coord.x == 0 && coord.y == 1 && Simulator.CurrentRound == 1032)
 								stop = true;
@@ -924,7 +883,7 @@ namespace ICSimulator
 					if (eject != null) {
 
 						acceptFlit (eject); 	// Eject flit	
-						#if DEBUG
+						#if PKTDUMP
 						Console.WriteLine ("#6 Time {0}: Eject @ node {1} {2}", Simulator.CurrentRound,coord.ID, eject.ToString());
 						#endif
 					}
@@ -971,14 +930,111 @@ namespace ICSimulator
 					input [outDir].wasInRebuf = true;
 					rebuffered = true;
 					rBuf.addFlit (input [outDir]);
+					Simulator.stats.bypass_flit.Add ();
+					#if PKTDUMP
 					Console.WriteLine("PKT {0}-{1}/{2} Resub Buf of router {3} at time {4}",
 						input[outDir].packet.ID, input[outDir].flitNr+1, input[outDir].packet.nrOfFlits, coord, Simulator.CurrentRound);
+					#endif
 				} else {
 					linkOut [outDir].In = input [outDir];
+					#if PKTDUMP
 					Console.WriteLine("PKT {0}-{1}/{2} TAKE Port {3} router {4} at time {5}",
 						input[outDir].packet.ID, input[outDir].flitNr+1, input[outDir].packet.nrOfFlits, outDir, coord, Simulator.CurrentRound);
+					#endif
+					// check if the flit is deflected
+					if (linkOut [outDir].In.prefDir != outDir) {
+						linkOut [outDir].In.Deflected = true;
+					}
 				}
 
+			}
+		}
+
+
+
+
+
+		public override void _inject (ref int c)
+		{
+			// sometimes network-meddling such as flit-injection can put unexpected
+			// things in outlinks...
+			// outCount: # of the unexpected outstanding flits at the inport of output link, usually, it is 0
+			int outCount = 0;
+			for (int dir = 0; dir < 4; dir++)
+				if (linkOut[dir] != null && linkOut[dir].In != null)
+					outCount++;
+			for (int j = 0; j < Config.num_bypass; j++)
+				if (bypassLinkOut[j] != null && bypassLinkOut[j].In != null)
+					outCount++;
+			if (outCount != 0) throw new Exception("Unexpected flit on output!");
+
+			bool wantToInject = m_injectSlot2 != null || m_injectSlot != null;
+			//bool canInject = (c + outCount) < (neighbors - 1); // conservative inject: # of input < # of port - 1 -> prevent making network more congested.
+			bool canInject = (c + outCount) < neighbors;  // aggressive inject: as long as # of input < # of port
+			bool starved = wantToInject && !canInject;
+			bool stop;
+
+			if (starved)
+			{
+				Flit starvedFlit = null;
+				if (starvedFlit == null) starvedFlit = m_injectSlot2;
+				if (starvedFlit == null) starvedFlit = m_injectSlot;
+
+				#if PKTDUMP
+				Console.WriteLine("PKT {0}-{1}/{2} is STARVED at router {3}/{4} at time {5}",
+				starvedFlit.packet.ID, starvedFlit.flitNr+1, starvedFlit.packet.nrOfFlits, coord, subnet, Simulator.CurrentRound);
+				#endif
+				Simulator.controller.reportStarve(coord.ID);
+				statsStarve(starvedFlit);
+			}
+			if (canInject && wantToInject)
+			{				
+				Flit inj_peek=null; 
+				if(m_injectSlot2!=null)
+					inj_peek=m_injectSlot2;
+				else if (m_injectSlot!=null)
+					inj_peek=m_injectSlot;
+				if(inj_peek==null)
+					throw new Exception("Inj flit peek is null!!");
+
+				if(!Simulator.controller.ThrottleAtRouter || Simulator.controller.tryInject(coord.ID))
+				{
+					Flit inj = null;
+					if (m_injectSlot2 != null)
+					{
+						inj = m_injectSlot2;
+						m_injectSlot2 = null;
+					}
+					else if (m_injectSlot != null)
+					{
+						inj = m_injectSlot;
+						m_injectSlot = null;
+					}
+					else
+						throw new Exception("what???inject null flits??");
+
+					inj.inDir = 4+Config.num_bypass;
+					if (Config.partial_sort)
+					{
+						for (int i = 0; i < 4+Config.num_bypass; i++) 
+							if (input[i] == null && linkIn[i] != null)
+							{
+								if (inj.packet.ID == 927 && coord.x == 0 && coord.y == 1 && Simulator.CurrentRound == 1032)
+									stop = true;
+								input[i] = inj;
+								c++;
+								break;
+							}
+					}
+					else
+						input[c++] = inj;
+
+					#if PKTDUMP
+					Console.WriteLine("PKT {0}-{1}/{2} is INJECTED at router {3}/{4} at time {5}", 
+					inj.packet.ID, inj.flitNr+1, inj.packet.nrOfFlits, coord, subnet, Simulator.CurrentRound);
+					#endif
+					statsInjectFlit(inj);
+				}
 			}
 		}
 
