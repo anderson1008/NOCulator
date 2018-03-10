@@ -69,10 +69,15 @@ Prove using a multiple network can better utilize the channel
            - sub_net = 1, data flit size = 2
            - sub_net = 2, data flit size = 2
            - sub_net = 4, data flit size = 2
+           - BLESS, data flit size = 2
+           - minbd, data flit size = 2
         Curve 2: channel size = 512b
            - sub_net = 1, data flit size = 1
            - sub_net = 2, data flit size = 1
            - sub_net = 4, data flit size = 1
+           - BLESS, data flit size = 1
+           - minbd, data flit size = 1
+           
 """
 router_algorithm = "BLESS_BYPASS"
 topology = "Mesh_Multi"
@@ -84,6 +89,25 @@ for sub_net in sub_net_array:
     out_dir = "./results/DeC/multi_subnet/chnlwidth256b/"+sub_net+"/"
     run()
 
+router_algorithm = "DR_FLIT_SWITCHED_OLDEST_FIRST"
+topology = "Mesh"
+partial_sort = "false"
+sub_net = "1" # Aggregated link width = 512b
+out_dir = "./results/DeC/multi_subnet/chnlwidth256b/bless/"
+run()
+
+router_algorithm = "Router_MinBD"
+topology = "Mesh"
+sub_net = "1" # Aggregated link width = 512b
+num_bypass = "0"
+meshEjectTrial = "1"
+partial_sort = "true"
+out_dir = "./results/DeC/multi_subnet/chnlwidth256b/minbd/"
+run()
+
+router_algorithm = "BLESS_BYPASS"
+topology = "Mesh_Multi"
+router_addrPacketSize = "1"
 router_dataPacketSize = "1"
 channel_size = "512b"
 synth_rate_set = [0.01, 0.02, 0.05, 0.1, 0.15, 0.20, 0.25, 0.30, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 1.0, 1.1, 1.2, 1.3]
@@ -91,6 +115,22 @@ sub_net_array = ["1", "2", "4"]
 for sub_net in sub_net_array:
     out_dir = "./results/DeC/multi_subnet/chnlwidth512b/"+sub_net+"/"
     run()
+
+router_algorithm = "DR_FLIT_SWITCHED_OLDEST_FIRST"
+topology = "Mesh"
+partial_sort = "false"
+sub_net = "1" # Aggregated link width = 512b
+out_dir = "./results/DeC/multi_subnet/chnlwidth512b/bless/"
+run()
+
+router_algorithm = "Router_MinBD"
+topology = "Mesh"
+sub_net = "1" # Aggregated link width = 512b
+num_bypass = "0"
+meshEjectTrial = "1"
+partial_sort = "true"
+out_dir = "./results/DeC/multi_subnet/chnlwidth512b/minbd/"
+run()
 
 """
 Test 3
@@ -106,8 +146,7 @@ sub_net = "1"
 out_dir = "./results/router_cmp/DeC/"
 run()
 
-# Test 3.2: BLESS
-synth_rate_set = [0.01, 0.02, 0.05, 0.1, 0.15, 0.20, 0.25, 0.30, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7]
+# Test 3.2: BLESS synth_rate_set = [0.01, 0.02, 0.05, 0.1, 0.15, 0.20, 0.25, 0.30, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7]
 router_algorithm = "DR_FLIT_SWITCHED_OLDEST_FIRST"
 topology = "Mesh"
 partial_sort = "false"
@@ -121,7 +160,7 @@ router_algorithm = "Router_MinBD"
 topology = "Mesh"
 sub_net = "1" # Aggregated link width = 512b
 num_bypass = "0"
-meshEjectTrial = "2"
+meshEjectTrial = "1"
 partial_sort = "true"
 out_dir = "./results/router_cmp/minbd/"
 run()

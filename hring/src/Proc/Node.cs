@@ -206,14 +206,16 @@ namespace ICSimulator
 			int packet_size;
 			if (Config.uniform_size_enable == true) { 
 				if (Config.topology == Topology.Mesh_Multi)
-					packet_size = (int)Math.Ceiling(Config.uniform_size / Config.payload_link_portion);
+					packet_size = Config.uniform_size * Config.sub_net;
 				else
 					packet_size = Config.uniform_size;
 			}
 			else
 			{
-				if (Simulator.rand.NextDouble() < 0.5) packet_size = (int)Math.Ceiling(Config.router.addrPacketSize / Config.payload_link_portion);
-				else  packet_size = (int)Math.Ceiling(Config.router.dataPacketSize/Config.payload_link_portion);
+				if (Simulator.rand.NextDouble () < 0.5)
+					packet_size = Config.router.addrPacketSize;
+				else  
+					packet_size = Config.router.dataPacketSize;
 			}
 
 			if (mc == true)
@@ -412,16 +414,17 @@ namespace ICSimulator
 				if (Config.topology == Topology.Mesh_Multi) {
 					
 
-					if (p != null && p.creationTime <= Simulator.CurrentRound)
+					if (p != null && p.creationTime <= Simulator.CurrentRound) {
 						foreach (Flit f in p.flits) {
 							// serialize packet to flit and select a subnetwork
 							// assume infinite NI buffer
 							selected = select_subnet ();
-							Simulator.stats.subnet_util[m_coord.ID, selected].Add();
+							Simulator.stats.subnet_util [m_coord.ID, selected].Add ();
 							//if (selected % 2 == 0)
 							//	f.routingOrder = true;
 							m_injQueue_multi_flit [selected].Enqueue (f);
 						}
+					}
 					
 					for (int i = 0 ; i < Config.sub_net; i++)
 					{
