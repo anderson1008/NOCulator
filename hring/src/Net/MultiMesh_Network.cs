@@ -130,7 +130,7 @@ namespace ICSimulator
 					for (int pi = 0; pi < Config.num_bypass; pi++)
 						for (int m = 0; m < Config.sub_net; m++)
 						{
-							Link bypass = new Link(0);
+							Link bypass = new Link(0); // 1 cycle latency
 							links.Add(bypass);
 							_routers[n].subrouter[m].bypassLinkOut[pi] = bypass;
 							_routers[n].subrouter[(m+1)%Config.sub_net].bypassLinkIn[pi] = bypass;  // forming a local ring using bypass link
@@ -154,13 +154,10 @@ namespace ICSimulator
 						_routers[k * Config.network_nrX+j%Config.network_nrX].subrouter [i].neighbors++;
 					}
 
-
-			// TORUS: be careful about the number of neighbors, which is based on if bypass is enabled. NOT tested.
-			if (Config.torus)
-				for (int i = 0; i < Config.N; i++)
-					for (int j = 0; j < Config.sub_net; j++)
-						if (_routers[i].subrouter [j].neighbors < 4)
-							throw new Exception("torus construction not successful!");
+			// Verify the number of links
+			int num_link = (Config.network_nrX * Config.network_nrY * (4 + Config.num_bypass)  - 2 * Config.network_nrX - 2 * Config.network_nrY ) * Config.sub_net;
+			if (links.Count != num_link)
+				throw new Exception ("Error: Network configuration fails!");
 		}
 
 		public override void doStep()

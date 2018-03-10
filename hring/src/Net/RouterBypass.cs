@@ -137,47 +137,6 @@ namespace ICSimulator
 			}
 		}
 
-		Flit handleGolden(Flit f)
-		{
-			if (f == null)
-				return f;
-
-			if (f.state == Flit.State.Normal)
-				return f;
-
-			if (f.state == Flit.State.Rescuer)
-			{
-				if (m_injectSlot == null)
-				{
-					m_injectSlot = f;
-					f.state = Flit.State.Placeholder;
-				}
-				else
-					m_injectSlot.state = Flit.State.Carrier;
-
-				return null;
-			}
-
-			if (f.state == Flit.State.Carrier)
-			{
-				f.state = Flit.State.Normal;
-				Flit newPlaceholder = new Flit(null, 0);
-				newPlaceholder.state = Flit.State.Placeholder;
-
-				if (m_injectSlot != null)
-					m_injectSlot2 = newPlaceholder;
-				else
-					m_injectSlot = newPlaceholder;
-
-				return f;
-			}
-
-			if (f.state == Flit.State.Placeholder)
-				throw new Exception("Placeholder should never be ejected!");
-
-			return null;
-		}
-
 		// accept one ejected flit into rxbuf
 		protected void acceptFlit(Flit f)
 		{
@@ -234,9 +193,7 @@ namespace ICSimulator
 				Console.WriteLine("PKT {0}-{1}/{2} EJECT from port {3} router {4}/{5} at time {6}", 
 					                  ret.packet.ID, ret.flitNr+1, ret.packet.nrOfFlits, bestDir, coord, subnet, Simulator.CurrentRound);
 #endif
-
-			//ret = handleGolden(ret);
-
+		
 			return ret;
 		}
 
@@ -302,40 +259,21 @@ namespace ICSimulator
 			for (int i = 0; i < 4+Config.num_bypass; i++) input[i] = null;
 			// grab inputs into a local array so we can sort
 			count = 0;
-
-			if (Config.partial_sort)
+					
+			for (int dir = 0; dir < 4; dir++)
+				if (linkIn[dir] != null && linkIn[dir].Out != null)
 			{
-				for (int dir = 0; dir < 4; dir++)
-					if (linkIn[dir] != null && linkIn[dir].Out != null)
-				{
-					#if PKTDUMP
+				#if PKTDUMP
 
-					Console.WriteLine("PKT {0}-{1}/{2} ARRIVED at router {3} at time {4}",
-							linkIn[dir].Out.packet.ID, linkIn[dir].Out.flitNr+1, linkIn[dir].Out.packet.nrOfFlits, coord, Simulator.CurrentRound);
-					#endif
-					if (linkIn [dir].Out.packet.ID == 20394 && coord.x == 1 && coord.y == 0 && Simulator.CurrentRound == 22789)
-						stop = true;
-					linkIn[dir].Out.inDir = dir;
-					input[dir] = linkIn[dir].Out;  // c: # of incoming flits
-					count++;
-					linkIn[dir].Out = null;
-				}
-			}
-			else{
-				for (int dir = 0; dir < 4; dir++)
-					if (linkIn[dir] != null && linkIn[dir].Out != null)
-				{
-					#if PKTDUMP
-					Console.WriteLine("PKT {0}-{1}/{2} ARRIVED at router {3} at time {4}",
+				Console.WriteLine("PKT {0}-{1}/{2} ARRIVED at router {3} at time {4}",
 						linkIn[dir].Out.packet.ID, linkIn[dir].Out.flitNr+1, linkIn[dir].Out.packet.nrOfFlits, coord, Simulator.CurrentRound);
-					#endif
-					linkIn[dir].Out.inDir = dir;
-					input[count++] = linkIn[dir].Out;  // c: # of incoming flits
-					//linkIn[dir].Out.inDir = dir;  // By Xiyue: what's the point? Seems redundant
-					linkIn[dir].Out = null;
-				}
+				#endif
+				linkIn[dir].Out.inDir = dir;
+				input[dir] = linkIn[dir].Out;  // c: # of incoming flits
+				count++;
+				linkIn[dir].Out = null;
 			}
-
+		
 			// regardless how we sort flits, bypass flit is always at the tail of input array
 			// this may affect how we will inject flit.
 			for (int bypass = 0; bypass < Config.num_bypass; bypass++)
@@ -363,16 +301,15 @@ namespace ICSimulator
 					outCount++;
 			if (outCount != 0) throw new Exception("Unexpected flit on output!");
 
-			bool wantToInject = m_injectSlot2 != null || m_injectSlot != null;
-			//bool canInject = (c + outCount) < (neighbors - 1); // conservative inject: # of input < # of port - 1 -> prevent making network more congested.
-			bool canInject = (c + outCount) < neighbors;  // aggressive inject: as long as # of input < # of port
+			bool wantToInject = m_injectSlot != null;
+			//bool canInject = c < (neighbors - 1); // conservative inject: # of input < # of port - 1 -> prevent making network more congested.
+			bool canInject = c < neighbors;  // aggressive inject: as long as # of input < # of port
 			bool starved = wantToInject && !canInject;
 			bool stop;
 
 			if (starved)
 			{
 				Flit starvedFlit = null;
-				if (starvedFlit == null) starvedFlit = m_injectSlot2;
 				if (starvedFlit == null) starvedFlit = m_injectSlot;
 
 				#if PKTDUMP
@@ -385,22 +322,13 @@ namespace ICSimulator
 			if (canInject && wantToInject)
 			{				
 				Flit inj_peek=null; 
-				if(m_injectSlot2!=null)
-					inj_peek=m_injectSlot2;
-				else if (m_injectSlot!=null)
+				if (m_injectSlot!=null)
 					inj_peek=m_injectSlot;
-				if(inj_peek==null)
-					throw new Exception("Inj flit peek is null!!");
-
+				
 				if(!Simulator.controller.ThrottleAtRouter || Simulator.controller.tryInject(coord.ID))
 				{
 					Flit inj = null;
-					if (m_injectSlot2 != null)
-					{
-						inj = m_injectSlot2;
-						m_injectSlot2 = null;
-					}
-					else if (m_injectSlot != null)
+					if (m_injectSlot != null)
 					{
 						inj = m_injectSlot;
 						m_injectSlot = null;
@@ -409,22 +337,16 @@ namespace ICSimulator
 						throw new Exception("what???inject null flits??");
 
 					inj.inDir = 4+Config.num_bypass;
-					if (Config.partial_sort)
+				
+					for (int i = 0; i < 4+Config.num_bypass; i++) 
+						if (input[i] == null)
+							
 					{
-						for (int i = 0; i < 4+Config.num_bypass; i++) 
-							//if (input[i] == null && linkIn[i] != null)
-							if (input[i] == null)
-								
-						{
-							if (inj.packet.ID == 927 && coord.x == 0 && coord.y == 1 && Simulator.CurrentRound == 1032)
-								stop = true;
-							input[i] = inj;
-							c++;
-							break;
-						}
+						input[i] = inj;
+						c++;
+						break;
 					}
-					else
-						input[c++] = inj;
+				
 					
 					#if PKTDUMP
 					Console.WriteLine("PKT {0}-{1}/{2} is INJECTED at router {3}/{4} at time {5}", 
@@ -542,7 +464,7 @@ namespace ICSimulator
 				int outDir = -1;
 				bool deflect = false;
 				bool bypass = false;
-
+				/* X dimension is preferred */
 				if (input[i].routingOrder == false)
 				{
 					if (pd.xDir != Simulator.DIR_NONE && linkOut[pd.xDir].In == null)
@@ -560,7 +482,8 @@ namespace ICSimulator
 					else 
 						bypass = true;
 				}
-				else       //y over x
+				/* Y dimension is preferred */
+				else    
 				{
 					if (pd.yDir != Simulator.DIR_NONE && linkOut[pd.yDir].In == null)
 					{
@@ -703,7 +626,7 @@ namespace ICSimulator
 		public override void statsEjectPacket(Packet p) {
 			ScoreBoard.UnregPacket (ID, p.ID); 
 			if (Config.uniform_size_enable == false) {
-				if (p.nrOfFlits == (Config.sub_net * Config.router.addrPacketSize))
+				if (p.nrOfFlits == (Config.router.addrPacketSize))
 					Simulator.stats.ctrl_pkt.Add ();
 				else if (p.nrOfFlits == (Config.sub_net * Config.router.dataPacketSize))
 					Simulator.stats.data_pkt.Add ();	
@@ -773,59 +696,6 @@ namespace ICSimulator
 			}
 
 
-			// -----  Eject -------//
-
-/*          if (Config.EjectBufferSize != -1)
-			{								
-				for (int dir =0; dir < 4; dir ++)
-					if (linkIn[dir] != null && linkIn[dir].Out != null && linkIn[dir].Out.packet.dest.ID == ID && ejectBuffer[dir].Count < Config.EjectBufferSize)
-					{
-						ejectBuffer[dir].Enqueue(linkIn[dir].Out);
-						linkIn[dir].Out = null;
-					}
-				int bestdir = -1;			
-				for (int dir = 0; dir < 4; dir ++)
-					if (ejectBuffer[dir].Count > 0 && (bestdir == -1 || ejectBuffer[dir].Peek().injectionTime < ejectBuffer[bestdir].Peek().injectionTime))
-						bestdir = dir;				
-				if (bestdir != -1)
-					acceptFlit(ejectBuffer[bestdir].Dequeue());
-			}
-			else 
-			{
-				int flitsTryToEject = 0;
-				for (int dir = 0; dir < 4; dir ++)
-					if (linkIn[dir] != null && linkIn[dir].Out != null && linkIn[dir].Out.dest.ID == ID)
-					{
-						flitsTryToEject ++;
-						if (linkIn[dir].Out.ejectTrial == 0)
-							linkIn[dir].Out.firstEjectTrial = Simulator.CurrentRound;
-						linkIn[dir].Out.ejectTrial ++;
-					}
-				Simulator.stats.flitsTryToEject[flitsTryToEject].Add();            
-
-				Flit f1 = null,f2 = null;
-				for (int i = 0; i < Config.meshEjectTrial; i++)
-				{
-					// Only support dual ejection (MAX.Config.meshEjectTrial = 2)
-					Flit eject = ejectLocal();
-					if (i == 0) f1 = eject; 
-					else if (i == 1) f2 = eject;
-					if (eject != null) {
-
-						acceptFlit (eject); 	// Eject flit	
-						#if DEBUG
-						Console.WriteLine ("#6 Time {0}: Eject @ node {1} {2}", Simulator.CurrentRound,coord.ID, eject.ToString());
-						#endif
-					}
-				}
-				if (f1 != null && f2 != null && f1.packet == f2.packet)
-					Simulator.stats.ejectsFromSamePacket.Add(1);
-				else if (f1 != null && f2 != null)
-					Simulator.stats.ejectsFromSamePacket.Add(0);
-			}
-*/
-
-
 // ----- Reinject flit from side buffer ----  //
 			Reinject:
 			int count_reinjected = 0;
@@ -844,7 +714,8 @@ namespace ICSimulator
 							}
 						}
 			}
-						
+
+// ----- Eject ----  //
 			if (Config.EjectBufferSize != -1)
 			{								
 				for (int dir =0; dir < 4; dir ++)
@@ -1027,7 +898,7 @@ namespace ICSimulator
 							}
 					}
 					else
-						input[c++] = inj;
+						throw new Exception("MinBD does not support full sort yet");
 
 					#if PKTDUMP
 					Console.WriteLine("PKT {0}-{1}/{2} is INJECTED at router {3}/{4} at time {5}", 
@@ -1329,8 +1200,6 @@ namespace ICSimulator
 				Console.WriteLine("PKT {0}-{1}/{2} EJECT from port {3} router {4}/{5} at time {6}", 
 					ret.packet.ID, ret.flitNr+1, ret.packet.nrOfFlits, bestDir, coord, subnet, Simulator.CurrentRound);
 			#endif
-
-			//ret = handleGolden(ret);
 
 			return ret;
 		}

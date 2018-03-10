@@ -69,10 +69,12 @@ namespace ICSimulator
     {
         public bool idealNetwork = false; //summary>Packets bypass the network.</summary>
         public int addrPacketSize = 1;
-        public int dataPacketSize = 4;
+        public int dataPacketSize = 2;
         public int maxPacketSize = 4;
-		public RouterAlgorithm algorithm = RouterAlgorithm.BLESS_BYPASS;
-        public string options = "";
+		//public RouterAlgorithm algorithm = RouterAlgorithm.DR_FLIT_SWITCHED_OLDEST_FIRST;
+		//public RouterAlgorithm algorithm = RouterAlgorithm.BLESS_BYPASS;
+		public RouterAlgorithm algorithm = RouterAlgorithm.Router_MinBD;
+		public string options = "";
         public double throttleparam = 1.0;
         public int extraLatency = 0;
         public int linkLatency = 3;

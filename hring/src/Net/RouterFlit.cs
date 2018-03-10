@@ -314,6 +314,7 @@ namespace ICSimulator
                     }
 			*/
 			_fullSort(ref input);
+
 			//_bubbleSort (ref input);
             // assign outputs
 			for (int i = 0; i < 4; i++)
@@ -630,24 +631,7 @@ namespace ICSimulator
             if (f1 == null) return 1;
             if (f2 == null) return -1;
 
-            bool f1_resc = (f1.state == Flit.State.Rescuer) || (f1.state == Flit.State.Carrier);
-            bool f2_resc = (f2.state == Flit.State.Rescuer) || (f2.state == Flit.State.Carrier);
-            bool f1_place = (f1.state == Flit.State.Placeholder);
-            bool f2_place = (f2.state == Flit.State.Placeholder);
-
-            int c0 = 0;
-            if (f1_resc && f2_resc)
-                c0 = 0;
-            else if (f1_resc)
-                c0 = -1;
-            else if (f2_resc)
-                c0 = 1;
-            else if (f1_place && f2_place)
-                c0 = 0;
-            else if (f1_place)
-                c0 = 1;
-            else if (f2_place)
-                c0 = -1;
+         
 
             int c1 = 0, c2 = 0;
             if (f1.packet != null && f2.packet != null)
@@ -657,14 +641,9 @@ namespace ICSimulator
             }
 
             int c3 = f1.flitNr.CompareTo(f2.flitNr);
-			/*
-			int f1_critical = (f1.packet.critical) ? 1 : -1;
-			int f2_critical = (f2.packet.critical) ? 1 : -1;
-			int c6 = -f1_critical.CompareTo (f2_critical);
-			*/
-
+		
             int zerosSeen = 0;
-            foreach (int i in new int[] { c0, c1, c2, c3 })
+            foreach (int i in new int[] { c1, c2, c3 })
             {
                 if (i == 0)
                     zerosSeen++;
@@ -672,12 +651,10 @@ namespace ICSimulator
                     break;
             }
             Simulator.stats.net_decisionLevel.Add(zerosSeen);
-            return
-				//(c6 != 0) ? c6 :
-                //(c0 != 0) ? c0 :
-                (c1 != 0) ? c1 :
-                (c2 != 0) ? c2 :
-                c3;
+			return c1;
+               // (c1 != 0) ? c1 :
+               // (c2 != 0) ? c2 :
+               // c3;
         }
 
         public override int rank(Flit f1, Flit f2)
