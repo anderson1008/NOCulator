@@ -206,14 +206,14 @@ namespace ICSimulator
 			int packet_size;
 			if (Config.uniform_size_enable == true) { 
 				if (Config.topology == Topology.Mesh_Multi)
-					packet_size = Config.uniform_size * Config.sub_net;
+					packet_size = (int)Math.Ceiling(Config.uniform_size / Config.payload_link_portion);
 				else
 					packet_size = Config.uniform_size;
 			}
 			else
 			{
-				if (Simulator.rand.NextDouble() < 0.5) packet_size = Config.router.addrPacketSize;
-				else  packet_size = Config.router.dataPacketSize;
+				if (Simulator.rand.NextDouble() < 0.5) packet_size = (int)Math.Ceiling(Config.router.addrPacketSize / Config.payload_link_portion);
+				else  packet_size = (int)Math.Ceiling(Config.router.dataPacketSize/Config.payload_link_portion);
 			}
 
 			if (mc == true)
@@ -417,9 +417,10 @@ namespace ICSimulator
 							// serialize packet to flit and select a subnetwork
 							// assume infinite NI buffer
 							selected = select_subnet ();
-							Simulator.stats.subnet_util[selected].Add();
+							Simulator.stats.subnet_util[m_coord.ID, selected].Add();
+							//if (selected % 2 == 0)
+							//	f.routingOrder = true;
 							m_injQueue_multi_flit [selected].Enqueue (f);
-
 						}
 					
 					for (int i = 0 ; i < Config.sub_net; i++)
@@ -428,6 +429,10 @@ namespace ICSimulator
 						{
 							Flit f = m_injQueue_multi_flit[i].Dequeue();
 							m_router.InjectFlitMultNet(i, f);
+							#if PACKETDUMP
+							Console.WriteLine("Time {2}: @ node {1} Inject pktID {0} on subnet {3}",
+								f.packet.ID, coord.ID, Simulator.CurrentRound, i);
+							#endif
 						}
 					}
 				}
@@ -520,10 +525,10 @@ namespace ICSimulator
 				// Inject to the subnet with lower load
 				for (int i = 0; i < Config.sub_net; i++)
 				{
-					if (Simulator.stats.subnet_util[i].Count < util)
+					if (Simulator.stats.subnet_util[m_coord.ID, i].Count < util)
 					{
 						selected = i;
-						util = Simulator.stats.subnet_util[i].Count;
+						util = Simulator.stats.subnet_util[m_coord.ID, i].Count;
 					}
 				}
 

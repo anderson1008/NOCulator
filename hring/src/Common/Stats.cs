@@ -121,7 +121,7 @@ namespace ICSimulator
 		public SampledStat net_decisionLevel;
 		public SampledStat hoq_latency;  // latency between each successful injection
 		public SampledStat[] hoq_latency_bysrc;
-		public SubnetProfileStat [] subnet_util;
+		public SubnetProfileStat [,] subnet_util;
 		public AccumStat permute; // power for permuter block
 		public AccumStat data_pkt, ctrl_pkt;
 
@@ -154,53 +154,19 @@ namespace ICSimulator
 
 		public class SubnetProfileStat : PeriodicAccumStat 
 		{	
-
-
-			/*
-			protected double m_count;
-
-			public SubnetProfileStat ()
-			{
-				Reset();
-			}
-
-			public void Add()
-			{
-				m_count++;
-			}
-
-			public void Add(ulong addee)
-			{
-				m_count += (ulong) addee;
-			}
-
-			public void Add(double addee)
-			{
-				m_count += addee;
-			}
-
-			public override void Reset()
-			{
-				m_count = 0;
-			}
-
-
-			public override void DumpJSON(TextWriter tw)
-			{
-				tw.Write("{0}", m_count);
-			}
-
-			public double Count
-			{ get { return m_count; } }
-			*/
 		}
 
 
-		SubnetProfileStat[] newSubnetProfileStatArray()
-		{
-			SubnetProfileStat[] ret = new SubnetProfileStat[Config.sub_net];
-			for (int i = 0; i < Config.sub_net; i++)
-				ret[i] = new SubnetProfileStat(); // initialize private variable
+		SubnetProfileStat[,] newSubnetProfileStatArray()
+		{						
+			SubnetProfileStat[,] ret = new SubnetProfileStat[Config.N, Config.sub_net];
+			
+			for (int n=0; n < Config.N; n++) {
+				//ret[n] = new SubnetProfileStat[Config.sub_net];
+
+				for (int i = 0; i < Config.sub_net; i++)
+					ret[n,i] = new SubnetProfileStat(); // initialize private variable
+				}
 			return ret;
 		}
 
@@ -694,7 +660,7 @@ namespace ICSimulator
                     fi.SetValue(this, newSampledStatArray2D());
 				else if (t == typeof(CacheProfileStat[]))
 					fi.SetValue(this, newCacheProfileStatArray());
-				else if (t == typeof(SubnetProfileStat[]))
+				else if (t == typeof(SubnetProfileStat[,]))
 					fi.SetValue(this, newSubnetProfileStatArray());
 				else if (t == typeof(LogStat))
 					fi.SetValue(this, newLogStat());
