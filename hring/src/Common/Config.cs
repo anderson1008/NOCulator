@@ -208,7 +208,7 @@ namespace ICSimulator
 
 		// For Deflection Containment
 		// Many parameters related to the underlying topology
-		public static int sub_net = 2;
+		public static int sub_net = 1;
 		public static int num_bypass = 0; // not include local; 
 		public static bool bypass_enable = true;
 		public static bool bridge_subnet = true;
@@ -409,9 +409,9 @@ namespace ICSimulator
         // ---- sampling methodology
         public static int rand_seed = 0; // controlled seed for deterministic runs
         public static ulong randomize_trace = 0; // range of starting counts (in insns)
-        public static int warmup_cyc = 0;
-        public static bool trace_wraparound = false;
-        public static ulong insns = 1000000000000; // insns for which stats are collected on each CPU
+        public static int warmup_cyc = 10000000;
+        public static bool trace_wraparound = true;
+        public static ulong insns = 10000000; // insns for which stats are collected on each CPU
 
         // for Weighted Speedup
         public static string readlog = ""; // retire-time annotation log (one per trace, space-separated)
@@ -444,7 +444,7 @@ namespace ICSimulator
         // ---- new cache architecture
         public static bool simple_nocoher = false; // simple no-coherence, no-memory (low overhead) model?
         public static int cache_block = 5; // cache block size is universal
-        public static int coherent_cache_size = 14; // power of two
+        public static int coherent_cache_size = 16; // power of two
         public static int coherent_cache_assoc = 2; // power of two
         public static bool sh_cache = true;   // have a shared cache layer?
         public static int sh_cache_size = 18; // power of two: per slice
@@ -572,8 +572,9 @@ namespace ICSimulator
         // ------ CIF: experiment parameters, new version -----------------
         public static string sources = "all uniformRandom";
 		//public static string finish = "cycle 100000";
-		public static string finish = "packet 1000000";
-        public static string solo = "";
+		public static string finish = "packet 10000000";
+		//public static string finish = "app";
+		       public static string solo = "";
 
 
 
@@ -611,8 +612,8 @@ namespace ICSimulator
 		public static int G2LBufferDepth = 4;
 		public static int L2GBufferDepth = 1;
 		public static bool SingleDirRing = false;
-		public static Topology topology = Topology.Mesh;
-		//public static Topology topology = Topology.Mesh_Multi;
+		//public static Topology topology = Topology.Mesh;
+		public static Topology topology = Topology.Mesh_Multi;
 		public static int observerThreshold = 4;
 		public static bool NoPreference = false;
 		public static bool forcePreference = false;

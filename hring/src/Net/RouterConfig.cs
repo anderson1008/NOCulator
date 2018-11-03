@@ -16,9 +16,10 @@ namespace ICSimulator
 
     public enum RouterAlgorithm
     {
+		WORM_BYPASS,
 		BLESS_BYPASS, // bufferless with bypass
-		Router_MinBD, // minBD
-		DR_FLIT_SW_OF_MC, // deflection router, flit switched, oldest first, multicast
+	    Router_MinBD, // minBD
+	    DR_FLIT_SW_OF_MC, // deflection router, flit switched, oldest first, multicast
         OLDEST_FIRST_DO_ROUTER,
         ROUND_ROBIN_DO_ROUTER,
         MIN_AD_OLDEST_FIRST_DO_ROUTER,
@@ -73,7 +74,9 @@ namespace ICSimulator
         public int maxPacketSize = 4;
 		//public RouterAlgorithm algorithm = RouterAlgorithm.DR_FLIT_SWITCHED_OLDEST_FIRST;
 		//public RouterAlgorithm algorithm = RouterAlgorithm.BLESS_BYPASS;
-		public RouterAlgorithm algorithm = RouterAlgorithm.Router_MinBD;
+		//public RouterAlgorithm algorithm = RouterAlgorithm.Router_MinBD;
+    public RouterAlgorithm algorithm = RouterAlgorithm.WORM_BYPASS;
+
 		public string options = "";
         public double throttleparam = 1.0;
         public int extraLatency = 0;

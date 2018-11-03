@@ -392,18 +392,8 @@ namespace ICSimulator
 
         public override void finalize()
         {
-            /*
-            // Verify the MCLocations list
-            if (MCLocations.Count == 0)
-            {
-                MCLocations.Add(new Coord(0, 0));
-                MCLocations.Add(new Coord(0, Config.network_nrY - 1));
-                MCLocations.Add(new Coord(Config.network_nrX - 1, 0));
-                MCLocations.Add(new Coord(Config.network_nrX - 1, Config.network_nrY - 1));
-                            
-                memoryBV.bits = 2;
-            }
-            */
+			if (Config.sh_cache_perfect)
+				return;
 
 			if ((Config.ScalableRingClustered || Config.topology != Topology.Mesh) && Config.sh_cache_perfect == false)
 			{

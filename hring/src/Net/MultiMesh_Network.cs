@@ -10,7 +10,11 @@ namespace ICSimulator
 	{
 		private MultiMeshRouter[] _routers;
 
+		private int ID, ID_neighbor; 
+
 		public MultiMesh (int dimX, int dimY) : base(dimX, dimY) {	}
+
+		public enum topology {SINGLE_LOCAL_BYPASS, SINGLE_EXPRESS, X_BYPASS_Y_EXPRESS};
 
 		public override void setup()
 		{
@@ -23,7 +27,6 @@ namespace ICSimulator
 			cache = new CmpCache();
 
 			endOfTraceBarrier = new bool[Config.N];
-			canRewind = false;
 
 			ParseFinish(Config.finish);
 
@@ -43,11 +46,6 @@ namespace ICSimulator
 				endOfTraceBarrier[n] = false;
 			}
 
-
-			// create the Golden manager
-			// NOT sure if needed
-			golden = new Golden();
-
 			// connect the network with Links
 			for (int n = 0; n < Config.N; n++)
 			{
@@ -65,8 +63,6 @@ namespace ICSimulator
 					 * ...					 |||||    1  5 ...
 					 * (0,0) (1,0) ......	 |||||    0  4 ...
 					 * */
-
-					int oppDir = (dir + 2) % 4; // direction from neighbor's perspective
 
 					// determine neighbor's coordinates
 					int x_, y_;
@@ -100,49 +96,62 @@ namespace ICSimulator
 					// first router
 					if (x_ < x || (x_ == x && y_ < y)) continue;
 
-					int ID, ID_neighbor; 
 					ID = Coord.getIDfromXY(x, y);
 					ID_neighbor = Coord.getIDfromXY(x_, y_);
 
-					for (int m = 0; m < Config.sub_net; m++)
-					{
-						// Link param is *extra* latency (over the standard 1 cycle)
-						Link dirA = new Link(Config.router.linkLatency - 1);
-						Link dirB = new Link(Config.router.linkLatency - 1);
-						links.Add(dirA);
-						links.Add(dirB);
-
-						_routers [ID].subrouter [m].linkOut [dir] = dirA;
-						_routers [ID_neighbor].subrouter [m].linkIn [oppDir] = dirA;
-						_routers [ID].subrouter [m].linkIn [dir] = dirB;
-						_routers [ID_neighbor].subrouter [m].linkOut [oppDir] = dirB;
-						_routers [ID].subrouter [m].neighbors++;
-						_routers [ID_neighbor].subrouter [m].neighbors++;
-						_routers [ID].subrouter [m].neigh [dir] = _routers [ID_neighbor].subrouter [m];
-						_routers [ID_neighbor].subrouter [m].neigh [oppDir] = _routers [ID].subrouter [m];
-
-					}
+					buildMeshNetwork (dir);
 				}
 
-				// connect the subrouters
+				// Add additional links
+				addMoreLinks (n);
+				
+			}
 
+			// Verify the number of links
+			int num_link = (Config.network_nrX * Config.network_nrY * (4 + Config.num_bypass)  - 2 * Config.network_nrX - 2 * Config.network_nrY ) * Config.sub_net;
+			if (links.Count != num_link)
+				throw new Exception ("Error: Network configuration fails!");
+		}
+
+		public void buildMeshNetwork (int _dir) {
+
+			int _oppDir = (_dir + 2) % 4; // direction from neighbor's perspective
+
+			for (int m = 0; m < Config.sub_net; m++)
+			{
+				// Link param is *extra* latency (over the standard 1 cycle)
+				Link dirA = new Link(Config.router.linkLatency - 1);
+				Link dirB = new Link(Config.router.linkLatency - 1);
+				links.Add(dirA);
+				links.Add(dirB);
+
+				_routers [ID].subrouter [m].linkOut [_dir] = dirA;
+				_routers [ID_neighbor].subrouter [m].linkIn [_oppDir] = dirA;
+				_routers [ID].subrouter [m].linkIn [_dir] = dirB;
+				_routers [ID_neighbor].subrouter [m].linkOut [_oppDir] = dirB;
+				_routers [ID].subrouter [m].neighbors++;
+				_routers [ID_neighbor].subrouter [m].neighbors++;
+				_routers [ID].subrouter [m].neigh [_dir] = _routers [ID_neighbor].subrouter [m];
+				_routers [ID_neighbor].subrouter [m].neigh [_oppDir] = _routers [ID].subrouter [m];
+
+			}
+		}
+
+		public void addMoreLinks (int _node) {
+	
 				if (Config.bypass_enable && Config.bridge_subnet)
 					for (int pi = 0; pi < Config.num_bypass; pi++)
 						for (int m = 0; m < Config.sub_net; m++)
 						{
 							Link bypass = new Link(0); // 1 cycle latency
 							links.Add(bypass);
-							_routers[n].subrouter[m].bypassLinkOut[pi] = bypass;
-							_routers[n].subrouter[(m+1)%Config.sub_net].bypassLinkIn[pi] = bypass;  // forming a local ring using bypass link
-							_routers [n].subrouter[m].neighbors++;
-							//_routers [n].subrouter [m].neigh [pi] = _routers [n].subrouter [(m+1)%Config.sub_net];
+							_routers[_node].subrouter[m].bypassLinkOut[pi] = bypass;
+							_routers[_node].subrouter[(m+1)%Config.sub_net].bypassLinkIn[pi] = bypass;  // forming a local ring using bypass link
+							_routers [_node].subrouter[m].neighbors++;
 						}
 
-				
-			}
-
 			// The bypass link connect to the intermediate neighboring router in the X-dimension
-			if (Config.bypass_enable == true && Config.bridge_subnet == false)
+			else if (Config.bypass_enable == true && Config.bridge_subnet == false)
 				for (int i = 0; i < Config.sub_net; i++)
 					for (int k = 0; k < Config.network_nrY; k++)
 						for (int j = 0; j < Config.network_nrX; j++)
@@ -154,10 +163,6 @@ namespace ICSimulator
 						_routers[k * Config.network_nrX+j%Config.network_nrX].subrouter [i].neighbors++;
 					}
 
-			// Verify the number of links
-			int num_link = (Config.network_nrX * Config.network_nrY * (4 + Config.num_bypass)  - 2 * Config.network_nrX - 2 * Config.network_nrY ) * Config.sub_net;
-			if (links.Count != num_link)
-				throw new Exception ("Error: Network configuration fails!");
 		}
 
 		public override void doStep()

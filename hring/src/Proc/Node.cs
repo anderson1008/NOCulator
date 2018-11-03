@@ -378,47 +378,44 @@ namespace ICSimulator
 			}
 		}
 
-        public void doStep()
-        {
+    public void doStep()
+    {
 			// continue to run until all packets generated prior to stop time are received.
 			if (Config.synthGen && !Simulator.network.StopSynPktGen())
 			{
 				synthGen();
 			}
 
-            while (m_local.Count > 0 &&
-                    m_local.Peek().creationTime < Simulator.CurrentRound)
-            {
-                receivePacket(m_local.Dequeue());
-            }
+      while (m_local.Count > 0 &&
+        m_local.Peek().creationTime < Simulator.CurrentRound)
+      {
+        receivePacket(m_local.Dequeue());
+      }
 
-            if (m_cpu != null)
-                m_cpu.doStep();
-            if (m_mem != null)
-                m_mem.doStep();
+      if (m_cpu != null) m_cpu.doStep();
+      if (m_mem != null) m_mem.doStep();
 
-            if (m_inj_pool.FlitInterface) // By Xiyue: ??? why 2 different injection modes?
-            {
-                Flit f = m_inj_pool.peekFlit();
-                if (f != null && m_router.canInjectFlit(f))
-                {
-                    m_router.InjectFlit(f);  
-                    m_inj_pool.takeFlit();  // By Xiyue: ??? No action ???
-                }
-            }
+      if (m_inj_pool.FlitInterface) // By Xiyue: ??? why 2 different injection modes?
+      {
+          Flit f = m_inj_pool.peekFlit();
+          if (f != null && m_router.canInjectFlit(f))
+          {
+              m_router.InjectFlit(f);  
+              m_inj_pool.takeFlit();  // By Xiyue: ??? No action ???
+          }
+      }
 			else // By Xiyue: Actual injection into network
-            {
-                Packet p = m_inj_pool.next();
+      {
+        Packet p = m_inj_pool.next();
 				int selected;
 
 				if (Config.topology == Topology.Mesh_Multi) {
 					
-
 					if (p != null && p.creationTime <= Simulator.CurrentRound) {
+            selected = select_subnet ();
 						foreach (Flit f in p.flits) {
 							// serialize packet to flit and select a subnetwork
 							// assume infinite NI buffer
-							selected = select_subnet ();
 							Simulator.stats.subnet_util [m_coord.ID, selected].Add ();
 							//if (selected % 2 == 0)
 							//	f.routingOrder = true;
@@ -515,7 +512,7 @@ namespace ICSimulator
 	                }
 				}
             }
-        }
+    }
 
 		protected int select_subnet ()
 		{

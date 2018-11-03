@@ -456,11 +456,12 @@ namespace ICSimulator
         {
             this.packet = packet;
             this.flitNr = flitNr;
-
+			this.prefDir = -1;
             hasFlitArrived = false;
             this.Deflected = false;
 			this.Bypassed = false;
 			this.ackCount = 1;
+
 			this.creationTime = Simulator.CurrentRound;
             //deflections = new bool[100];
             //deflectionsIndex = 0;

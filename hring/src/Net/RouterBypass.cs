@@ -9,119 +9,12 @@ using System.Text;
 namespace ICSimulator
 {
 
-	/* Parameters
-	 * meshEjectTrial: number of ejection 
-	 * 
-	 * 
-	 */
-	public class MultiMeshRouter : Router
-	{
-		public Router[] subrouter = new Router[Config.sub_net];
-
-		protected override void _doStep ()
-		{
-			for (int i = 0; i < Config.sub_net; i++) 
-				subrouter [i].doStep ();
-
-		}
-
-		public override bool canInjectFlit (Flit f)
-		{
-			// just to fool the complier
-			return false;
-		}
-
-		public override void InjectFlit (Flit f){
-			// just to fool the complier
-		}
-
-		// only determine if can or cannot inject
-		public bool canInjectFlit (int subnet, Flit f)
-		{
-			return subrouter [subnet].canInjectFlit (f);
-		}
-			
-		public override bool canInjectFlitMultNet (int subnet, Flit f)
-		{
-			return canInjectFlit (subnet, f);
-		}
-
-		public override void InjectFlitMultNet (int subnet, Flit f)
-		{	
-			subrouter [subnet].InjectFlit (f);
-
-			#if PKTDUMP
-			//	Console.WriteLine("PKT {0}-{1}/{2} aclaim the injection slot at subnet {3} router {4} at time {5}", 
-			//                  f.packet.ID, f.flitNr+1, f.packet.nrOfFlits, selected, coord, Simulator.CurrentRound);
-			#endif
-
-		}
-			
-		public MultiMeshRouter (Coord c):base(c)
-		{
-			for (int i=0; i<Config.sub_net; i++) 
-			{
-				subrouter [i] = makeSubRouters (c);
-				subrouter [i].subnet = i;
-			}
-		}
-
-		Router makeSubRouters (Coord c)
-		{
-			switch (Config.router.algorithm)
-			{
-				case RouterAlgorithm.BLESS_BYPASS:
-				return new Router_BLESS_BYPASS (c);
-
-				case RouterAlgorithm.DR_AFC:
-				return new Router_AFC(c);
-
-				case RouterAlgorithm.DR_FLIT_SWITCHED_CTLR:
-				return new Router_Flit_Ctlr(c); // BLESS random proritization
-
-				case RouterAlgorithm.DR_FLIT_SWITCHED_OLDEST_FIRST:
-				return new Router_Flit_OldestFirst(c); // BLESS OF proritization
-
-				case RouterAlgorithm.DR_SCARAB:
-				return new Router_SCARAB(c);
-
-				case RouterAlgorithm.DR_FLIT_SWITCHED_GP:
-				return new Router_Flit_GP(c);
-
-				case RouterAlgorithm.DR_FLIT_SWITCHED_CALF:
-				return new Router_SortNet_GP(c);
-
-				case RouterAlgorithm.DR_FLIT_SWITCHED_CALF_OF:
-				return new Router_SortNet_OldestFirst(c);
-
-				case RouterAlgorithm.DR_FLIT_SWITCHED_RANDOM:
-				return new Router_Flit_Random(c);
-
-				case RouterAlgorithm.ROUTER_FLIT_EXHAUSTIVE:
-				return new Router_Flit_Exhaustive(c);
-
-				case RouterAlgorithm.OLDEST_FIRST_DO_ROUTER:
-				return new OldestFirstDORouter(c);
-
-				case RouterAlgorithm.ROUND_ROBIN_DO_ROUTER:
-				return new RoundRobinDORouter(c);
-
-				case RouterAlgorithm.STC_DO_ROUTER:
-				return new STC_DORouter(c);
-
-				default:
-				throw new Exception("invalid routing algorithm " + Config.router.algorithm);
-			}
-		}
-	}
-
 	public class Router_BLESS_BYPASS : Router
 	{
 
 		protected Flit m_injectSlot, m_injectSlot2;
 		protected Queue<Flit>	[] ejectBuffer;
-		protected Flit[] input; // keep this as a member var so we don't
-		// have to allocate on every step
+		protected Flit[] input; // keep this as a member var so we don't have to allocate on every step
 
 		public Router_BLESS_BYPASS(Coord myCoord)
 			: base(myCoord)
@@ -628,7 +521,7 @@ namespace ICSimulator
 			if (Config.uniform_size_enable == false) {
 				if (p.nrOfFlits == (Config.router.addrPacketSize))
 					Simulator.stats.ctrl_pkt.Add ();
-				else if (p.nrOfFlits == (Config.sub_net * Config.router.dataPacketSize))
+				else if (p.nrOfFlits == (Config.router.dataPacketSize))
 					Simulator.stats.data_pkt.Add ();	
 				else
 					throw new Exception ("packet size is undefined, yet received!");

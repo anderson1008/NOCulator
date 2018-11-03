@@ -281,6 +281,7 @@ namespace ICSimulator
             return pd;
         }
 
+
         // returns true if the direction is good for this packet. 
         protected bool isDirectionProductive(Coord dest, int direction)
         {
@@ -669,4 +670,71 @@ namespace ICSimulator
             return (double)used / tot;
         }
     }
+
+	public class MultiMeshRouter : Router
+	{
+		public Router[] subrouter = new Router[Config.sub_net];
+
+		protected override void _doStep ()
+		{
+			for (int i = 0; i < Config.sub_net; i++) 
+				subrouter [i].doStep ();
+		}
+
+		public override bool canInjectFlit (Flit f)
+		{
+			// just to fool the complier
+			return false;
+		}
+
+		public override void InjectFlit (Flit f){
+			// just to fool the complier
+		}
+
+		// only determine if can or cannot inject
+		public bool canInjectFlit (int subnet, Flit f)
+		{
+			return subrouter [subnet].canInjectFlit (f);
+		}
+			
+		public override bool canInjectFlitMultNet (int subnet, Flit f)
+		{
+			return canInjectFlit (subnet, f);
+		}
+
+		public override void InjectFlitMultNet (int subnet, Flit f)
+		{	
+			subrouter [subnet].InjectFlit (f);
+
+			#if PKTDUMP
+			//	Console.WriteLine("PKT {0}-{1}/{2} aclaim the injection slot at subnet {3} router {4} at time {5}", 
+			//                  f.packet.ID, f.flitNr+1, f.packet.nrOfFlits, selected, coord, Simulator.CurrentRound);
+			#endif
+
+		}
+			
+		public MultiMeshRouter (Coord c):base(c)
+		{
+			for (int i=0; i<Config.sub_net; i++) 
+			{
+				subrouter [i] = makeSubRouters (c);
+				subrouter [i].subnet = i;
+			}
+		}
+
+		Router makeSubRouters (Coord c)
+		{
+			switch (Config.router.algorithm)
+			{
+				case RouterAlgorithm.BLESS_BYPASS:
+				return new Router_BLESS_BYPASS (c);
+
+        		case RouterAlgorithm.WORM_BYPASS:
+				return new RouterWormBypass (c);
+
+				default:
+				throw new Exception("invalid routing algorithm " + Config.router.algorithm);
+			}
+		}
+	}
 }
