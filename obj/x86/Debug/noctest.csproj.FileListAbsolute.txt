@@ -1,0 +1,1 @@
+C:\Users\localuser\source\repos\NOCulator\obj\x86\Debug\noctest.csproj.CoreCompileInputs.cache
