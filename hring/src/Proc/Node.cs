@@ -28,47 +28,47 @@ namespace ICSimulator
       support both private and shared cache designs.
     */
 
-	public class Interference
-	{
-		private CmpCache_Txn _txn;
-		private Request _request;
-		private int _requesterID;
-		private bool valid;
-		private int interference_cycle;
-		private int _mshr;
+    public class Interference
+    {
+        private CmpCache_Txn _txn;
+        private Request _request;
+        private int _requesterID;
+        private bool valid;
+        private int interference_cycle;
+        private int _mshr;
 
-		public Interference (Packet pkt)
-		{
-			_txn = pkt.txn;
-			_mshr = pkt.txn.mshr;
-			_request = pkt.request;
-			_requesterID = pkt.requesterID;
-			valid = true;
-			interference_cycle = pkt.intfCycle;
-		}
+        public Interference(Packet pkt)
+        {
+            _txn = pkt.txn;
+            _mshr = pkt.txn.mshr;
+            _request = pkt.request;
+            _requesterID = pkt.requesterID;
+            valid = true;
+            interference_cycle = pkt.intfCycle;
+        }
 
-		public Interference ()
-		{
-			_txn = null;
-			_request = null;
-			_requesterID = 0;
-			valid = false;
-			interference_cycle = 0;
-		}
+        public Interference()
+        {
+            _txn = null;
+            _request = null;
+            _requesterID = 0;
+            valid = false;
+            interference_cycle = 0;
+        }
 
-		public bool compare (Packet pkt) 
-		{
-			if (pkt.txn.mshr == _mshr && pkt.requesterID == _requesterID)
-				return true;
-			else
-				return false;
-		}
+        public bool compare(Packet pkt)
+        {
+            if (pkt.txn.mshr == _mshr && pkt.requesterID == _requesterID)
+                return true;
+            else
+                return false;
+        }
 
-		public int intfCycle 
-		{
-			get {return interference_cycle;}
-		}
-	}
+        public int intfCycle
+        {
+            get { return interference_cycle; }
+        }
+    }
 
 
     public class Node
@@ -84,15 +84,16 @@ namespace ICSimulator
         public CPU cpu { get { return m_cpu; } }
         private CPU m_cpu;
         private MemCtlr m_mem;
-		//private ArrayList m_inheritance_table;
-		private Dictionary <string, int> m_inheritance_dict;
+        //private ArrayList m_inheritance_table;
+        private Dictionary<string, int> m_inheritance_dict;
 
         private Router m_router;
-		private ulong m_last_retired_synth;
-
+        private ulong m_last_retired_synth;
+        
         private IPrioPktPool m_inj_pool;
+        public bool[] injector; // injector to handle truncated worm
         private Queue<Flit> m_injQueue_flit, m_injQueue_evict;
-		private Queue<Flit> [] m_injQueue_multi_flit;
+        private Queue<Flit>[] m_injQueue_multi_flit;
         public Queue<Packet> m_local;
 
         public int RequestQueueLen { get { return m_inj_pool.FlitCount + m_injQueue_flit.Count; } }
@@ -100,14 +101,16 @@ namespace ICSimulator
         RxBufNaive m_rxbuf_naive;
 
 
-		public int get_txn_intf (Packet new_inj_pkt) {
-			int intfCycle = 0;
-			string key = new_inj_pkt.requesterID.ToString() + (new_inj_pkt.txn.mshr + Config.N).ToString();
-			if (m_inheritance_dict.ContainsKey (key)) {
-				intfCycle = m_inheritance_dict [key];
-				m_inheritance_dict.Remove (key);
-			}
-			/*
+        public int get_txn_intf(Packet new_inj_pkt)
+        {
+            int intfCycle = 0;
+            string key = new_inj_pkt.requesterID.ToString() + (new_inj_pkt.txn.mshr + Config.N).ToString();
+            if (m_inheritance_dict.ContainsKey(key))
+            {
+                intfCycle = m_inheritance_dict[key];
+                m_inheritance_dict.Remove(key);
+            }
+            /*
 			foreach (Interference i in m_inheritance_table)
 			{
 				if (i.compare(new_inj_pkt))
@@ -118,8 +121,8 @@ namespace ICSimulator
 				}
 			}
 			*/
-			return intfCycle;
-		}
+            return intfCycle;
+        }
 
         public Node(NodeMapping mapping, Coord c)
         {
@@ -132,7 +135,7 @@ namespace ICSimulator
             }
             if (mapping.hasMem(c.ID))
             {
-				Console.WriteLine("Proc/Node.cs : MC locations:{0}", c.ID);
+                Console.WriteLine("Proc/Node.cs : MC locations:{0}", c.ID);
                 m_mem = new MemCtlr(this);
             }
 
@@ -140,16 +143,19 @@ namespace ICSimulator
             Simulator.controller.setInjPool(m_coord.ID, m_inj_pool);
             m_injQueue_flit = new Queue<Flit>();
             m_injQueue_evict = new Queue<Flit>();
-			m_injQueue_multi_flit = new Queue<Flit> [Config.sub_net];
-			for (int i=0; i<Config.sub_net; i++)
-				m_injQueue_multi_flit[i] = new Queue<Flit> ();
+            injector = new bool[Config.sub_net];
+            for (int i = 0; i < Config.sub_net; i++)            
+                injector[i] = true; // true means free
+            m_injQueue_multi_flit = new Queue<Flit>[Config.sub_net];
+            for (int i = 0; i < Config.sub_net; i++)
+                m_injQueue_multi_flit[i] = new Queue<Flit>();
             m_local = new Queue<Packet>();
-			//m_inheritance_table =  new ArrayList();
-			m_inheritance_dict = new Dictionary<string, int> ();
+            //m_inheritance_table =  new ArrayList();
+            m_inheritance_dict = new Dictionary<string, int>();
 
             m_rxbuf_naive = new RxBufNaive(this,
-                    delegate(Flit f) { m_injQueue_evict.Enqueue(f); },
-                    delegate(Packet p) { receivePacket(p); });
+                    delegate (Flit f) { m_injQueue_evict.Enqueue(f); },
+                    delegate (Packet p) { receivePacket(p); });
 
 
 
@@ -160,304 +166,357 @@ namespace ICSimulator
             m_router = r;
         }
 
-		Coord PickDst ()
-		{
-			int dest = m_coord.ID;
-			Coord c = new Coord (dest);
+        Coord PickDst()
+        {
+            int dest = m_coord.ID;
+            Coord c = new Coord(dest);
 
-			while (dest == m_coord.ID) { // ensure src != dst
+            while (dest == m_coord.ID)
+            { // ensure src != dst
 
-				switch (Config.synthPattern) {
-				case SynthTrafficPattern.UR:
-					dest = Simulator.rand.Next (Config.N);
-					c = new Coord (dest);
-					break;
-				case SynthTrafficPattern.BC:
-					dest = ~dest & (Config.N - 1);
-					c = new Coord (dest);
-					break;
-				case SynthTrafficPattern.TR:  // TODO: Check if correct
-					c = new Coord (m_coord.y, m_coord.x);
-					break;
-				case SynthTrafficPattern.HS:
-					Simulator.network.pickHotSpot (); // pick a hot spot when N-1 Mergeable packets destined to hotspot node
-					if ((Simulator.rand.NextDouble () < Config.hs_rate) && 
-						// use to control the number of mergable request from each node
-						(Simulator.network.hsReqPerNode[m_coord.ID] < Config.hotSpotReqPerNode))  
-					{
-						dest = Simulator.network.hotSpotNode;
-						Simulator.network.hsReqPerNode [m_coord.ID] ++;
-						Simulator.network.hotSpotGenCount++; // clear for every Config.N-1 hs packets. Then pick a new hot spot.
-						Simulator.stats.generate_hs_packet.Add ();
-					}
-					else  // otherwide generate a normal uniform random packet
-						dest = Simulator.rand.Next (Config.N);
-					c = new Coord (dest);
-					break;
-				}
-			}
-			return c;
-		}
+                switch (Config.synthPattern)
+                {
+                    case SynthTrafficPattern.UR:
+                        dest = Simulator.rand.Next(Config.N);
+                        c = new Coord(dest);
+                        break;
+                    case SynthTrafficPattern.BC:
+                        dest = ~dest & (Config.N - 1);
+                        c = new Coord(dest);
+                        break;
+                    case SynthTrafficPattern.TR:  // TODO: Check if correct
+                        c = new Coord(m_coord.y, m_coord.x);
+                        break;
+                    case SynthTrafficPattern.HS:
+                        Simulator.network.pickHotSpot(); // pick a hot spot when N-1 Mergeable packets destined to hotspot node
+                        if ((Simulator.rand.NextDouble() < Config.hs_rate) &&
+                            // use to control the number of mergable request from each node
+                            (Simulator.network.hsReqPerNode[m_coord.ID] < Config.hotSpotReqPerNode))
+                        {
+                            dest = Simulator.network.hotSpotNode;
+                            Simulator.network.hsReqPerNode[m_coord.ID]++;
+                            Simulator.network.hotSpotGenCount++; // clear for every Config.N-1 hs packets. Then pick a new hot spot.
+                            Simulator.stats.generate_hs_packet.Add();
+                        }
+                        else  // otherwide generate a normal uniform random packet
+                            dest = Simulator.rand.Next(Config.N);
+                        c = new Coord(dest);
+                        break;
+                }
+            }
+            return c;
+        }
 
 
-		int PickPktSize (bool mc, bool gather)
-		{
-			// decide packet size
-			int packet_size;
-			if (Config.uniform_size_enable == true) { 
-				if (Config.topology == Topology.Mesh_Multi)
-					packet_size = Config.uniform_size * Config.sub_net;
-				else
-					packet_size = Config.uniform_size;
-			}
-			else
-			{
-				if (Simulator.rand.NextDouble () < 0.5)
-					packet_size = Config.router.addrPacketSize;
-				else  
-					packet_size = Config.router.dataPacketSize;
-			}
+        int PickPktSize(bool mc, bool gather)
+        {
+            // decide packet size
+            int packet_size;
+            if (Config.uniform_size_enable == true)
+            {
+                if (Config.topology == Topology.Mesh_Multi)
+                    packet_size = Config.uniform_size * Config.sub_net;
+                else
+                    packet_size = Config.uniform_size;
+            }
+            else
+            {
+                if (Simulator.rand.NextDouble() < 0.5)
+                    packet_size = Config.router.addrPacketSize;
+                else
+                    packet_size = Config.router.dataPacketSize;
+            }
 
-			if (mc == true)
-				return packet_size * 2; // each packet only contains half of original payload.
-			else if (gather == true)
-				return packet_size * 2;
-			else
-			    return packet_size;
-		}
+            if (mc == true)
+                return packet_size * 2; // each packet only contains half of original payload.
+            else if (gather == true)
+                return packet_size * 2;
+            else
+                return packet_size;
+        }
 
-		Packet packetization ()
-		{
-			int oldHsReq;
-			Coord c = PickDst ();
-			bool gather = false;
-			int packet_size;
-			Packet p;
-			if (Config.synthPattern == SynthTrafficPattern.HS) {
-				oldHsReq = Simulator.network.hsReqPerNode [m_coord.ID]; // use to determine if a hot spot packet is generated. Place it before PickDst()
-				if (Simulator.network.hsReqPerNode [m_coord.ID] == oldHsReq + 1)
-					gather = true;
-				packet_size = PickPktSize (false, gather);
-				if (gather)
-					p = new Packet (null,0,packet_size,m_coord, c, true);
-				else
-					p = new Packet(null,0,packet_size,m_coord, c);
+        Packet packetization()
+        {
+            int oldHsReq;
+            Coord c = PickDst();
+            bool gather = false;
+            int packet_size;
+            Packet p;
+            if (Config.synthPattern == SynthTrafficPattern.HS)
+            {
+                oldHsReq = Simulator.network.hsReqPerNode[m_coord.ID]; // use to determine if a hot spot packet is generated. Place it before PickDst()
+                if (Simulator.network.hsReqPerNode[m_coord.ID] == oldHsReq + 1)
+                    gather = true;
+                packet_size = PickPktSize(false, gather);
+                if (gather)
+                    p = new Packet(null, 0, packet_size, m_coord, c, true);
+                else
+                    p = new Packet(null, 0, packet_size, m_coord, c);
 
-			} else {
-				packet_size = PickPktSize (false, false); // this is a unicast
-				p = new Packet(null,0,packet_size,m_coord, c);
-			}	
-				
+            }
+            else
+            {
+                packet_size = PickPktSize(false, false); // this is a unicast
+                p = new Packet(null, 0, packet_size, m_coord, c);
+            }
+
 #if PACKETDUMP
 			Console.WriteLine ("#1 Time {0}, @ node {1} {2}", Simulator.CurrentRound, m_coord.ID, p.ToString());
 #endif
-			return p;
-		}
+            return p;
+        }
 
-		void unicastSynthGen (bool mc, bool record)
-		{
-			if (m_inj_pool.Count > Config.synthQueueLimit)
-				Simulator.stats.synth_queue_limit_drop.Add();
-			else
-			{
-				Packet p = packetization ();
-				queuePacket(p);
-				//Console.WriteLine ("Packet {0} is generated @ Time {1} Router {2}", p.ID, Simulator.CurrentRound, coord.ID);
-				ScoreBoard.RegPacket (p.dest.ID, p.ID);
-				Simulator.stats.generate_packet.Add ();
-				if (record) {
-					if (!mc) 
-						Simulator.stats.generate_uc_packet.Add ();
-					else 
-						Simulator.stats.generate_mc_packet.Add ();
-				}
-				
-			}
-		}
+        void unicastSynthGen(bool mc, bool record)
+        {
+            if (m_inj_pool.Count > Config.synthQueueLimit)
+                Simulator.stats.synth_queue_limit_drop.Add();
+            else
+            {
+                Packet p = packetization();
+                queuePacket(p);
+                //Console.WriteLine ("Packet {0} is generated @ Time {1} Router {2}", p.ID, Simulator.CurrentRound, coord.ID);
+                ScoreBoard.RegPacket(p.dest.ID, p.ID);
+                Simulator.stats.generate_packet.Add();
+                if (record)
+                {
+                    if (!mc)
+                        Simulator.stats.generate_uc_packet.Add();
+                    else
+                        Simulator.stats.generate_mc_packet.Add();
+                }
 
-		void multicastSynthGenMultiDst ()
-		{
-			double mc_rate = Config.mc_rate; // enforcing mc_rate = 0 is equivalent to running unicast
-			double mc_degree = 1;
-			List <Coord> sharerList = new List <Coord> ();
-			int packet_size; 
-			Coord dst;
-			//Coord[] destArray = new Coord[] { };
+            }
+        }
 
-			if (Simulator.rand.NextDouble () < mc_rate) {
-				mc_degree = Simulator.rand.Next (Config.mc_degree - 2) + 2; // multicast; generate index 2-15
-				//Console.WriteLine ("TIME={0} Node {1} send {2} MC_PKT", Simulator.CurrentRound, m_coord.ID, mc_degree);
-			}
-			else
-				mc_degree = 1;
+        void multicastSynthGenMultiDst()
+        {
+            double mc_rate = Config.mc_rate; // enforcing mc_rate = 0 is equivalent to running unicast
+            double mc_degree = 1;
+            List<Coord> sharerList = new List<Coord>();
+            int packet_size;
+            Coord dst;
+            //Coord[] destArray = new Coord[] { };
 
-			if (mc_degree == 1) {
-				// This is a unicast packet
-				packet_size = PickPktSize (false, false); 
-				unicastSynthGen (false, true);
-				return;
-			}
-				
-			while (mc_degree > 0) {
-				// This is a MC packet
-				// Generate the destination list
-				// it will be used for packetization
-				// Note: it is different from the destination list of a packet, 
-				//       which may be a subset, depending on the network size and pakcet format.
-				dst = PickDst();
-				if (sharerList.Contains (dst)) // ensure no dst is added twice
-					continue;
-				sharerList.Add(dst);
-				mc_degree--;
-			}
-			packet_size = PickPktSize (true, false); 
-			Packet p = new Packet(null,0,packet_size,m_coord, sharerList);
-			queuePacket(p);
-			foreach (Coord dest in sharerList) {
-				ScoreBoard.RegPacket (dest.ID, p.ID);
-				p.creationTimeMC [dest.ID] = Simulator.CurrentRound; // it will be overriden everytime when replication occur, but only once.
-			}
-			
-			Simulator.stats.generate_mc_packet.Add ();
-			Simulator.stats.generate_packet.Add (sharerList.Count);
-		}
+            if (Simulator.rand.NextDouble() < mc_rate)
+            {
+                mc_degree = Simulator.rand.Next(Config.mc_degree - 2) + 2; // multicast; generate index 2-15
+                                                                           //Console.WriteLine ("TIME={0} Node {1} send {2} MC_PKT", Simulator.CurrentRound, m_coord.ID, mc_degree);
+            }
+            else
+                mc_degree = 1;
 
-		void multicastSynthGenNaive ()
-		{
-			double mc_rate = Config.mc_rate; // enforcing mc_rate = 0 is equivalent to running unicast
-			double mc_degree = 1;
-			bool mc;
+            if (mc_degree == 1)
+            {
+                // This is a unicast packet
+                packet_size = PickPktSize(false, false);
+                unicastSynthGen(false, true);
+                return;
+            }
 
-			if (Simulator.rand.NextDouble () < mc_rate) {
-				mc_degree = Simulator.rand.Next (Config.mc_degree - 2) + 2; // multicast
-				mc = true;
-				//Console.WriteLine ("TIME={0} Node {1} send {2} MC_PKT", Simulator.CurrentRound, m_coord.ID, mc_degree);
-			} else {
-				mc_degree = 1;
-				mc = false;
-			}
+            while (mc_degree > 0)
+            {
+                // This is a MC packet
+                // Generate the destination list
+                // it will be used for packetization
+                // Note: it is different from the destination list of a packet, 
+                //       which may be a subset, depending on the network size and pakcet format.
+                dst = PickDst();
+                if (sharerList.Contains(dst)) // ensure no dst is added twice
+                    continue;
+                sharerList.Add(dst);
+                mc_degree--;
+            }
+            packet_size = PickPktSize(true, false);
+            Packet p = new Packet(null, 0, packet_size, m_coord, sharerList);
+            queuePacket(p);
+            foreach (Coord dest in sharerList)
+            {
+                ScoreBoard.RegPacket(dest.ID, p.ID);
+                p.creationTimeMC[dest.ID] = Simulator.CurrentRound; // it will be overriden everytime when replication occur, but only once.
+            }
 
-			while (mc_degree > 0) {
-				// Naive multicast
-				// Sending multiple unicast packets
-				if (mc_degree == 1)
-					unicastSynthGen (mc, true);
-				else
-					unicastSynthGen (mc, false);
-					
-				mc_degree--;
-			}
-		}
+            Simulator.stats.generate_mc_packet.Add();
+            Simulator.stats.generate_packet.Add(sharerList.Count);
+        }
 
-		void synthGen()
-		{
-			double uc_rate = Config.synth_rate;
+        void multicastSynthGenNaive()
+        {
+            double mc_rate = Config.mc_rate; // enforcing mc_rate = 0 is equivalent to running unicast
+            double mc_degree = 1;
+            bool mc;
 
-			if (!Config.multicast && Simulator.rand.NextDouble () < uc_rate)
-				unicastSynthGen (false, true);
-			// Enable adaptiveInj to make it adaptive
-			else if (Config.multicast && Simulator.rand.NextDouble () < uc_rate)
- 			{				
-				// Console.WriteLine ("Starvation rate is {0}", m_router.starveCount/(float)Config.starveResetEpoch);
+            if (Simulator.rand.NextDouble() < mc_rate)
+            {
+                mc_degree = Simulator.rand.Next(Config.mc_degree - 2) + 2; // multicast
+                mc = true;
+                //Console.WriteLine ("TIME={0} Node {1} send {2} MC_PKT", Simulator.CurrentRound, m_coord.ID, mc_degree);
+            }
+            else
+            {
+                mc_degree = 1;
+                mc = false;
+            }
 
-				// Using the naive mc method when the starvation rate is higher than the threshold.
-				if (Config.router.algorithm == RouterAlgorithm.DR_FLIT_SW_OF_MC && Config.scatterEnable
-				) {
+            while (mc_degree > 0)
+            {
+                // Naive multicast
+                // Sending multiple unicast packets
+                if (mc_degree == 1)
+                    unicastSynthGen(mc, true);
+                else
+                    unicastSynthGen(mc, false);
 
-					if ((Config.adaptiveMC == true && (m_router.starveCount/(double)Config.starveResetEpoch < Config.starveRateThreshold)) || Config.adaptiveMC == false)
-						multicastSynthGenMultiDst ();
-					// else
-						// THROTTLED HERE, VERY IMPORTANT
+                mc_degree--;
+            }
+        }
 
-					// Tried the following, but did not see much difference
-					//else
-					//	multicastSynthGenNaive ();
-				}
-				else
-					multicastSynthGenNaive ();
-			}
-		}
+        void synthGen()
+        {
+            double uc_rate = Config.synth_rate;
 
-    public void doStep()
-    {
-			// continue to run until all packets generated prior to stop time are received.
-			if (Config.synthGen && !Simulator.network.StopSynPktGen())
-			{
-				synthGen();
-			}
+            if (!Config.multicast && Simulator.rand.NextDouble() < uc_rate)
+                unicastSynthGen(false, true);
+            // Enable adaptiveInj to make it adaptive
+            else if (Config.multicast && Simulator.rand.NextDouble() < uc_rate)
+            {
+                // Console.WriteLine ("Starvation rate is {0}", m_router.starveCount/(float)Config.starveResetEpoch);
 
-      while (m_local.Count > 0 &&
-        m_local.Peek().creationTime < Simulator.CurrentRound)
-      {
-        receivePacket(m_local.Dequeue());
-      }
+                // Using the naive mc method when the starvation rate is higher than the threshold.
+                if (Config.router.algorithm == RouterAlgorithm.DR_FLIT_SW_OF_MC && Config.scatterEnable
+                )
+                {
 
-      if (m_cpu != null) m_cpu.doStep();
-      if (m_mem != null) m_mem.doStep();
+                    if ((Config.adaptiveMC == true && (m_router.starveCount / (double)Config.starveResetEpoch < Config.starveRateThreshold)) || Config.adaptiveMC == false)
+                        multicastSynthGenMultiDst();
+                    // else
+                    // THROTTLED HERE, VERY IMPORTANT
 
-      if (m_inj_pool.FlitInterface) // By Xiyue: ??? why 2 different injection modes?
-      {
-          Flit f = m_inj_pool.peekFlit();
-          if (f != null && m_router.canInjectFlit(f))
-          {
-              m_router.InjectFlit(f);  
-              m_inj_pool.takeFlit();  // By Xiyue: ??? No action ???
-          }
-      }
-			else // By Xiyue: Actual injection into network
-      {
-        Packet p = m_inj_pool.next();
-				int selected;
+                    // Tried the following, but did not see much difference
+                    //else
+                    //	multicastSynthGenNaive ();
+                }
+                else
+                    multicastSynthGenNaive();
+            }
+        }
+        public void injectTruncatedFlits(Flit f, int sub_network, int flag) // if flag == 1; make injector[subNetwork] to free
+        {
+            m_injQueue_multi_flit[sub_network].Enqueue(f);
+            if (flag == 1)
+            {
+                injector[sub_network] = true;
+            }else
+                injector[sub_network] = false;
+        }
+        //if truncated flit is from local port, move all remaining body flits to back of the list to follow the header
+        public void injectLocallyTruncatedFlits(Flit f, int sub_network) // this will also make injector[subNetwork]= true
+        {
+            Flit tempFlit;
+            m_injQueue_multi_flit[sub_network].Enqueue(f);
+            while (!m_injQueue_multi_flit[sub_network].Peek().isHeadFlit) // move all body flit to the end 
+            {
+                tempFlit = m_injQueue_multi_flit[sub_network].Dequeue();
+                m_injQueue_multi_flit[sub_network].Enqueue(tempFlit);
+            }
+            // clear the injector busy flag
+            if (!injector[sub_network])
+                injector[sub_network] = true;
+        }
+        public void doStep()
+        {
+            // continue to run until all packets generated prior to stop time are received.
+            if (Config.synthGen && !Simulator.network.StopSynPktGen())
+            {
+                synthGen();
+            }
 
-				if (Config.topology == Topology.Mesh_Multi) {
-					
-					if (p != null && p.creationTime <= Simulator.CurrentRound) {
-            selected = select_subnet ();
-						foreach (Flit f in p.flits) {
-							// serialize packet to flit and select a subnetwork
-							// assume infinite NI buffer
-							Simulator.stats.subnet_util [m_coord.ID, selected].Add ();
-							//if (selected % 2 == 0)
-							//	f.routingOrder = true;
-							m_injQueue_multi_flit [selected].Enqueue (f);
-						}
-					}
-					
-					for (int i = 0 ; i < Config.sub_net; i++)
-					{
-						if (m_injQueue_multi_flit[i].Count > 0 && m_router.canInjectFlitMultNet(i, m_injQueue_multi_flit[i].Peek()))
-						{
-							Flit f = m_injQueue_multi_flit[i].Dequeue();
-							m_router.InjectFlitMultNet(i, f);
-							#if PACKETDUMP
+            while (m_local.Count > 0 &&
+              m_local.Peek().creationTime < Simulator.CurrentRound)
+            {
+                receivePacket(m_local.Dequeue());
+            }
+
+            if (m_cpu != null) m_cpu.doStep();
+            if (m_mem != null) m_mem.doStep();
+
+            if (m_inj_pool.FlitInterface) // By Xiyue: ??? why 2 different injection modes?
+            {
+                Flit f = m_inj_pool.peekFlit();
+                if (f != null && m_router.canInjectFlit(f))
+                {
+                    m_router.InjectFlit(f);
+                    m_inj_pool.takeFlit();  // By Xiyue: ??? No action ???
+                }
+            }
+            else // By Xiyue: Actual injection into network
+            {
+                if (Config.topology == Topology.Mesh_Multi)
+                {
+                    int selected = select_subnet();
+                    if (injector[selected] == true) // If injector is not free, it must be busy with Truncated worm : true means free
+                    {
+                        Packet pp = m_inj_pool.next();
+
+                        if (pp != null && pp.creationTime <= Simulator.CurrentRound)
+                        {
+                            // selected = select_subnet();
+                            foreach (Flit f in pp.flits)
+                            {
+                                // serialize packet to flit and select a subnetwork
+                                // assume infinite NI buffer
+                                Simulator.stats.subnet_util[m_coord.ID, selected].Add();
+                                //if (selected % 2 == 0)
+                                //	f.routingOrder = true;
+                                f.subNetwork = selected;
+                                m_injQueue_multi_flit[selected].Enqueue(f);
+                            }
+                        }
+                    } // if injector is busy, blocking to insert packet into the network ends here
+
+                    for (int i = 0; i < Config.sub_net; i++)
+                    {
+                        if (m_injQueue_multi_flit[i].Count > 0 && m_router.canInjectFlitMultNet(i, m_injQueue_multi_flit[i].Peek()))
+                        {
+                            Flit f = m_injQueue_multi_flit[i].Dequeue();
+                            m_router.InjectFlitMultNet(i, f);
+#if PACKETDUMP
 							Console.WriteLine("Time {2}: @ node {1} Inject pktID {0} on subnet {3}",
 								f.packet.ID, coord.ID, Simulator.CurrentRound, i);
-							#endif
-						}
-					}
-				}
-				else if (Config.throttle_enable && Config.controller == ControllerType.THROTTLE_QOS)
-            	{
+#endif
+                        }
+                        if (m_injQueue_multi_flit[i].Count == 0)
+                        {
+                            injector[i] = true; // clear the injector if there is no flit in buffer
+                        }
+                    }
 
-
-	                if (p != null)
-	                {
-						int intfCycle = get_txn_intf(p);  // first term: interf. of predecessor, second term: throttled cycle
-	                    foreach (Flit f in p.flits)
-						{
-							f.intfCycle = intfCycle;
-	                        m_injQueue_flit.Enqueue(f);
-						}
-	                }
-
-				if (m_injQueue_evict.Count > 0 && m_router.canInjectFlit(m_injQueue_evict.Peek())) // By Xiyue: ??? What is m_injQueue_evict ?
-                {
-                    Flit f = m_injQueue_evict.Dequeue();
-                    m_router.InjectFlit(f);
                 }
-				else if (m_injQueue_flit.Count > 0 && m_router.canInjectFlit(m_injQueue_flit.Peek())) // By Xiyue: ??? Dif from m_injQueue_evict?
-                {
-                    Flit f = m_injQueue_flit.Dequeue();
+                else
+                {                    
+                    Packet p = m_inj_pool.next();
+
+                    if (Config.throttle_enable && Config.controller == ControllerType.THROTTLE_QOS)
+                    {
+
+
+                        if (p != null)
+                        {
+                            int intfCycle = get_txn_intf(p);  // first term: interf. of predecessor, second term: throttled cycle
+                            foreach (Flit f in p.flits)
+                            {
+                                f.intfCycle = intfCycle;
+                                m_injQueue_flit.Enqueue(f);
+                            }
+                        }
+
+                        if (m_injQueue_evict.Count > 0 && m_router.canInjectFlit(m_injQueue_evict.Peek())) // By Xiyue: ??? What is m_injQueue_evict ?
+                        {
+                            Flit f = m_injQueue_evict.Dequeue();
+                            m_router.InjectFlit(f);
+                        }
+                        else if (m_injQueue_flit.Count > 0 && m_router.canInjectFlit(m_injQueue_flit.Peek())) // By Xiyue: ??? Dif from m_injQueue_evict?
+                        {
+                            Flit f = m_injQueue_flit.Dequeue();
 #if PACKETDUMP
                     if (f.flitNr == 0)
                         if (m_coord.ID == 0)
@@ -465,136 +524,143 @@ namespace ICSimulator
                                 f.packet, coord, Simulator.CurrentRound);
 #endif
 
-                    m_router.InjectFlit(f);  // by Xiyue: inject into a router
-                    // for Ring based Network, inject two flits if possible
-                    for (int i = 0 ; i < Config.RingInjectTrial - 1; i++)
-						if (m_injQueue_flit.Count > 0 && m_router.canInjectFlit(m_injQueue_flit.Peek()))
-    	                {
-        	            	f = m_injQueue_flit.Dequeue();
-            	        	m_router.InjectFlit(f);
-                	    }
-                }
+                            m_router.InjectFlit(f);  // by Xiyue: inject into a router
+                                                     // for Ring based Network, inject two flits if possible
+                            for (int i = 0; i < Config.RingInjectTrial - 1; i++)
+                                if (m_injQueue_flit.Count > 0 && m_router.canInjectFlit(m_injQueue_flit.Peek()))
+                                {
+                                    f = m_injQueue_flit.Dequeue();
+                                    m_router.InjectFlit(f);
+                                }
+                        }
 
-                 }
-				else
-				{
+                    }
+                    else
+                    {
 
-	                if (p != null)
-	                {
-	                    foreach (Flit f in p.flits)
-	                        m_injQueue_flit.Enqueue(f);
-	                }
+                        if (p != null)
+                        {
+                            foreach (Flit f in p.flits)
+                                m_injQueue_flit.Enqueue(f);
+                        }
 
-					//Console.WriteLine ("FlitInjectQ size {0}", m_injQueue_flit.Count);
+                        //Console.WriteLine ("FlitInjectQ size {0}", m_injQueue_flit.Count);
 
-					if (m_injQueue_evict.Count > 0 && m_router.canInjectFlit(m_injQueue_evict.Peek())) // By Xiyue: ??? What is m_injQueue_evict ?
-	                {
-	                    Flit f = m_injQueue_evict.Dequeue();
-	                    m_router.InjectFlit(f);
-	                }
-					else if (m_injQueue_flit.Count > 0 && m_router.canInjectFlit(m_injQueue_flit.Peek())) // By Xiyue: ??? Dif from m_injQueue_evict?
-	                {
-	                    Flit f = m_injQueue_flit.Dequeue();
-	#if PACKETDUMP
+                        if (m_injQueue_evict.Count > 0 && m_router.canInjectFlit(m_injQueue_evict.Peek())) // By Xiyue: ??? What is m_injQueue_evict ?
+                        {
+                            Flit f = m_injQueue_evict.Dequeue();
+                            m_router.InjectFlit(f);
+                        }
+                        else if (m_injQueue_flit.Count > 0 && m_router.canInjectFlit(m_injQueue_flit.Peek())) // By Xiyue: ??? Dif from m_injQueue_evict?
+                        {
+                            Flit f = m_injQueue_flit.Dequeue();
+#if PACKETDUMP
 						Console.WriteLine("#2 Time {2}: @ node {1} Inject pktID {0}",
 							f.packet.ID, coord.ID, Simulator.CurrentRound);
-	#endif
+#endif
 
-	                    m_router.InjectFlit(f);  // by Xiyue: inject into a router
+                            m_router.InjectFlit(f);  // by Xiyue: inject into a router
 
-	                    // for Ring based Network, inject two flits if possible
-	                    for (int i = 0 ; i < Config.RingInjectTrial - 1; i++)
-							if (m_injQueue_flit.Count > 0 && m_router.canInjectFlit(m_injQueue_flit.Peek()))
-	    	                {
-	        	            	f = m_injQueue_flit.Dequeue();
-	            	        	m_router.InjectFlit(f);
-	                	    }
-	                }
-				}
+                            // for Ring based Network, inject two flits if possible
+                            for (int i = 0; i < Config.RingInjectTrial - 1; i++)
+                                if (m_injQueue_flit.Count > 0 && m_router.canInjectFlit(m_injQueue_flit.Peek()))
+                                {
+                                    f = m_injQueue_flit.Dequeue();
+                                    m_router.InjectFlit(f);
+                                }
+                        }
+                    }
+                }
             }
-    }
+        }
 
-		protected int select_subnet ()
-		{
-			
-			int selected = -1;
-			double util = double.MaxValue;
-			if (Config.subnet_sel_rand)
-				selected = Simulator.rand.Next(Config.sub_net);
-			else
-				// Inject to the subnet with lower load
-				for (int i = 0; i < Config.sub_net; i++)
-				{
-					if (Simulator.stats.subnet_util[m_coord.ID, i].Count < util)
-					{
-						selected = i;
-						util = Simulator.stats.subnet_util[m_coord.ID, i].Count;
-					}
-				}
+        protected int select_subnet()
+        {
 
-			if (selected == -1 || selected >= Config.sub_net) throw new Exception("no subnet is selected");
-			return selected;
-		}
+            int selected = -1;
+            double util = double.MaxValue;
+            if (Config.subnet_sel_rand)
+                selected = Simulator.rand.Next(Config.sub_net);
+            else
+                // Inject to the subnet with lower load
+                for (int i = 0; i < Config.sub_net; i++)
+                {
+                    if (Simulator.stats.subnet_util[m_coord.ID, i].Count < util)
+                    {
+                        selected = i;
+                        util = Simulator.stats.subnet_util[m_coord.ID, i].Count;
+                    }
+                }
+
+            if (selected == -1 || selected >= Config.sub_net) throw new Exception("no subnet is selected");
+            return selected;
+        }
 
         public virtual void receiveFlit(Flit f)
         {
-			if (Config.naive_rx_buf)
-				m_rxbuf_naive.acceptFlit (f);
-			else {
-				if (Config.router.algorithm == RouterAlgorithm.DR_FLIT_SW_OF_MC)
-					receiveFlit_noBuf_mc (f);
-				else
-					receiveFlit_noBuf (f);
-			}
-			m_last_retired_synth = Simulator.CurrentRound;
+            if (Config.naive_rx_buf)
+                m_rxbuf_naive.acceptFlit(f);
+            else
+            {
+                if (Config.router.algorithm == RouterAlgorithm.DR_FLIT_SW_OF_MC)
+                    receiveFlit_noBuf_mc(f);
+                else
+                    receiveFlit_noBuf(f);
+            }
+            m_last_retired_synth = Simulator.CurrentRound;
 
-       }
+        }
 
-		void receiveFlit_noBuf_mc (Flit f){
-			int nrOfarrivedFlit = -1;
-			if (f.packet.mc) {
-				f.packet.nrOfArrivedFlitsMC [m_coord.ID]++;
-				nrOfarrivedFlit = f.packet.nrOfArrivedFlitsMC [m_coord.ID];
-					
-			} else {
-				f.packet.nrOfArrivedFlits++;
-				nrOfarrivedFlit = f.packet.nrOfArrivedFlits;
-			}
+        void receiveFlit_noBuf_mc(Flit f)
+        {
+            int nrOfarrivedFlit = -1;
+            if (f.packet.mc)
+            {
+                f.packet.nrOfArrivedFlitsMC[m_coord.ID]++;
+                nrOfarrivedFlit = f.packet.nrOfArrivedFlitsMC[m_coord.ID];
 
-			if (nrOfarrivedFlit == f.packet.nrOfFlits) {
-				receivePacket (f.packet);
-			}
-		}
+            }
+            else
+            {
+                f.packet.nrOfArrivedFlits++;
+                nrOfarrivedFlit = f.packet.nrOfArrivedFlits;
+            }
+
+            if (nrOfarrivedFlit == f.packet.nrOfFlits)
+            {
+                receivePacket(f.packet);
+            }
+        }
 
         void receiveFlit_noBuf(Flit f)
         {
-			// Register the flit interferece delay
-			// intfCycle gets updates only at the first and last flit of a packet arrival.
-			f.packet.nrOfArrivedFlits++;
-			if (f.packet.nrOfArrivedFlits == 1)
-			{
-				// Record the inteference cycle of flits.
-				f.packet.intfCycle = f.intfCycle;  // the interference cycle of head flit
-				f.packet.first_flit_arrival = Simulator.CurrentRound;
-			}
+            // Register the flit interferece delay
+            // intfCycle gets updates only at the first and last flit of a packet arrival.
+            f.packet.nrOfArrivedFlits++;
+            if (f.packet.nrOfArrivedFlits == 1)
+            {
+                // Record the inteference cycle of flits.
+                f.packet.intfCycle = f.intfCycle;  // the interference cycle of head flit
+                f.packet.first_flit_arrival = Simulator.CurrentRound;
+            }
 
-			if (f.packet.nrOfArrivedFlits == f.packet.nrOfFlits)
-			{
-				// Compute the inteference cycle of a pacekt.
-				f.packet.intfCycle = (int)f.packet.intfCycle + ((int)Simulator.CurrentRound - (int)f.packet.first_flit_arrival - f.packet.nrOfFlits + 1); // assume the flits of will arrive consecutively without interference. In case of control packet, the portion inside of parenthesis is 0.
-				if (f.packet.intfCycle  > 0 && f.packet.requesterID != m_coord.ID && f.packet.critical == true && Config.throttle_enable == true && Config.controller == ControllerType.THROTTLE_QOS)
-				{
-					// only log the delay of the packets whose associated request is not generated by the current node
-					// therefore, they will trigger some packets later.
-					string inheritance_key = f.packet.requesterID.ToString() + (f.packet.txn.mshr + Config.N).ToString();
-					m_inheritance_dict.Add(inheritance_key, f.packet.intfCycle);
-					// m_inheritance_table.Add(intf_entry);
-					// profile size of the m_inheritance_table
-					Simulator.stats.inherit_table_size.Add(m_inheritance_dict.Count);
-				}
+            if (f.packet.nrOfArrivedFlits == f.packet.nrOfFlits)
+            {
+                // Compute the inteference cycle of a pacekt.
+                f.packet.intfCycle = (int)f.packet.intfCycle + ((int)Simulator.CurrentRound - (int)f.packet.first_flit_arrival - f.packet.nrOfFlits + 1); // assume the flits of will arrive consecutively without interference. In case of control packet, the portion inside of parenthesis is 0.
+                if (f.packet.intfCycle > 0 && f.packet.requesterID != m_coord.ID && f.packet.critical == true && Config.throttle_enable == true && Config.controller == ControllerType.THROTTLE_QOS)
+                {
+                    // only log the delay of the packets whose associated request is not generated by the current node
+                    // therefore, they will trigger some packets later.
+                    string inheritance_key = f.packet.requesterID.ToString() + (f.packet.txn.mshr + Config.N).ToString();
+                    m_inheritance_dict.Add(inheritance_key, f.packet.intfCycle);
+                    // m_inheritance_table.Add(intf_entry);
+                    // profile size of the m_inheritance_table
+                    Simulator.stats.inherit_table_size.Add(m_inheritance_dict.Count);
+                }
 
-				receivePacket(f.packet);
-			}
+                receivePacket(f.packet);
+            }
         }
 
         public void evictFlit(Flit f)
@@ -610,27 +676,30 @@ namespace ICSimulator
                 p, coord, Simulator.CurrentRound, Simulator.CurrentRound - p.creationTime);
 #endif
 
-			// nothing happens for synthetic packet
-			if (p is RetxPacket) {
-				p.retx_count++;
-				p.flow_open = false;
-				p.flow_close = false;
-				queuePacket (((RetxPacket)p).pkt);
-			} else if (p is CachePacket) {
-				CachePacket cp = p as CachePacket;// TODO: DONT CAST, CREATE NEW ONE
-				m_cpu.receivePacket (cp); // by Xiyue: Local ejection
-			} 
+            // nothing happens for synthetic packet
+            if (p is RetxPacket)
+            {
+                p.retx_count++;
+                p.flow_open = false;
+                p.flow_close = false;
+                queuePacket(((RetxPacket)p).pkt);
+            }
+            else if (p is CachePacket)
+            {
+                CachePacket cp = p as CachePacket;// TODO: DONT CAST, CREATE NEW ONE
+                m_cpu.receivePacket(cp); // by Xiyue: Local ejection
+            }
         }
-        
-		public void queuePacket(Packet p) // By Xiyue: called by CmpCache::send_noc() 
+
+        public void queuePacket(Packet p) // By Xiyue: called by CmpCache::send_noc() 
         {
-			if (p.dest.ID == m_coord.ID && p.mc == false) // local traffic: do not go to net (will confuse router) // by Xiyue: just hijack the packet if it only access the shared cache at the local node.
+            if (p.dest.ID == m_coord.ID && p.mc == false) // local traffic: do not go to net (will confuse router) // by Xiyue: just hijack the packet if it only access the shared cache at the local node.
             {
                 m_local.Enqueue(p);  // this is filter out
                 return;
             }
 
-			if (Config.idealnet && p.mc == false) // ideal network: deliver immediately to dest
+            if (Config.idealnet && p.mc == false) // ideal network: deliver immediately to dest
                 Simulator.network.nodes[p.dest.ID].m_local.Enqueue(p);
             else // otherwise: enqueue on injection queue
             {
@@ -649,9 +718,13 @@ namespace ICSimulator
         { get { return (m_cpu != null) ? m_cpu.Finished : false; } }
 
         public bool Livelocked
-		{ get { return (m_cpu != null) ? m_cpu.Livelocked : 
-				(Simulator.CurrentRound - m_last_retired_synth) > Config.livelock_thresh; } 
-		}
+        {
+            get
+            {
+                return (m_cpu != null) ? m_cpu.Livelocked :
+                (Simulator.CurrentRound - m_last_retired_synth) > Config.livelock_thresh;
+            }
+        }
 
         public void visitFlits(Flit.Visitor fv)
         {

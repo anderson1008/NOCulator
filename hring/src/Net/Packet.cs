@@ -119,6 +119,7 @@ namespace ICSimulator
 		public ulong [] creationTimeMC;
 		public int nrMCPacket;
 		public int nrArrivedMCPacket;
+        
 
         public ulong ID { get { return _ID; } }
         private ulong _ID;
@@ -379,6 +380,7 @@ namespace ICSimulator
         public int virtualChannel; // to which virtual channel the packet should go in the next router. 
         public bool sortnet_winner;
 		public int ackCount;
+        public int subNetwork; // To be used for truncated worm
 
         public int currentX;
         public int currentY;

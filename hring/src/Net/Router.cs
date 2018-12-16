@@ -726,11 +726,11 @@ namespace ICSimulator
 		{
 			switch (Config.router.algorithm)
 			{
-				case RouterAlgorithm.BLESS_BYPASS:
-				return new Router_BLESS_BYPASS (c);
+				//case RouterAlgorithm.BLESS_BYPASS:
+				//return new Router_BLESS_BYPASS (c);
 
-        		//case RouterAlgorithm.WORM_BYPASS:
-				//return new RouterWormBypass (c);
+        		case RouterAlgorithm.WORM_BYPASS:
+				return new RouterWormBypass (c);
 
 				default:
 				throw new Exception("invalid routing algorithm " + Config.router.algorithm);

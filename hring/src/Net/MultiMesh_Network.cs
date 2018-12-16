@@ -8,8 +8,7 @@ namespace ICSimulator
 
 	public class MultiMesh : Network
 	{
-		private MultiMeshRouter[] _routers;
-
+		private MultiMeshRouter[] _routers ;      
 		private int ID, ID_neighbor; 
 
 		public MultiMesh (int dimX, int dimY) : base(dimX, dimY) {	}
@@ -20,9 +19,9 @@ namespace ICSimulator
 		{
 			if (Config.sub_net <= 0) 
 				throw new Exception ("No subnetwork is configured (sub_net <= 0)!");
-
 			_routers = new MultiMeshRouter [Config.N];
-			nodes = new Node[Config.N];
+           
+            nodes = new Node[Config.N];
 			links = new List<Link>();
 			cache = new CmpCache();
 

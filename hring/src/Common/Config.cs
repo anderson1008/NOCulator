@@ -226,7 +226,7 @@ namespace ICSimulator
 		public static string RSBuffer_sort            = "fifo";  
 		public static bool   RSBuffer_randomVariant   = false;
 		public static bool isInfiniteRSBuffer       = false; // Overrides size
-		public static int meshEjectTrial = 1;
+		public static int meshEjectTrial = 2;
 
 
 
