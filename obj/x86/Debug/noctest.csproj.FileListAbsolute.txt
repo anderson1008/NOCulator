@@ -1,1 +1,6 @@
 C:\Users\localuser\source\repos\NOCulator\obj\x86\Debug\noctest.csproj.CoreCompileInputs.cache
+C:\Users\localuser\source\repos\NOCulator\obj\x86\Debug\noctest.csprojAssemblyReference.cache
+C:\Users\localuser\source\repos\NOCulator\bin\Debug\ConsoleApplication.exe
+C:\Users\localuser\source\repos\NOCulator\bin\Debug\ConsoleApplication.pdb
+C:\Users\localuser\source\repos\NOCulator\obj\x86\Debug\ConsoleApplication.exe
+C:\Users\localuser\source\repos\NOCulator\obj\x86\Debug\ConsoleApplication.pdb
