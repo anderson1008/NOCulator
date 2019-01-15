@@ -13,28 +13,28 @@ namespace ICSimulator
     public abstract class Router
     {
         public Coord coord;
-		public int subnet;
+        public int subnet;
         public int ID { get { return coord.ID; } }
-		public bool enable;
+        public bool enable;
         public Link[] linkOut = new Link[4];
         public Link[] linkIn = new Link[4];
-		public Link[] bypassLinkIn = new Link[Config.num_bypass];
-		public Link[] bypassLinkOut = new Link[Config.num_bypass];
-		public Link[] LLinkIn;
-		public Link[] LLinkOut;
-		public Link[] GLinkIn;
-		public Link[] GLinkOut;
+        public Link[] bypassLinkIn = new Link[Config.num_bypass];
+        public Link[] bypassLinkOut = new Link[Config.num_bypass];
+        public Link[] LLinkIn;
+        public Link[] LLinkOut;
+        public Link[] GLinkIn;
+        public Link[] GLinkOut;
         public Router[] neigh = new Router[4];
         public int neighbors;
-		public int RouterType = -1;
-		public int starveCount = 0;
+        public int RouterType = -1;
+        public int starveCount = 0;
 
         protected string routerName;
         protected Node m_n;
 
         // Keep track of the current router's average queue length over the
         // last INJ_RATE_WIN cycles
-        public const int AVG_QLEN_WIN=1000;
+        public const int AVG_QLEN_WIN = 1000;
         public float avg_qlen;
         public int[] qlen_win;
         public int qlen_ptr;
@@ -57,7 +57,7 @@ namespace ICSimulator
         {
             coord = myCoord;
 
-	        m_n = Simulator.network.nodes[ID];
+            m_n = Simulator.network.nodes[ID];
             routerName = "Router";
 
             neighbors = 0;
@@ -69,7 +69,7 @@ namespace ICSimulator
             qlen_win = new int[AVG_QLEN_WIN];
         }
         public Router()
-        {	
+        {
             routerName = "Router";
             qlen_win = new int[AVG_QLEN_WIN];
         }
@@ -87,18 +87,18 @@ namespace ICSimulator
         // called from Network
         public void doStep()
         {
-	        statsInput();
-			
+            statsInput();
+
             _doStep();
-	        statsOutput();
+            statsOutput();
         }
 
         protected abstract void _doStep(); // called from Network
-		public virtual void Scalable_doStep() {return;}
+        public virtual void Scalable_doStep() { return; }
         public abstract bool canInjectFlit(Flit f); // called from Processor
         public abstract void InjectFlit(Flit f); // called from Processor
-		public virtual void InjectFlitMultNet(int subnet, Flit f) {} // For multiple networks
-		public virtual bool canInjectFlitMultNet(int subnet, Flit f) { return false; }
+        public virtual void InjectFlitMultNet(int subnet, Flit f) { } // For multiple networks
+        public virtual bool canInjectFlitMultNet(int subnet, Flit f) { return false; }
         public virtual int rank(Flit f1, Flit f2) { return 0; }
 
         // finally, subclasses should call myProcessor.ejectFlit() whenever a flit
@@ -110,74 +110,74 @@ namespace ICSimulator
         // and statsEjectFlit(f) if a flit is ejected.
 
         // Buffered hierarchical ring: check downstream ring/ejection buffer and see if it's available
-		public virtual bool creditAvailable(Flit f) {return false;}
+        public virtual bool creditAvailable(Flit f) { return false; }
         // Whether it wants to into the global ring or loca ring
-		public virtual bool productive(Flit f, int level) {return false;}
+        public virtual bool productive(Flit f, int level) { return false; }
 
         // for flush/retry mechanisms: clear all router state.
         public virtual void flush() { }
 
-		// only work for 4x4 network
-		public static bool [] starved = new bool [Config.N + 16];
-		public static bool [] now_starved = new bool [Config.N + 16];
-		public static Queue<bool[]> starveDelay = new Queue<bool[]>();
-		public static Queue<bool[]> throttleDelay = new Queue<bool[]>();
-		public static bool [] throttle = new bool [Config.N];		
-		public static int n = 0;
-		public static int working = -1;
-		public static void livelockFreedom()
-		{
-			bool [] starvetmp = new bool [Config.N + 16];
-			bool [] throttletmp = new bool [Config.N];
-			for (int i = 0; i < Config.N + 16; i++)
-				starvetmp[i] = starved[i];
-			starveDelay.Enqueue(starvetmp);
-			if (starveDelay.Count > Config.starveDelay)
-				now_starved = starveDelay.Dequeue();
-			//			else
-//				Console.WriteLine("starveDelay.Count:{0}", starveDelay.Count);
+        // only work for 4x4 network
+        public static bool[] starved = new bool[Config.N + 16];
+        public static bool[] now_starved = new bool[Config.N + 16];
+        public static Queue<bool[]> starveDelay = new Queue<bool[]>();
+        public static Queue<bool[]> throttleDelay = new Queue<bool[]>();
+        public static bool[] throttle = new bool[Config.N];
+        public static int n = 0;
+        public static int working = -1;
+        public static void livelockFreedom()
+        {
+            bool[] starvetmp = new bool[Config.N + 16];
+            bool[] throttletmp = new bool[Config.N];
+            for (int i = 0; i < Config.N + 16; i++)
+                starvetmp[i] = starved[i];
+            starveDelay.Enqueue(starvetmp);
+            if (starveDelay.Count > Config.starveDelay)
+                now_starved = starveDelay.Dequeue();
+            //			else
+            //				Console.WriteLine("starveDelay.Count:{0}", starveDelay.Count);
 
-//			Console.WriteLine("n = {0}", n);
-			if (now_starved[n])
-			{				
-/*				Console.WriteLine("cycle: {0}", Simulator.CurrentRound);
-				for (int i = 0; i < 24; i++)
-					Console.WriteLine("starved[{0}] = {1}\tnow_starved[{2}] = {3}", i, starved[i], i, now_starved[i]);
-				Console.WriteLine("\n");
+            //			Console.WriteLine("n = {0}", n);
+            if (now_starved[n])
+            {
+                /*				Console.WriteLine("cycle: {0}", Simulator.CurrentRound);
+                                for (int i = 0; i < 24; i++)
+                                    Console.WriteLine("starved[{0}] = {1}\tnow_starved[{2}] = {3}", i, starved[i], i, now_starved[i]);
+                                Console.WriteLine("\n");
 
-				for (int j = 0; j < starveDelay.Count; j++)
-				{
-					for (int i = 0; i < 24; i++)										
-						Console.WriteLine("now_starved[{0}] = {1}", i, now_starved[i]);
-					now_starved = starveDelay.Dequeue();
-				}
-*/
+                                for (int j = 0; j < starveDelay.Count; j++)
+                                {
+                                    for (int i = 0; i < 24; i++)										
+                                        Console.WriteLine("now_starved[{0}] = {1}", i, now_starved[i]);
+                                    now_starved = starveDelay.Dequeue();
+                                }
+                */
 
-//				Console.ReadKey(true);
-				if (throttletmp[(n+1) % Config.N] == false)
-					Simulator.stats.starveTriggered.Add(1);
-				Simulator.stats.allNodeThrottled.Add(1);
-				for (int i = 0; i < Config.N; i++)
-					if (i != n)
-						throttletmp[i] = true;
-				working = n;				
-			}
-			else 
-				working = -1;
-			if (working == -1)
-			{
-				for (int i = 0; i < Config.N; i++)
-					throttletmp[i] = false;
-				n = (n == Config.N + 8 - 1) ? 0 : n + 1;
-			}
-			throttleDelay.Enqueue(throttletmp);
-			if (throttleDelay.Count > Config.starveDelay)
-				throttle = throttleDelay.Dequeue();
-//			for (int i = 0; i < Config.N; i++)
-//				Console.WriteLine("delay {0}. throttle[{1}] : {2}", Config.starveDelay, i, throttle[i]);
-//			Console.WriteLine("\n");
-//			Console.ReadKey(true);
-		}
+                //				Console.ReadKey(true);
+                if (throttletmp[(n + 1) % Config.N] == false)
+                    Simulator.stats.starveTriggered.Add(1);
+                Simulator.stats.allNodeThrottled.Add(1);
+                for (int i = 0; i < Config.N; i++)
+                    if (i != n)
+                        throttletmp[i] = true;
+                working = n;
+            }
+            else
+                working = -1;
+            if (working == -1)
+            {
+                for (int i = 0; i < Config.N; i++)
+                    throttletmp[i] = false;
+                n = (n == Config.N + 8 - 1) ? 0 : n + 1;
+            }
+            throttleDelay.Enqueue(throttletmp);
+            if (throttleDelay.Count > Config.starveDelay)
+                throttle = throttleDelay.Dequeue();
+            //			for (int i = 0; i < Config.N; i++)
+            //				Console.WriteLine("delay {0}. throttle[{1}] : {2}", Config.starveDelay, i, throttle[i]);
+            //			Console.WriteLine("\n");
+            //			Console.ReadKey(true);
+        }
         /********************************************************
          * ROUTING HELPERS
          ********************************************************/
@@ -188,39 +188,40 @@ namespace ICSimulator
         }
 
 
-		protected bool [] determineDirection (Flit f, Coord current, int[,] mcMask)
-		{
-			bool [] preferredDirVector = new bool [5];
-			for (int i = 0; i < 5; i++)
-				preferredDirVector [i] = false;
+        protected bool[] determineDirection(Flit f, Coord current, int[,] mcMask)
+        {
+            bool[] preferredDirVector = new bool[5];
+            for (int i = 0; i < 5; i++)
+                preferredDirVector[i] = false;
 
-			List <Coord> destList;
-			int nodeID;
+            List<Coord> destList;
+            int nodeID;
 
-			destList = f.destList;
-			foreach (Coord dest in destList) {
-				nodeID = dest.ID;
-				// U-Turn is disabled to avoid livelock
-				if (mcMask [Simulator.DIR_UP, nodeID] == 1 && preferredDirVector [Simulator.DIR_UP] != true && f.inDir != Simulator.DIR_UP)
-					preferredDirVector [Simulator.DIR_UP] = true;
-				if (mcMask [Simulator.DIR_RIGHT, nodeID] == 1 && preferredDirVector [Simulator.DIR_RIGHT] != true && f.inDir != Simulator.DIR_RIGHT)
-					preferredDirVector [Simulator.DIR_RIGHT] = true;
-				if (mcMask [Simulator.DIR_DOWN, nodeID] == 1 && preferredDirVector [Simulator.DIR_DOWN] != true && f.inDir != Simulator.DIR_DOWN)
-					preferredDirVector [Simulator.DIR_DOWN] = true;
-				if (mcMask [Simulator.DIR_LEFT, nodeID] == 1 && preferredDirVector [Simulator.DIR_LEFT] != true && f.inDir != Simulator.DIR_LEFT)
-					preferredDirVector [Simulator.DIR_LEFT] = true;
-				if (nodeID == current.ID)
-					preferredDirVector [Simulator.DIR_LOCAL] = true;
-				//else
-				//	Debug.Assert (false, "ERROR: Direction doesn't exist\n");
+            destList = f.destList;
+            foreach (Coord dest in destList)
+            {
+                nodeID = dest.ID;
+                // U-Turn is disabled to avoid livelock
+                if (mcMask[Simulator.DIR_UP, nodeID] == 1 && preferredDirVector[Simulator.DIR_UP] != true && f.inDir != Simulator.DIR_UP)
+                    preferredDirVector[Simulator.DIR_UP] = true;
+                if (mcMask[Simulator.DIR_RIGHT, nodeID] == 1 && preferredDirVector[Simulator.DIR_RIGHT] != true && f.inDir != Simulator.DIR_RIGHT)
+                    preferredDirVector[Simulator.DIR_RIGHT] = true;
+                if (mcMask[Simulator.DIR_DOWN, nodeID] == 1 && preferredDirVector[Simulator.DIR_DOWN] != true && f.inDir != Simulator.DIR_DOWN)
+                    preferredDirVector[Simulator.DIR_DOWN] = true;
+                if (mcMask[Simulator.DIR_LEFT, nodeID] == 1 && preferredDirVector[Simulator.DIR_LEFT] != true && f.inDir != Simulator.DIR_LEFT)
+                    preferredDirVector[Simulator.DIR_LEFT] = true;
+                if (nodeID == current.ID)
+                    preferredDirVector[Simulator.DIR_LOCAL] = true;
+                //else
+                //	Debug.Assert (false, "ERROR: Direction doesn't exist\n");
 
-			}
-			return preferredDirVector;
-		}
+            }
+            return preferredDirVector;
+        }
 
         protected PreferredDirection determineDirection(Flit f, Coord current)
         {
-            PreferredDirection pd;		
+            PreferredDirection pd;
             pd.xDir = Simulator.DIR_NONE;
             pd.yDir = Simulator.DIR_NONE;
 
@@ -235,44 +236,47 @@ namespace ICSimulator
             pd.xDir = Simulator.DIR_NONE;
             pd.yDir = Simulator.DIR_NONE;
 
-            if(Config.torus) {
-              int x_sdistance = Math.Abs(c.x - coord.x);
-              int x_wdistance = Config.network_nrX - Math.Abs(c.x - coord.x);
-              int y_sdistance = Math.Abs(c.y - coord.y);
-              int y_wdistance = Config.network_nrY - Math.Abs(c.y - coord.y);
-              bool x_dright, y_ddown;
+            if (Config.torus)
+            {
+                int x_sdistance = Math.Abs(c.x - coord.x);
+                int x_wdistance = Config.network_nrX - Math.Abs(c.x - coord.x);
+                int y_sdistance = Math.Abs(c.y - coord.y);
+                int y_wdistance = Config.network_nrY - Math.Abs(c.y - coord.y);
+                bool x_dright, y_ddown;
 
-              x_dright = coord.x < c.x;
-              y_ddown = c.y < coord.y;
+                x_dright = coord.x < c.x;
+                y_ddown = c.y < coord.y;
 
-              if(c.x == coord.x)
-                pd.xDir = Simulator.DIR_NONE;
-              else if(x_sdistance < x_wdistance)
-                pd.xDir = (x_dright) ? Simulator.DIR_RIGHT : Simulator.DIR_LEFT;
-              else
-                pd.xDir = (x_dright) ? Simulator.DIR_LEFT : Simulator.DIR_RIGHT;
+                if (c.x == coord.x)
+                    pd.xDir = Simulator.DIR_NONE;
+                else if (x_sdistance < x_wdistance)
+                    pd.xDir = (x_dright) ? Simulator.DIR_RIGHT : Simulator.DIR_LEFT;
+                else
+                    pd.xDir = (x_dright) ? Simulator.DIR_LEFT : Simulator.DIR_RIGHT;
 
-              if(c.y == coord.y)
-                pd.yDir = Simulator.DIR_NONE;
-              else if(y_sdistance < y_wdistance)
-                pd.yDir = (y_ddown) ? Simulator.DIR_DOWN : Simulator.DIR_UP;
-              else
-                pd.yDir = (y_ddown) ? Simulator.DIR_UP : Simulator.DIR_DOWN;
+                if (c.y == coord.y)
+                    pd.yDir = Simulator.DIR_NONE;
+                else if (y_sdistance < y_wdistance)
+                    pd.yDir = (y_ddown) ? Simulator.DIR_DOWN : Simulator.DIR_UP;
+                else
+                    pd.yDir = (y_ddown) ? Simulator.DIR_UP : Simulator.DIR_DOWN;
 
-            } else {
-              if (c.x > coord.x)
-                  pd.xDir = Simulator.DIR_RIGHT;
-              else if (c.x < coord.x)
-                  pd.xDir = Simulator.DIR_LEFT;
-              else
-                  pd.xDir = Simulator.DIR_NONE;
+            }
+            else
+            {
+                if (c.x > coord.x)
+                    pd.xDir = Simulator.DIR_RIGHT;
+                else if (c.x < coord.x)
+                    pd.xDir = Simulator.DIR_LEFT;
+                else
+                    pd.xDir = Simulator.DIR_NONE;
 
-              if (c.y > coord.y)
-                  pd.yDir = Simulator.DIR_UP;
-              else if (c.y < coord.y)
-                  pd.yDir = Simulator.DIR_DOWN;
-              else
-                  pd.yDir = Simulator.DIR_NONE;
+                if (c.y > coord.y)
+                    pd.yDir = Simulator.DIR_UP;
+                else if (c.y < coord.y)
+                    pd.yDir = Simulator.DIR_DOWN;
+                else
+                    pd.yDir = Simulator.DIR_NONE;
             }
 
             if (Config.dor_only && pd.xDir != Simulator.DIR_NONE)
@@ -316,54 +320,54 @@ namespace ICSimulator
          ********************************************************/
         protected int incomingFlits;
         private void statsInput()
-        {        	
+        {
             //int goldenCount = 0;
             incomingFlits = 0;
-			if (Config.topology == Topology.Mesh)
-				for (int i = 0; i < 4; i++)
-					if (linkIn[i] != null && linkIn[i].Out != null)
-						Simulator.stats.flitsToRouter.Add(1);
-			if (Config.topology == Topology.Mesh_Multi)
-			{
-				for (int i = 0; i < 4; i++)
-					if (linkIn[i] != null && linkIn[i].Out != null)
-						Simulator.stats.flitsToRouter.Add(1);
-				for (int i = 0; i < Config.num_bypass; i++)
-					if (bypassLinkIn[i] != null && bypassLinkIn[i].Out != null)
-						Simulator.stats.flitsToRouter.Add(1);
-			}
+            if (Config.topology == Topology.Mesh)
+                for (int i = 0; i < 4; i++)
+                    if (linkIn[i] != null && linkIn[i].Out != null)
+                        Simulator.stats.flitsToRouter.Add(1);
+            if (Config.topology == Topology.Mesh_Multi)
+            {
+                for (int i = 0; i < 4; i++)
+                    if (linkIn[i] != null && linkIn[i].Out != null)
+                        Simulator.stats.flitsToRouter.Add(1);
+                for (int i = 0; i < Config.num_bypass; i++)
+                    if (bypassLinkIn[i] != null && bypassLinkIn[i].Out != null)
+                        Simulator.stats.flitsToRouter.Add(1);
+            }
 
-			if (Config.topology == Topology.HR_8drop || Config.topology == Topology.MeshOfRings)
-			{
-				if (this is Router_Node)
-					for (int i = 0; i < 2; i++)
-						if (linkIn[i].Out != null)
-							Simulator.stats.flitsToHRnode.Add(1);
-				if (this is Router_Bridge)
-				{
-					if (RouterType == 1)
-					{	
-						for (int i = 0; i < 2; i++)
-							if (LLinkIn[i].Out != null)
-								Simulator.stats.flitsToHRbridge.Add(1);
-						for (int i = 0; i < 4; i++)
-							if (GLinkIn[i].Out != null)
-								Simulator.stats.flitsToHRbridge.Add(1);
-					}
-					else if (RouterType == 2)
-					{
-						for (int i = 0; i < 4; i++)
-							if (LLinkIn[i].Out != null)
-								Simulator.stats.flitsToHRbridge.Add(1);
-						for (int i = 0; i < 8; i++)
-							if (GLinkIn[i].Out != null)
-								Simulator.stats.flitsToHRbridge.Add(1);
-					}
-					else
-						throw new Exception("The RouterType should only be 1 or 2");
-				}
-			}
-  
+            if (Config.topology == Topology.HR_8drop || Config.topology == Topology.MeshOfRings)
+            {
+                if (this is Router_Node)
+                    for (int i = 0; i < 2; i++)
+                        if (linkIn[i].Out != null)
+                            Simulator.stats.flitsToHRnode.Add(1);
+                if (this is Router_Bridge)
+                {
+                    if (RouterType == 1)
+                    {
+                        for (int i = 0; i < 2; i++)
+                            if (LLinkIn[i].Out != null)
+                                Simulator.stats.flitsToHRbridge.Add(1);
+                        for (int i = 0; i < 4; i++)
+                            if (GLinkIn[i].Out != null)
+                                Simulator.stats.flitsToHRbridge.Add(1);
+                    }
+                    else if (RouterType == 2)
+                    {
+                        for (int i = 0; i < 4; i++)
+                            if (LLinkIn[i].Out != null)
+                                Simulator.stats.flitsToHRbridge.Add(1);
+                        for (int i = 0; i < 8; i++)
+                            if (GLinkIn[i].Out != null)
+                                Simulator.stats.flitsToHRbridge.Add(1);
+                    }
+                    else
+                        throw new Exception("The RouterType should only be 1 or 2");
+                }
+            }
+
         }
 
         private void statsOutput()
@@ -371,8 +375,8 @@ namespace ICSimulator
             int deflected = 0;
             int unproductive = 0;
             int traversals = 0;
-			int bypassed = 0;
-            int links = (Config.RingClustered || Config.ScalableRingClustered)? 2:4;
+            int bypassed = 0;
+            int links = (Config.RingClustered || Config.ScalableRingClustered) ? 2 : 4;
             for (int i = 0; i < links; i++)
             {
                 if (linkOut[i] != null && linkOut[i].In != null)
@@ -404,16 +408,16 @@ namespace ICSimulator
                     //linkOut[i].In.deflectTest();
                 }
             }
-			for (int i = 0; i < Config.num_bypass; i++)
-			{
-				if (bypassLinkOut[i] != null && bypassLinkOut[i].In != null)
-				{
-					bypassed++;
-					traversals++;
-				}
-			}
+            for (int i = 0; i < Config.num_bypass; i++)
+            {
+                if (bypassLinkOut[i] != null && bypassLinkOut[i].In != null)
+                {
+                    bypassed++;
+                    traversals++;
+                }
+            }
 
-			Simulator.stats.bypass_flit.Add(bypassed);
+            Simulator.stats.bypass_flit.Add(bypassed);
             Simulator.stats.deflect_flit.Add(deflected);
             Simulator.stats.deflect_flit_byinc[incomingFlits].Add(deflected);
             Simulator.stats.unprod_flit.Add(unproductive);
@@ -427,10 +431,10 @@ namespace ICSimulator
 
             // Compute the average queue length
             qlen_win[qlen_ptr] = qlen;
-            if(++qlen_ptr >= AVG_QLEN_WIN) qlen_ptr=0;
+            if (++qlen_ptr >= AVG_QLEN_WIN) qlen_ptr = 0;
 
             avg_qlen = (float)qlen_count / (float)AVG_QLEN_WIN;
-            
+
 
         }
 
@@ -438,8 +442,8 @@ namespace ICSimulator
         {
             //if (f.packet.src.ID == 3) Console.WriteLine("inject flit: packet {0}, seq {1}",
             //        f.packet.ID, f.flitNr);
-			
-			Simulator.stats.inject_flit.Add(); 
+
+            Simulator.stats.inject_flit.Add();
             if (f.isHeadFlit) Simulator.stats.inject_flit_head.Add();
             if (f.packet != null)
             {
@@ -463,72 +467,72 @@ namespace ICSimulator
         protected void statsEjectFlit(Flit f)
         {
             // per-flit latency stats
-			//Console.Write("Packet {0}.{1} Traverse: ", f.packet.ID, f.flitNr);
-			//foreach (int i in f.roadMap)
-			//	Console.Write (" {0}", i);
-			//Console.WriteLine ();
-			ulong net_latency;
-			ulong total_latency;
-			ulong inj_latency;
-				
-			net_latency = Simulator.CurrentRound - f.injectionTime;
-			total_latency = Simulator.CurrentRound - f.creationTime;
+            //Console.Write("Packet {0}.{1} Traverse: ", f.packet.ID, f.flitNr);
+            //foreach (int i in f.roadMap)
+            //	Console.Write (" {0}", i);
+            //Console.WriteLine ();
+            ulong net_latency;
+            ulong total_latency;
+            ulong inj_latency;
+
+            net_latency = Simulator.CurrentRound - f.injectionTime;
+            total_latency = Simulator.CurrentRound - f.creationTime;
             inj_latency = total_latency - net_latency;
 
-			Simulator.stats.flit_intf.Add(f.intfCycle);
+            Simulator.stats.flit_intf.Add(f.intfCycle);
             Simulator.stats.flit_inj_latency.Add(inj_latency);
             Simulator.stats.flit_net_latency.Add(net_latency);
             Simulator.stats.flit_total_latency.Add(total_latency);
-			Simulator.stats.ejectTrial.Add(f.ejectTrial);
-			Simulator.stats.minNetLatency.Add(f.firstEjectTrial - f.injectionTime);
-			if (f.ejectTrial > 1)
-			{
-				Simulator.stats.destDeflectedNetLatency.Add(net_latency);
-				Simulator.stats.destDeflectedMinLatency.Add(f.firstEjectTrial - f.injectionTime);
-				Simulator.stats.multiEjectTrialFlits.Add();
-			}
-			else if (f.ejectTrial == 1)
-				Simulator.stats.singleEjectTrialFlits.Add();
+            Simulator.stats.ejectTrial.Add(f.ejectTrial);
+            Simulator.stats.minNetLatency.Add(f.firstEjectTrial - f.injectionTime);
+            if (f.ejectTrial > 1)
+            {
+                Simulator.stats.destDeflectedNetLatency.Add(net_latency);
+                Simulator.stats.destDeflectedMinLatency.Add(f.firstEjectTrial - f.injectionTime);
+                Simulator.stats.multiEjectTrialFlits.Add();
+            }
+            else if (f.ejectTrial == 1)
+                Simulator.stats.singleEjectTrialFlits.Add();
 
-			if (Config.N == 16)
-			{
-				if (f.packet.dest.ID / 4 == f.packet.src.ID / 4)
-				{
-					Simulator.stats.flitLocal.Add(1);
-					Simulator.stats.netLatency_local.Add(net_latency);			
-				}
-				else if (Math.Abs(f.packet.dest.ID / 4 - f.packet.src.ID / 4) != 2) // one hop
-				{
-					Simulator.stats.flit1hop.Add(1);
-					Simulator.stats.netLatency_1hop.Add(net_latency);
-					Simulator.stats.timeInBuffer1hop.Add(f.timeSpentInBuffer);
-					Simulator.stats.timeInTheDestRing.Add(f.timeInTheDestRing);
-					Simulator.stats.timeInTheSourceRing.Add(f.timeInTheSourceRing);
-					Simulator.stats.timeInGR1hop.Add(f.timeInGR);
-				}
-				else  // 2 hop 
-				{
-					Simulator.stats.flit2hop.Add(1);
-					Simulator.stats.netLatency_2hop.Add(net_latency);
-					Simulator.stats.timeInBuffer2hop.Add(f.timeSpentInBuffer);
-					Simulator.stats.timeInTheDestRing.Add(f.timeInTheDestRing);
-					Simulator.stats.timeInTheTransitionRing.Add(f.timeInTheTransitionRing);
-					Simulator.stats.timeInGR2hop.Add(f.timeInGR);
-					Simulator.stats.timeInTheSourceRing.Add(f.timeInTheSourceRing);
-				}				
-				Simulator.stats.timeWaitToInject.Add(f.timeWaitToInject);		
-			}
-			if (Config.N == 64)
-			{
-				if (f.packet.dest.ID / 4 == f.packet.src.ID / 4)
-					Simulator.stats.flitLocal.Add(1);
-				else if (f.packet.dest.ID /16 == f.packet.src.ID / 16)
-					Simulator.stats.flitL1Global.Add(1);
-			}
+            if (Config.N == 16)
+            {
+                if (f.packet.dest.ID / 4 == f.packet.src.ID / 4)
+                {
+                    Simulator.stats.flitLocal.Add(1);
+                    Simulator.stats.netLatency_local.Add(net_latency);
+                }
+                else if (Math.Abs(f.packet.dest.ID / 4 - f.packet.src.ID / 4) != 2) // one hop
+                {
+                    Simulator.stats.flit1hop.Add(1);
+                    Simulator.stats.netLatency_1hop.Add(net_latency);
+                    Simulator.stats.timeInBuffer1hop.Add(f.timeSpentInBuffer);
+                    Simulator.stats.timeInTheDestRing.Add(f.timeInTheDestRing);
+                    Simulator.stats.timeInTheSourceRing.Add(f.timeInTheSourceRing);
+                    Simulator.stats.timeInGR1hop.Add(f.timeInGR);
+                }
+                else  // 2 hop 
+                {
+                    Simulator.stats.flit2hop.Add(1);
+                    Simulator.stats.netLatency_2hop.Add(net_latency);
+                    Simulator.stats.timeInBuffer2hop.Add(f.timeSpentInBuffer);
+                    Simulator.stats.timeInTheDestRing.Add(f.timeInTheDestRing);
+                    Simulator.stats.timeInTheTransitionRing.Add(f.timeInTheTransitionRing);
+                    Simulator.stats.timeInGR2hop.Add(f.timeInGR);
+                    Simulator.stats.timeInTheSourceRing.Add(f.timeInTheSourceRing);
+                }
+                Simulator.stats.timeWaitToInject.Add(f.timeWaitToInject);
+            }
+            if (Config.N == 64)
+            {
+                if (f.packet.dest.ID / 4 == f.packet.src.ID / 4)
+                    Simulator.stats.flitLocal.Add(1);
+                else if (f.packet.dest.ID / 16 == f.packet.src.ID / 16)
+                    Simulator.stats.flitL1Global.Add(1);
+            }
 
 
-			Simulator.stats.eject_flit.Add(f.ackCount);
-			Simulator.stats.eject_flit_bydest[f.packet.dest.ID].Add(f.ackCount);
+            Simulator.stats.eject_flit.Add(f.ackCount);
+            Simulator.stats.eject_flit_bydest[f.packet.dest.ID].Add(f.ackCount);
 
             int minpath = Math.Abs(f.packet.dest.x - f.packet.src.x) + Math.Abs(f.packet.dest.y - f.packet.src.y);
             Simulator.stats.minpath.Add(minpath);
@@ -537,56 +541,65 @@ namespace ICSimulator
             //f.dumpDeflections();
             Simulator.stats.deflect_perdist[f.distance].Add(f.nrOfDeflections);
             //if(f.nrOfDeflections!=0)
-//                Simulator.stats.deflect_perflit_byreq[f.packet.requesterID].Add(f.nrOfDeflections);
+            //                Simulator.stats.deflect_perflit_byreq[f.packet.requesterID].Add(f.nrOfDeflections);
         }
 
         public virtual void statsEjectPacket(Packet p)
         {
-			ScoreBoard.UnregPacket (ID, p.ID); // TODO: merged packet may cause issue.
+            ScoreBoard.UnregPacket(ID, p.ID); // TODO: merged packet may cause issue.
 
-			if (!p.mc && !p.gather) {
-				if (p.nrOfFlits == Config.router.addrPacketSize)
-					Simulator.stats.ctrl_pkt.Add ();
-				else if (p.nrOfFlits == Config.router.dataPacketSize)
-					Simulator.stats.data_pkt.Add ();
-				else
-					throw new Exception ("packet size is undefined, yet received!");
-				
-			} else if (p.gather) {
-				Simulator.stats.ctrl_pkt.Add ();
-			}
-			else {
+            if (!p.mc && !p.gather)
+            {
+                if (p.nrOfFlits == Config.router.addrPacketSize)
+                    Simulator.stats.ctrl_pkt.Add();
+                else if (p.nrOfFlits == Config.router.dataPacketSize)
+                    Simulator.stats.data_pkt.Add();
+                else
+                    throw new Exception("packet size is undefined, yet received!");
 
-				if (p.nrOfFlits == 2*Config.router.addrPacketSize)
-					Simulator.stats.ctrl_pkt.Add ();
-				else if (p.nrOfFlits == 2*Config.router.dataPacketSize)
-					Simulator.stats.data_pkt.Add ();
-				else
-					throw new Exception ("packet size is undefined, yet received!");
-			}
+            }
+            else if (p.gather)
+            {
+                Simulator.stats.ctrl_pkt.Add();
+            }
+            else
+            {
 
-			ulong net_latency;
-			ulong total_latency;
-			if (p.mc) {
-				if (p.creationTimeMC [ID] == p.creationTime) { // if true, this is a master copy, not replciated. 
-					net_latency = Simulator.CurrentRound - p.injectionTime;
-					total_latency = Simulator.CurrentRound - p.creationTime;
-				} else {
-					net_latency = Simulator.CurrentRound - p.creationTimeMC[ID];
-					total_latency = net_latency; // for replicated packet, injection_latency = 0;
-				}
-			}
+                if (p.nrOfFlits == 2 * Config.router.addrPacketSize)
+                    Simulator.stats.ctrl_pkt.Add();
+                else if (p.nrOfFlits == 2 * Config.router.dataPacketSize)
+                    Simulator.stats.data_pkt.Add();
+                else
+                    throw new Exception("packet size is undefined, yet received!");
+            }
 
-			else {
-				net_latency = Simulator.CurrentRound - p.injectionTime;
-				total_latency = Simulator.CurrentRound - p.creationTime;
-			}
+            ulong net_latency;
+            ulong total_latency;
+            if (p.mc)
+            {
+                if (p.creationTimeMC[ID] == p.creationTime)
+                { // if true, this is a master copy, not replciated. 
+                    net_latency = Simulator.CurrentRound - p.injectionTime;
+                    total_latency = Simulator.CurrentRound - p.creationTime;
+                }
+                else
+                {
+                    net_latency = Simulator.CurrentRound - p.creationTimeMC[ID];
+                    total_latency = net_latency; // for replicated packet, injection_latency = 0;
+                }
+            }
 
-			bool stop = false;
-			if (total_latency > 120)
-				stop = true;
+            else
+            {
+                net_latency = Simulator.CurrentRound - p.injectionTime;
+                total_latency = Simulator.CurrentRound - p.creationTime;
+            }
 
-			Simulator.stats.packet_intf.Add(p.intfCycle);
+            bool stop = false;
+            if (total_latency > 120)
+                stop = true;
+
+            Simulator.stats.packet_intf.Add(p.intfCycle);
             Simulator.stats.net_latency.Add(net_latency);
             Simulator.stats.total_latency.Add(total_latency);
             Simulator.stats.net_latency_bysrc[p.src.ID].Add(net_latency);
@@ -637,11 +650,14 @@ namespace ICSimulator
             Simulator.stats.starve_flit.Add();
             Simulator.stats.starve_flit_bysrc[f.packet.src.ID].Add();
 
-            if (last_starve == Simulator.CurrentRound - 1) {
-              starve_interval++;
-            } else {
-              Simulator.stats.starve_interval_bysrc[f.packet.src.ID].Add(starve_interval);
-              starve_interval = 0;
+            if (last_starve == Simulator.CurrentRound - 1)
+            {
+                starve_interval++;
+            }
+            else
+            {
+                Simulator.stats.starve_interval_bysrc[f.packet.src.ID].Add(starve_interval);
+                starve_interval = 0;
             }
 
             last_starve = Simulator.CurrentRound;
@@ -671,70 +687,82 @@ namespace ICSimulator
         }
     }
 
-	public class MultiMeshRouter : Router
-	{
-		public Router[] subrouter = new Router[Config.sub_net];
+    public class MultiMeshRouter : Router
+    {
+        //public Router[] subrouter = new Router[Config.sub_net];
 
-		protected override void _doStep ()
-		{
-			for (int i = 0; i < Config.sub_net; i++) 
-				subrouter [i].doStep ();
-		}
+        public RouterWormBypass[] subrouter = new RouterWormBypass[Config.sub_net];
 
-		public override bool canInjectFlit (Flit f)
-		{
-			// just to fool the complier
-			return false;
-		}
+        protected override void _doStep()
+        {
+            for (int i = 0; i < Config.sub_net; i++)
+                subrouter[i].doStep();
+        }
 
-		public override void InjectFlit (Flit f){
-			// just to fool the complier
-		}
+        public override bool canInjectFlit(Flit f)
+        {
+            // just to fool the complier
+            return false;
+        }
 
-		// only determine if can or cannot inject
-		public bool canInjectFlit (int subnet, Flit f)
-		{
-			return subrouter [subnet].canInjectFlit (f);
-		}
-			
-		public override bool canInjectFlitMultNet (int subnet, Flit f)
-		{
-			return canInjectFlit (subnet, f);
-		}
+        public override void InjectFlit(Flit f)
+        {
+            // just to fool the complier
+        }
 
-		public override void InjectFlitMultNet (int subnet, Flit f)
-		{	
-			subrouter [subnet].InjectFlit (f);
+        // only determine if can or cannot inject
+        public bool canInjectFlit(int subnet, Flit f)
+        {
+            return subrouter[subnet].canInjectFlit(f);
+        }
 
-			#if PKTDUMP
-			//	Console.WriteLine("PKT {0}-{1}/{2} aclaim the injection slot at subnet {3} router {4} at time {5}", 
-			//                  f.packet.ID, f.flitNr+1, f.packet.nrOfFlits, selected, coord, Simulator.CurrentRound);
-			#endif
+        public override bool canInjectFlitMultNet(int subnet, Flit f)
+        {
+            return canInjectFlit(subnet, f);
+        }
 
-		}
-			
-		public MultiMeshRouter (Coord c):base(c)
-		{
-			for (int i=0; i<Config.sub_net; i++) 
-			{
-				subrouter [i] = makeSubRouters (c);
-				subrouter [i].subnet = i;
-			}
-		}
+        public override void InjectFlitMultNet(int subnet, Flit f)
+        {
+            subrouter[subnet].InjectFlit(f);
 
-		Router makeSubRouters (Coord c)
-		{
-			switch (Config.router.algorithm)
-			{
-				//case RouterAlgorithm.BLESS_BYPASS:
-				//return new Router_BLESS_BYPASS (c);
+#if PKTDUMP
+				Console.WriteLine("PKT {0}-{1}/{2} aclaim the injection slot at subnet {3} router {4} at time {5}", 
+			                  f.packet.ID, f.flitNr+1, f.packet.nrOfFlits, selected, coord, Simulator.CurrentRound);
+#endif
 
-        		case RouterAlgorithm.WORM_BYPASS:
-				return new RouterWormBypass (c);
+        }
 
-				default:
-				throw new Exception("invalid routing algorithm " + Config.router.algorithm);
-			}
-		}
-	}
+        public MultiMeshRouter(Coord c) : base(c)
+        {
+            for (int i = 0; i < Config.sub_net; i++)
+            {
+                subrouter[i] = makeSubRouters(c);
+                subrouter[i].subnet = i;
+
+                // for (int j=0; j< Config.sub_net; j++)
+                // {
+                // System.Console.WriteLine(subrouter);
+                //(RouterWormBypass)subrouter[i].setHeaderTable();
+                //}
+
+            }
+            // Console.WriteLine(ID+" Sub_net="+Config.sub_net);
+        }
+
+        // makeSubRouters (Coord c)
+        RouterWormBypass makeSubRouters(Coord c)
+        {
+            switch (Config.router.algorithm)
+            {
+                //case RouterAlgorithm.BLESS_BYPASS:
+                //return new Router_BLESS_BYPASS (c);
+
+                case RouterAlgorithm.WORM_BYPASS:
+                    return new RouterWormBypass(c);
+
+                default:
+                    throw new Exception("invalid routing algorithm " + Config.router.algorithm);
+            }
+        }
+    }
 }

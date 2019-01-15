@@ -22,7 +22,7 @@ namespace ICSimulator
         public const int DIR_RIGHT = 1;
         public const int DIR_DOWN = 2;
         public const int DIR_LEFT = 3;
-		public const int DIR_LOCAL = 4;
+        public const int DIR_LOCAL = 4;
         public const int DIR_BLOCKED = -1;
         public const int DIR_NONE = -99;
 
@@ -50,10 +50,10 @@ namespace ICSimulator
         }
 
         public static void Init(string[] args)
-         {
+        {
             Config config = new Config();
 
-			// Read in the configuration
+            // Read in the configuration
             config.read(args);
 
             rand = new Rand(Config.rand_seed);
@@ -62,40 +62,41 @@ namespace ICSimulator
 
             controller = Controller.construct();
 
-			ScoreBoard.createScoreBoard ();
+            ScoreBoard.createScoreBoard();
 
-			if (Config.ScalableRingClustered)
-				network = new RC_Network (Config.network_nrX, Config.network_nrY);
-			else if (Config.topology == Topology.Mesh_Multi)
-				network = new MultiMesh (Config.network_nrX, Config.network_nrY);
-			else if (Config.topology == Topology.HR_16drop)
-				network = new HR_16drop_Network(Config.network_nrX, Config.network_nrY);				
-			else if (Config.topology == Topology.HR_4drop)
-				network = new HR_4drop_Network(Config.network_nrX, Config.network_nrY);	
-			else if (Config.topology == Topology.HR_8drop)
-				network = new HR_8drop_Network(Config.network_nrX, Config.network_nrY);
-			else if (Config.topology == Topology.HR_8_16drop)
-				network = new HR_8_16drop_Network(Config.network_nrX, Config.network_nrY);
-			else if (Config.topology == Topology.HR_8_8drop)
-				network = new HR_8_8drop_Network(Config.network_nrX, Config.network_nrY);
-			else if (Config.topology == Topology.HR_16_8drop)				
-				network = new HR_16_8drop_Network(Config.network_nrX, Config.network_nrY);
-			else if (Config.topology == Topology.HR_32_8drop)				
-				network = new HR_32_8drop_Network(Config.network_nrX, Config.network_nrY);
-			else if (Config.topology == Topology.HR_buffered)
-				network = new HR_buffered_Network(Config.network_nrX, Config.network_nrY);
-			else if (Config.topology == Topology.SingleRing)
-				network = new SingleRing_Network(Config.network_nrX, Config.network_nrY);
-			else if (Config.topology == Topology.MeshOfRings)
-				network = new MeshOfRings_Network(Config.network_nrX, Config.network_nrY);
+            if (Config.ScalableRingClustered)
+                network = new RC_Network(Config.network_nrX, Config.network_nrY);
+            else if (Config.topology == Topology.Mesh_Multi)
+                network = new MultiMesh(Config.network_nrX, Config.network_nrY);
+            else if (Config.topology == Topology.HR_16drop)
+                network = new HR_16drop_Network(Config.network_nrX, Config.network_nrY);
+            else if (Config.topology == Topology.HR_4drop)
+                network = new HR_4drop_Network(Config.network_nrX, Config.network_nrY);
+            else if (Config.topology == Topology.HR_8drop)
+                network = new HR_8drop_Network(Config.network_nrX, Config.network_nrY);
+            else if (Config.topology == Topology.HR_8_16drop)
+                network = new HR_8_16drop_Network(Config.network_nrX, Config.network_nrY);
+            else if (Config.topology == Topology.HR_8_8drop)
+                network = new HR_8_8drop_Network(Config.network_nrX, Config.network_nrY);
+            else if (Config.topology == Topology.HR_16_8drop)
+                network = new HR_16_8drop_Network(Config.network_nrX, Config.network_nrY);
+            else if (Config.topology == Topology.HR_32_8drop)
+                network = new HR_32_8drop_Network(Config.network_nrX, Config.network_nrY);
+            else if (Config.topology == Topology.HR_buffered)
+                network = new HR_buffered_Network(Config.network_nrX, Config.network_nrY);
+            else if (Config.topology == Topology.SingleRing)
+                network = new SingleRing_Network(Config.network_nrX, Config.network_nrY);
+            else if (Config.topology == Topology.MeshOfRings)
+                network = new MeshOfRings_Network(Config.network_nrX, Config.network_nrY);
             else if (Config.topology == Topology.BufRingNetwork)
                 network = new BufRingNetwork(Config.network_nrX, Config.network_nrY);
             else if (Config.topology == Topology.BufRingNetworkMulti)
                 network = new BufRingMultiNetwork(Config.network_nrX, Config.network_nrY);
-	    	else
-				network = new Network(Config.network_nrX, Config.network_nrY);
+            else
+                network = new Network(Config.network_nrX, Config.network_nrY);
 
-	      	network.setup();
+            System.Console.WriteLine(network);
+            network.setup();
 
             Warming = true;
         }
@@ -111,22 +112,22 @@ namespace ICSimulator
             Simulator.stats.Finish();
             using (TextWriter tw = new StreamWriter(Config.output))
             {
-				Simulator.stats.Report(tw);
-				tw.WriteLine("Overall dump begins.");
-				Simulator.stats.DumpJSON(tw);
+                Simulator.stats.Report(tw);
+                tw.WriteLine("Overall dump begins.");
+                Simulator.stats.DumpJSON(tw);
             }
             if (Config.matlab != "")
-            using (TextWriter tw = new StreamWriter(Config.matlab))
-            {
-                Simulator.stats.DumpMATLAB(tw);
-            }
+                using (TextWriter tw = new StreamWriter(Config.matlab))
+                {
+                    Simulator.stats.DumpMATLAB(tw);
+                }
 
             Simulator.network.close();
         }
 
         public static void RunSimulationRun()
         {
-           if (File.Exists(Config.output))
+            if (File.Exists(Config.output))
             {
                 Console.WriteLine("Output file {0} exists; exiting.", Config.output);
                 Environment.Exit(0);
@@ -145,7 +146,7 @@ namespace ICSimulator
             // handle pending deferred-callbacks first
             while (!m_deferQueue.Empty && m_deferQueue.MinPrio <= Simulator.CurrentRound)  //by Xiyue: MinPrio here is the time stamp of the scheduled event
             {
-                m_deferQueue.Dequeue() (); // dequeue and call the callback
+                m_deferQueue.Dequeue()(); // dequeue and call the callback
             }
             if (CurrentRound == (ulong)Config.warmup_cyc) // By Xiyue: CurrentRound is the main clock.
             {
@@ -168,19 +169,23 @@ namespace ICSimulator
 
             network.doStep();
             if (Config.simpleLivelock)
-	    		Router.livelockFreedom();
+                Router.livelockFreedom();
             controller.doStep();
 
-			if (!network.isFinished () && (Config.ignore_livelock || !network.isLivelocked ())) {
-				
-				return true;
-			} else {
-				// dump the flits which cause livelock
-				if (!Config.ignore_livelock && network.isLivelocked ()) {
-					ScoreBoard.ScoreBoardDump ();
-				}
-				return false;
-			}
+            if (!network.isFinished() && (Config.ignore_livelock || !network.isLivelocked()))
+            {
+
+                return true;
+            }
+            else
+            {
+                // dump the flits which cause livelock
+                if (!Config.ignore_livelock && network.isLivelocked())
+                {
+                    ScoreBoard.ScoreBoardDump();
+                }
+                return false;
+            }
         }
 
         public static void RunSimulation()
@@ -194,12 +199,12 @@ namespace ICSimulator
         {
             if (!Config.progress) return;
 
-			Console.Out.WriteLine(Environment.NewLine + "cycle {0}: {1} flits injected, {2} flits arrived, avg total latency {3}",
+            Console.Out.WriteLine(Environment.NewLine + "cycle {0}: {1} flits injected, {2} flits arrived, avg total latency {3}",
                                   CurrentRound,
                                   Simulator.stats.inject_flit.Count,
                                   Simulator.stats.eject_flit.Count,
                                   Simulator.stats.total_latency.Avg);
-            Console.WriteLine("TimeStamp = {0}",DateTime.Now);
+            Console.WriteLine("TimeStamp = {0}", DateTime.Now);
         }
 
         static void WarmingStats()
@@ -223,7 +228,7 @@ namespace ICSimulator
             Simulator.stats.l2_warmblocks.Add((ulong)l2_warmblocks);
             Simulator.stats.l2_totblocks.Add((ulong)l2_totblocks);
             */
-       }
+        }
 
         public static void Defer(Simulator.Ready cb, ulong cyc) // by Xiyue: can be considered as a scheduler
         {
@@ -245,7 +250,7 @@ namespace ICSimulator
             int x1, x2, y1, y2;
             Coord.getXYfromID(node1, out x1, out y1);
             Coord.getXYfromID(node2, out x2, out y2);
-            return (ulong)(Math.Abs(x1-x2) + Math.Abs(y1-y2));
+            return (ulong)(Math.Abs(x1 - x2) + Math.Abs(y1 - y2));
         }
 
         // helpers

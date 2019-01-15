@@ -50,7 +50,7 @@ namespace ICSimulator
 
 		public static void ScoreBoardDump () {
 			for (int i = 0; i < Config.N; i++) {
-				Console.WriteLine ("Unfinished Flit @ Node {0}", i);
+				Console.WriteLine ("Unfinished Flit @ Node {0} Count {1}", i, inFlightFlit[i].Count);
 
 				inFlightFlit[i].ForEach(delegate (ulong pktID) {
 					Console.Write ("{0}  ", pktID);

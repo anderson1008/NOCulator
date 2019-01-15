@@ -1,4 +1,6 @@
-﻿#define DEBUG
+﻿//#define DEBUG
+//#define PKTDUMP
+//#define CLEARUP
 using System;
 using System.Collections.Generic;
 using System.Collections;
@@ -19,7 +21,7 @@ using System.Text;
 
 namespace ICSimulator
 {
-    public class RouterWormBypass : Router 
+    public class RouterWormBypass : Router
     {
         Flit[][] flit_buf, header_buf; // first dimension is channel index; second dimension is the pipeline
         Flit[] tempHeader;
@@ -67,7 +69,7 @@ namespace ICSimulator
             for (int ej = 0; ej < Config.meshEjectTrial; ej++)
             {
                 ejector[ej] = DIR.INV;
-                            }
+            }
             for (int stg = 0; stg < STAGE_CNT; stg++)
             {
                 flit_buf[stg] = new Flit[CHNL_CNT];
@@ -101,37 +103,38 @@ namespace ICSimulator
             }
         }
 
+
         /////////////////////////////////////////////////////////////////
         // Define class method 
         /////////////////////////////////////////////////////////////////
 
         /*
-		doStep(): wrapper function glues all operations in a router together
+        doStep(): wrapper function glues all operations in a router together
 
-		pipeline implemetation:
+        pipeline implemetation:
 
-		1) Pipeline stage 0 operation using flit_buf[0,*]
-		2) Pipeline stage 1 operation using flit_buf[1,*]
-		3) linkOut[*] = flit_buf[1,*];  
-		4) flit_buf[1,*] = flit_buf[0,*];
-		5) flit_buf[0,*] = linkIn[*];
+        1) Pipeline stage 0 operation using flit_buf[0,*]
+        2) Pipeline stage 1 operation using flit_buf[1,*]
+        3) linkOut[*] = flit_buf[1,*];  
+        4) flit_buf[1,*] = flit_buf[0,*];
+        5) flit_buf[0,*] = linkIn[*];
 
-		*/
+        */
 
         protected override void _doStep()
         {
 
-            //clear();
+            clearTempHeader();
 
             buffer_in();
             //////// Pipeline 1 start /////////// 
 
             /*
-			Store header in the following case:
-			1) head flit arrives
-			2) trucation 
-			3) injection
-			*/
+            Store header in the following case:
+            1) head flit arrives
+            2) trucation 
+            3) injection
+            */
             setHeaderTable();
             ejection();
             copyHeaderToTemp();
@@ -142,8 +145,8 @@ namespace ICSimulator
              * 2. For truncating a local injection, it moves all flits to NI and header and flit_buf[0][LOCAL] are set to null
              * 3. For truncating other, it downloads the header to NI and marks one of the ejector as busy
              */
-            
-            truncateWorm();            
+
+            truncateWorm();
             port_alloc();
             injectLocal();
             buffer_out();
@@ -158,33 +161,49 @@ namespace ICSimulator
 
         /*
   Design option 1: 
-  	We can sort the flit. So the allocation can be done in order of sorted flit. But mapping the sorted flit to the header table entry is needed.
+    We can sort the flit. So the allocation can be done in order of sorted flit. But mapping the sorted flit to the header table entry is needed.
 
   Design option 2:
     We can sort {chnl_idx, desired_port_vector}. So no mapping between header table and flit is needed. However, we need to select the correponding flit during allocation. This option seems to match the hw design.
 
-  		Select option 1 as it is easier.
+        Select option 1 as it is easier.
 
-		*/
-
-        void clear()
+        */
+        protected void Compare(Flit f1, Flit f2)
         {
-            dbg_idx = 0;
+            if (f1.packet.dest.ID == f2.packet.dest.ID &&
+                f1.packet.src.ID == f2.packet.src.ID &&
+                f1.packet.creationTime == f2.packet.creationTime &&
+                f1.packet.nrOfFlits == f2.packet.nrOfFlits &&
+                f1.inDir == f2.inDir &&
+                f1.prefDir == f2.prefDir)
+            {
+                return;
+            }
+            else
+            {
+                //Console.WriteLine("Cloned flits are different");
+                throw new Exception("Cloned flits are different");
+            }
+
+        }
+        void clearTempHeader()
+        {
+            //dbg_idx = 0;
             for (int dir = 0; dir < CHNL_CNT; dir++)
             {
-                flit_buf[0][dir] = null;
-                flit_buf[1][dir] = null;
+                tempHeader[dir] = null;
             }
 
         }
 
 
         /*
-		Buffer write (Order must be enforced)
-		linkOut[*].In = flit_buf[1,*];  
-		flit_buf[1,*] = flit_buf[0,*];
-		flit_buf[0,*] = linkIn[*].Out;
-		*/
+        Buffer write (Order must be enforced)
+        linkOut[*].In = flit_buf[1,*];  
+        flit_buf[1,*] = flit_buf[0,*];
+        flit_buf[0,*] = linkIn[*].Out;
+        */
 
         // Put the flit in the pipeline buffer onto the link
         void buffer_out()
@@ -207,9 +226,9 @@ namespace ICSimulator
 
                     linkOut[dir].In = flit_buf[1][dir];
 #if DEBUG
-                    Console.WriteLine("Router {0} : Buffer Outport {1} {2} @ {3}:from INPort {4} for Destination->{5}::{6} subNetwork {7} ",
+                    Console.WriteLine("Router {0}/{8} : Buffer Outport {1} {2} @ {3}:from INPort {4} for Destination->{5}::{6} subNetwork {7} ",
                         coord.ID, Simulator.network.portMap(dir), linkOut[dir].In.ToString(), Simulator.CurrentRound, linkOut[dir].In.inDir,
-                        linkOut[dir].In.dest, linkOut[dir].In.packet.nrOfFlits, linkOut[dir].In.subNetwork);
+                        linkOut[dir].In.dest, linkOut[dir].In.packet.nrOfFlits, linkOut[dir].In.subNetwork, subnet);
 #endif
 
                 }
@@ -217,8 +236,18 @@ namespace ICSimulator
                 {
                     if (bypassLinkOut[dir - 4].In != null)
                         throw new Exception("Bypass port is not idle");
-                    flit_buf[1][dir].subNetwork = ~flit_buf[1][dir].subNetwork; // invert the subNetwork info
+                    if (flit_buf[1][dir].subNetwork == 0)
+                        flit_buf[1][dir].subNetwork = 1;
+                    else
+                        flit_buf[1][dir].subNetwork = 0;
+
                     bypassLinkOut[dir - 4].In = flit_buf[1][dir];
+#if DEBUG
+                    Console.WriteLine("Router {0}/{8} : Buffer Outport {1} {2} @ {3}:from INPort {4} for Destination->{5}::{6} subNetwork {7} ",
+                        coord.ID, Simulator.network.portMap(dir), bypassLinkOut[dir - 4].In.ToString(), Simulator.CurrentRound, bypassLinkOut[dir - 4].In.inDir,
+                        bypassLinkOut[dir - 4].In.dest, bypassLinkOut[dir - 4].In.packet.nrOfFlits, bypassLinkOut[dir - 4].In.subNetwork, subnet);
+#endif
+
                 }
 
                 flit_buf[1][dir] = null;
@@ -235,19 +264,23 @@ namespace ICSimulator
 
                 if (from < 4) // if valid
                 {
-                    if (header_buf[0][from] != null && flit_buf[0][from]!=null)
+                    if (header_buf[0][from] != null && flit_buf[0][from] != null)
                     {
                         if (flit_buf[0][from].isHeadFlit)
                         {
-                            if(dir <4) // Only four neighbors exist, BYPASS router has the same coordinate
+                            if (dir < 4) // Only four neighbors exist, BYPASS router has the same coordinate
                                 routeComputeNext(ref flit_buf[0][from], (DIR)dir);
+                            else
+                                routeCompute(ref flit_buf[0][from]);
                         }
                         flit_buf[1][dir] = flit_buf[0][from]; // move the flit from-port buffer to to-port buffer
                         if (flit_buf[1][dir].isTailFlit)
                         {
-                            port_alloc_buf[dir] = DIR.INV; // if tail flit, reset port allocation 
+                            port_alloc_buf[dir] = DIR.INV; // if tail flit, reset port allocation
+                            header_buf[0][from] = null;
                         }
                         flit_buf[0][from] = null;
+
                     }
                 }
                 else if (from == (int)DIR.BYPASS)
@@ -256,15 +289,19 @@ namespace ICSimulator
                     {
                         if (flit_buf[0][from].isHeadFlit)
                         {
-                            if(dir <4) // Only four neighbors exist, BYPASS router has the same coordinate
+                            if (dir < 4) // Only four neighbors exist, BYPASS router has the same coordinate
                                 routeComputeNext(ref flit_buf[0][from], (DIR)dir);
+                            else
+                                routeCompute(ref flit_buf[0][from]);
                         }
                         flit_buf[1][dir] = flit_buf[0][from]; // move the flit from-port buffer to to-port buffer
                         if (flit_buf[1][dir].isTailFlit)
                         {
-                            port_alloc_buf[dir] = DIR.INV; // if tail flit, reset port allocation 
+                            port_alloc_buf[dir] = DIR.INV; // if tail flit, reset port allocation
+                            header_buf[0][from] = null;
                         }
                         flit_buf[0][from] = null;
+
                     }
                 }
                 // we are not worried about the header of second stage yet
@@ -283,9 +320,9 @@ namespace ICSimulator
                 if (linkIn[dir].Out != null)
                 {
 #if DEBUG
-                    Console.WriteLine("Router {0} : Buffer Inport {1} {2} @ {3} : Subnet {4} prefDir {5}",
-                        coord.ID, Simulator.network.portMap(dir), linkIn[dir].Out.ToString(), Simulator.CurrentRound,
-                        linkIn[dir].Out.subNetwork, linkIn[dir].Out.prefDir);
+                    Console.WriteLine("Router {0}/{8} : Buffer Inport {1} {2} @ {3}:from INPort {4} for Destination->{5}::{6} subNetwork {7} FlitNr = {9} isHead {10}",
+                         coord.ID, Simulator.network.portMap(dir), linkIn[dir].Out.ToString(), Simulator.CurrentRound, linkIn[dir].Out.inDir,
+                         linkIn[dir].Out.dest, linkIn[dir].Out.packet.nrOfFlits, linkIn[dir].Out.subNetwork, subnet, linkIn[dir].Out.flitNr, linkIn[dir].Out.isHeadFlit);
 #endif
                     flit_buf[0][dir] = linkIn[dir].Out;
                     flit_buf[0][dir].inDir = dir;
@@ -299,7 +336,10 @@ namespace ICSimulator
                 if (bypassLinkIn[bp].Out != null)
                 {
 #if DEBUG
-                    Console.WriteLine("Router {0} : Bypass Inport {1} {2} @ {3}", coord.ID, bp, bypassLinkIn[bp].Out.ToString(), Simulator.CurrentRound);
+                    Console.WriteLine("Router {0}/{8} : Buffer Inport {1} {2} @ {3}:from INPort {4} for Destination->{5}::{6} subNetwork {7} FlitNr = {9} isHead {10}",
+                        coord.ID, Simulator.network.portMap(4), bypassLinkIn[bp].Out.ToString(), Simulator.CurrentRound, bypassLinkIn[bp].Out.inDir,
+                        bypassLinkIn[bp].Out.dest, bypassLinkIn[bp].Out.packet.nrOfFlits, bypassLinkIn[bp].Out.subNetwork, subnet, bypassLinkIn[bp].Out.flitNr, bypassLinkIn[bp].Out.isHeadFlit);
+
 #endif
                     flit_buf[0][4 + bp] = bypassLinkIn[bp].Out;
                     flit_buf[0][4 + bp].inDir = (int)DIR.BYPASS;
@@ -381,29 +421,26 @@ namespace ICSimulator
             bool ret = false;
             // ret = ((num_incoming - num_eject + num_head_reinj) < CHNL_CNT - 1) ? true : false;
             // for current ongoing worm
-            ret = m_injectSlot == null;
+            ret = (m_injectSlot == null);
             return ret;
         }
         public bool canInjectLocal()
         {
-            bool ret = false;
-
-            if (header_buf[0][(int)DIR.LOCAL] != null)
+            bool ret = true;
+            //Check whether truncation happens to LOCAL injection
+            if (header_buf[0][(int)DIR.LOCAL] != null &&
+                isOutPortEnable((int)header_buf[0][(int)DIR.LOCAL].prefDir) &&
+                port_alloc_buf[(int)header_buf[0][(int)DIR.LOCAL].prefDir] == DIR.LOCAL &&
+                flit_buf[1][(int)header_buf[0][(int)DIR.LOCAL].prefDir] != null)
             {
-                if (header_buf[0][(int)DIR.LOCAL].prefDir != (int)DIR.BYPASS)
-                    ret = (linkOut[header_buf[0][(int)DIR.LOCAL].prefDir] != null) && (port_alloc_buf[header_buf[0][(int)DIR.LOCAL].prefDir] == DIR.LOCAL);
-                else
-                    ret = (bypassLinkOut[4 - (int)DIR.BYPASS] != null) && (port_alloc_buf[header_buf[0][(int)DIR.LOCAL].prefDir] == DIR.LOCAL);
-                if (!ret)
-                    throw new Exception("Something goes wrong, Please check the canInjectLocal()");
+                ret = false;
+                Console.WriteLine("Local Injection throttle due to truncation");
             }
-
-            if (!ret)
-                ret = isOutPortFree();
             return ret;
         }
         private void _inject(Flit f)
         {
+            // Console.WriteLine(" Compare 1 " + object.ReferenceEquals(f, header_buf[0][(int)DIR.LOCAL]));
             if (port_alloc_buf[header_buf[0][(int)DIR.LOCAL].prefDir] != DIR.LOCAL) // need to double check this. Better way is first assigned port allocation and use same port 
             {
                 throw new Exception("Port must be allocated here but it seems something wrong");
@@ -411,12 +448,22 @@ namespace ICSimulator
             // what should we do for header and port allocation table??
             int dir = header_buf[0][(int)DIR.LOCAL].prefDir;
             f.inDir = (int)DIR.LOCAL;// dir;
-            if (f.isHeadFlit)
+            if (f.isHeadFlit && dir < 4)
+            {
                 routeComputeNext(ref f, (DIR)dir);
+            }
+            else
+            {
+                routeCompute(ref f);
+            }
+            if (flit_buf[1][dir] != null)
+            {
+                throw new Exception("flit_buf[1][dir] is not clear, please check _inject()");
+            }
             flit_buf[1][dir] = f; // move to output buffer for TX
             if (f.isTailFlit)
-            { 
-                port_alloc_buf[dir] = DIR.INV; // Reset Port_alloc buffer
+            {
+                port_alloc_buf[header_buf[0][(int)DIR.LOCAL].prefDir] = DIR.INV; // Reset Port_alloc buffer
                 header_buf[0][(int)DIR.LOCAL] = null;
             }
 #if DEBUG
@@ -431,9 +478,11 @@ namespace ICSimulator
             p = (int)DIR.INV; // invalid port
             if (header_buf[0][(int)DIR.LOCAL] != null)
             {
-                for (int i = 0; i < CHNL_CNT-1; i++)
+                for (int i = 0; i < CHNL_CNT - 1; i++)
                 {
-                    if (isOutPortEnable(i) && port_alloc_buf[i] == DIR.LOCAL)
+                    if (isOutPortEnable(i) &&
+                        port_alloc_buf[i] == DIR.LOCAL &&
+                        flit_buf[1][i] == null)
                     {
                         p = i;
                         return true;
@@ -445,58 +494,80 @@ namespace ICSimulator
         protected void injectLocal()
         {
             int outPort = (int)DIR.INV;
-            if (m_injectSlot == null)
+            if (canInjectLocal())
             {
-                //release allocated port and clear header buffer
-                if (header_buf[0][(int)DIR.LOCAL] != null) // only top 4-entry of temp header are affected by sorting
+                if (m_injectSlot == null)
                 {
-                    if (port_alloc_buf[header_buf[0][(int)DIR.LOCAL].prefDir] == DIR.LOCAL)
+                    //release allocated port and clear header buffer
+                    if (header_buf[0][(int)DIR.LOCAL] != null) // only top 4-entry of temp header are affected by sorting
                     {
-                        port_alloc_buf[header_buf[0][(int)DIR.LOCAL].prefDir] = DIR.INV; // release port
-                        tempHeader[(int)DIR.LOCAL] = null;
-                        header_buf[0][(int)DIR.LOCAL] = null;
-                    }
-                    else
-                        throw new Exception("Port maping not matching please check injectLocal()");
-                }
-
-                return;
-            }
-            if (!isPortAllocatedForLoaclInjection(out outPort))
-            {
-                if (m_injectSlot.isHeadFlit)
-                {
-                    routeCompute(ref m_injectSlot);
-                    if (isOutPortEnable(m_injectSlot.prefDir) && port_alloc_buf[m_injectSlot.prefDir] == DIR.INV)
-                    {
-                        port_alloc_buf[m_injectSlot.prefDir] = DIR.LOCAL;
-                        outPort = m_injectSlot.prefDir;
-                    }
-                    else
-                    {
-                        for (int i = 0; i < CHNL_CNT-1; i++)
+                        if (port_alloc_buf[header_buf[0][(int)DIR.LOCAL].prefDir] == DIR.LOCAL)
                         {
-                            if (isOutPortEnable(i) && port_alloc_buf[i] == DIR.INV)
+                            port_alloc_buf[header_buf[0][(int)DIR.LOCAL].prefDir] = DIR.INV; // release port
+                            tempHeader[(int)DIR.LOCAL] = null;
+                            header_buf[0][(int)DIR.LOCAL] = null;
+                        }
+                        else
+                            throw new Exception("Port maping not matching please check injectLocal()");
+                    }
+
+                    return;
+                }
+                if (!isPortAllocatedForLoaclInjection(out outPort))
+                {
+                    if (m_injectSlot.isHeadFlit)
+                    {
+                        routeCompute(ref m_injectSlot);
+                        if (isOutPortEnable(m_injectSlot.prefDir) &&
+                            port_alloc_buf[m_injectSlot.prefDir] == DIR.INV &&
+                            flit_buf[1][m_injectSlot.prefDir] == null)
+                        {
+                            port_alloc_buf[m_injectSlot.prefDir] = DIR.LOCAL;
+                            outPort = m_injectSlot.prefDir;
+                        }
+                        else
+                        {   //check BYPASS first
+                            if (isOutPortEnable((int)DIR.BYPASS) &&
+                                port_alloc_buf[(int)DIR.BYPASS] == DIR.INV &&
+                                flit_buf[1][(int)DIR.BYPASS] == null)
                             {
-                                port_alloc_buf[i] = DIR.LOCAL; // assign port in port allocator
-                                outPort = i;
-                                break;
+                                port_alloc_buf[(int)DIR.BYPASS] = DIR.LOCAL; // assign port in port allocator
+                                outPort = (int)DIR.BYPASS;
+                            }
+                            else
+                            {
+                                for (int i = 0; i < 4; i++)
+                                {
+                                    if (isOutPortEnable(i) &&
+                                        port_alloc_buf[i] == DIR.INV &&
+                                        flit_buf[1][i] == null)
+                                    {
+                                        port_alloc_buf[i] = DIR.LOCAL; // assign port in port allocator
+                                        outPort = i;
+                                        break;
+                                    }
+                                }
                             }
                         }
                     }
                 }
-            }
-            if (outPort != (int)DIR.INV) // output port is available
-            {
-                // Compute the PPV here before putting on link for local flit
-                if (m_injectSlot.isHeadFlit)
+                if (outPort != (int)DIR.INV) // output port is available
                 {
-                    m_injectSlot.prefDir = outPort;
-                    header_buf[0][(int)DIR.LOCAL] = m_injectSlot;
-                    tempHeader[(int)DIR.LOCAL] = m_injectSlot;
+                    // Compute the PPV here before putting on link for local flit
+                    if (m_injectSlot.isHeadFlit)
+                    {
+                        m_injectSlot.prefDir = outPort;
+                        m_injectSlot.inDir = (int)DIR.LOCAL;
+                        // Console.WriteLine(" Compare 1" + object.ReferenceEquals(m_injectSlot, header_buf[0][(int)DIR.LOCAL]));
+                        header_buf[0][(int)DIR.LOCAL] = m_injectSlot.CloneSource();
+
+                        tempHeader[(int)DIR.LOCAL] = m_injectSlot.CloneSource();
+                        Compare(header_buf[0][(int)DIR.LOCAL], tempHeader[(int)DIR.LOCAL]);
+                        // Console.WriteLine(" Compare 2" + object.ReferenceEquals(m_injectSlot, header_buf[0][(int)DIR.LOCAL]));
+                    }
+                    _inject(m_injectSlot);
+                    m_injectSlot = null; // clear the m_injectSlot
                 }
-                _inject(m_injectSlot);
-                m_injectSlot = null; // clear the m_injectSlot
             }
         }
 
@@ -528,11 +599,25 @@ namespace ICSimulator
             PreferredDirection pd;
 
             pd = determineDirection(f.dest, coord);
+            if (f.takeX)
+            {
+                if (pd.xDir != (int)DIR.INV)
+                    f.prefDir = pd.xDir;
+                else
+                    f.prefDir = pd.yDir;
 
-            if (pd.xDir != (int)DIR.INV)
-                f.prefDir = pd.xDir;
+                f.takeX = false;
+            }
             else
-                f.prefDir = pd.yDir;
+            {
+                if (pd.yDir != (int)DIR.INV)
+                    f.prefDir = pd.yDir;
+                else
+                    f.prefDir = pd.xDir;
+
+                f.takeX = true;
+
+            }
 
         }
 
@@ -542,10 +627,25 @@ namespace ICSimulator
 
             pd = determineDirection(f.dest, neigh[(int)dir].coord);
 
-            if (pd.xDir != (int)DIR.INV)
-                f.prefDir = pd.xDir;
+            if (f.takeX)
+            {
+                if (pd.xDir != (int)DIR.INV)
+                    f.prefDir = pd.xDir;
+                else
+                    f.prefDir = pd.yDir;
+
+                f.takeX = false;
+            }
             else
-                f.prefDir = pd.yDir;
+            {
+                if (pd.yDir != (int)DIR.INV)
+                    f.prefDir = pd.yDir;
+                else
+                    f.prefDir = pd.xDir;
+
+                f.takeX = true;
+
+            }
         }
 
         // Ejection
@@ -565,6 +665,7 @@ namespace ICSimulator
         */
         protected void setHeaderTable()
         {
+            // printMe(printHeader());
             for (int dir = 0; dir < 4; dir++) // first 4 ports compete for each other when sorted
             {
                 if (flit_buf[0][dir] != null)
@@ -572,12 +673,20 @@ namespace ICSimulator
                     if (flit_buf[0][dir].isHeadFlit)
                     {
                         newHeader = true;
-                        header_buf[0][dir] = flit_buf[0][dir];
+                        header_buf[0][dir] = flit_buf[0][dir].CloneSource();
+                        Compare(header_buf[0][dir], flit_buf[0][dir]);
                         if (isOlder(header_buf[0][dir], tempHeader[0])) // tempHeader is sorted                       
-                            newIsOldest = true;                      
+                            newIsOldest = true;
                     }
-                }else
-                    header_buf[0][dir] = null;             
+                    if (header_buf[0][dir] == null)// || (header_buf[0][dir].packet.ID != flit_buf[0][dir].packet.ID)) // NI does not works
+                    {
+                        // Console.WriteLine("Router {0}/{1} Flit-Packet no {2} in Port {3} @ {4}",
+                        //     ID, subnet, flit_buf[0][dir], dir, Simulator.CurrentRound);
+                        throw new Exception("Flit without its' header information arrived, check setHeaderTable()");
+                    }
+                }
+                else
+                    header_buf[0][dir] = null;
             }
             //Check BYPASS port
             if (flit_buf[0][(int)DIR.BYPASS] != null)
@@ -585,21 +694,68 @@ namespace ICSimulator
                 if (flit_buf[0][(int)DIR.BYPASS].isHeadFlit)
                 {
                     newHeader = true; // BYPASS port does not compet for truncation
-                    header_buf[0][(int)DIR.BYPASS] = flit_buf[0][(int)DIR.BYPASS];
+                    header_buf[0][(int)DIR.BYPASS] = flit_buf[0][(int)DIR.BYPASS].CloneSource();
+                    Compare(header_buf[0][(int)DIR.BYPASS], flit_buf[0][(int)DIR.BYPASS]);
+                }
+                if (header_buf[0][(int)DIR.BYPASS] == null)// || header_buf[0][(int)DIR.BYPASS].packet.ID != flit_buf[0][(int)DIR.BYPASS].packet.ID)
+                {
+                    // Console.WriteLine("Router {0}/{1} Flit-Packet no {2} in Port {3} @ {4}",
+                    //    ID, subnet, flit_buf[0][(int)DIR.BYPASS], (int)DIR.BYPASS, Simulator.CurrentRound);
+                    throw new Exception("Flit without its' header information arrived, check setHeaderTable()");
                 }
             }
             else
             {
                 header_buf[0][(int)DIR.BYPASS] = null;
             }
+
+            // printMe(printHeader());
+            /*
+            printPacketLocation(265979);
+            printPacketLocation(278934);
+            printPacketLocation(283930);
+            printPacketLocation(329922);
+            printPacketLocation(364585);
+            // printPacketLocation(405330);
+            // printPacketLocation(668550);
+            // */
         }
-   
+        protected string printHeader()
+        {
+            string text = "Header Information ";
+            int i;
+            for (i = 0; i < 6; i++)
+            {
+                if (header_buf[0][i] != null)
+                    text = text + "[" + i + "] = " + header_buf[0][i].packet.ID + " prefDir = " + header_buf[0][i].prefDir + " InfDir = " + header_buf[0][i].inDir + ", ";
+            }
+            //Console.WriteLine("Router {0}/{1}:{2}", ID, subnet, text);
+            return text;
+        }
+
+        protected void printPacketLocation(ulong packetNo)
+        {
+
+            int i;
+            for (i = 0; i < 6; i++)
+            {
+                if ((header_buf[0][i] != null) && (header_buf[0][i].packet.ID == packetNo) && flit_buf[0][i] != null)
+                    Console.WriteLine("Router {0}/{1} arrived port {2} prefered out going port {3}: Packet-->{4} @{5} Source {6} Destination {7}",
+                        ID, subnet, i, header_buf[0][i].prefDir, flit_buf[0][i], Simulator.CurrentRound, flit_buf[0][i].packet.src.ID, flit_buf[0][i].packet.dest.ID);
+            }
+        }
+
         protected void copyHeaderToTemp()
+
         {
             int i = 0;
             for (i = 0; i < CHNL_CNT; i++)
             {
-                tempHeader[i] = header_buf[0][i]; // header_buf[0] holds the most recent headers
+                if (header_buf[0][i] != null)
+                {
+                    tempHeader[i] = header_buf[0][i].CloneSource(); // header_buf[0] holds the most recent headers
+                    Compare(tempHeader[i], header_buf[0][i]);
+                }
             }
         }
         protected bool isOlder(Flit f1, Flit f2)
@@ -611,6 +767,52 @@ namespace ICSimulator
             }
             return ret;
         }
+        public override int rank(Flit f1, Flit f2)
+        {
+            if (f1 == null && f2 == null) return 0;
+            if (f1 == null) return 1;
+            if (f2 == null) return -1;
+
+            int c0 = 0;
+
+            int c1 = 0, c2 = 0;
+            if (f1.packet != null && f2.packet != null)
+            {
+                c1 = -age(f1).CompareTo(age(f2));
+                c2 = f1.packet.ID.CompareTo(f2.packet.ID);
+            }
+
+            int c3 = f1.flitNr.CompareTo(f2.flitNr);
+
+            int zerosSeen = 0;
+            foreach (int i in new int[] { c0, c1, c2, c3 })
+            {
+                if (i == 0)
+                    zerosSeen++;
+                else
+                    break;
+            }
+            Simulator.stats.net_decisionLevel.Add(zerosSeen);
+            return
+                (c0 != 0) ? c0 :
+                (c1 != 0) ? c1 :
+                 c2;
+            /*
+            (c0 != 0) ? c0 :
+            (c1 != 0) ? c1 :
+            (c2 != 0) ? c2 :
+            c3;
+            */
+        }
+        public ulong age(Flit f)
+        {
+            if (Config.net_age_arbitration)
+                return Simulator.CurrentRound - f.packet.injectionTime;
+            else
+                return (Simulator.CurrentRound - f.packet.creationTime) /
+                    (ulong)Config.cheap_of;
+        }
+
         /*
           Clear header table entry 
         */
@@ -681,6 +883,33 @@ namespace ICSimulator
             _swap(ref input[1], ref input[3]); // youngest in input[3]
             _swap(ref input[1], ref input[2]);  // older in input[1] and younger in input[2]        
         }
+
+        protected bool isNIDownloading()
+        {
+            bool ret = false;
+            for (int i = 0; i < 2; i++)
+            {
+                if (ejector[i] != DIR.INV)
+                {
+                    if (header_buf[0][(int)ejector[i]].prefDir == (int)DIR.NI)
+                    {
+                        ret = true;
+                    }
+                }
+            }
+            return ret;
+        }
+
+        protected bool canTruncate()
+        {
+            bool ret = false;
+            if ((isNIDownloading() == false) ||
+                (getFreeOutPort(0) != (int)DIR.NI))
+            {
+                ret = false;
+            }
+            return ret;
+        }
         /* Look-ahead truncation
   // Override truncation detect
 
@@ -692,128 +921,417 @@ namespace ICSimulator
   Simplified problem: find out if a flit using port i is younger than anyone of the incoming flit and the particular older flit also requests the same output port i.
 
 */
-//This method test whether the truncation happens or not; if happents, it also elcear the prefered port maping
-        protected bool isTruncationHappens(out int expectedPort)
+        //This method test whether the truncation happens or not; if happents, it also mapped the prefered port mapp for truncation
+        protected void truncateWorm()
         {
-            bool ret = false;
-            expectedPort = (int)DIR.INV;
-            if (newIsOldest)
+            int contendingPort = (int)DIR.INV;
+            int freeOutPort = (int)DIR.INV;
+            newIsOldest = true;
+            cleanUpMapping(); // Cleanup mapping if not cleared
+            if (canTruncate() && newIsOldest)
             {
-                // newIsOldest = false;
-                if (tempHeader[0] != null && tempHeader[0].dest.ID != ID) //locally destined worm, tempHeader[0] must not be null
+                printMe("TruncateWorm executed");
+                newIsOldest = false; // reset flag for next round
+                // oldest is locally destined
+                if ((tempHeader[0] != null) &&
+                    ((tempHeader[0].prefDir == (int)DIR.INV) || (tempHeader[0].prefDir == (int)DIR.NI)))
                 {
-                    //dir = (int)tempHeader[0].prefDir;
-                    if ((int)tempHeader[0].prefDir < (int)DIR.LOCAL)
+                    if (ejector[0] == (DIR)tempHeader[0].inDir ||
+                        ejector[1] == (DIR)tempHeader[0].inDir)
+                    {   // already attached to ejector
+                        ;
+                    }
+                    /*you can't map to ejector here
+                    else if (ejector[0] == DIR.INV || ejector[1] == DIR.INV) // map to free ejector (NI is generated from truncation)
+                    {
+                        if (ejector[0] == DIR.INV)
+                        {
+                            ejector[0] = (DIR)tempHeader[0].inDir;
+                        }
+                        else
+                        {
+                            ejector[1] = (DIR)tempHeader[0].inDir;
+                        }
+                    }
+                    */
+                    else //deflect to BYPASS port
+                    {
+                        if (port_alloc_buf[(int)DIR.BYPASS] == DIR.INV) // no need to check flit_buf[1][BYPASS]==null
+                        {
+                            tempHeader[0].prefDir = (int)DIR.BYPASS; // divert the worm through BYPASS 
+                            if (header_buf[0][tempHeader[0].inDir] == null)
+                            {
+                                // Console.WriteLine("1:tempHeader[0]={0} inDir = {1} PreferDir ={2}", tempHeader[0], tempHeader[0].inDir, tempHeader[0].prefDir);
+                                throw new Exception("1:Uninitialized Header, Please check isTruncationHappens()");
+                            }
+                            header_buf[0][tempHeader[0].inDir].prefDir = (int)DIR.BYPASS;
+                            port_alloc_buf[(int)DIR.BYPASS] = (DIR)tempHeader[0].inDir;
+                        }
+                        else
+                        {
+                            tempHeader[0].prefDir = (int)DIR.BYPASS;
+                            if (header_buf[0][tempHeader[0].inDir] == null)
+                            {
+                                // Console.WriteLine("1:tempHeader[0]={0} inDir = {1} PreferDir ={2}", tempHeader[0], tempHeader[0].inDir, tempHeader[0].prefDir);
+                                throw new Exception("1:Uninitialized Header, Please check isTruncationHappens()");
+                            }
+                            header_buf[0][tempHeader[0].inDir].prefDir = (int)DIR.BYPASS;
+                            contendingPort = (int)port_alloc_buf[(int)DIR.BYPASS];
+                            //map to outgoing port
+                            port_alloc_buf[tempHeader[0].prefDir] = (DIR)tempHeader[0].inDir;
+
+                            //If contending port has incomming flit, truncate;
+                            if ((contendingPort != (int)DIR.INV) &&
+                                (header_buf[0][contendingPort] != null) &&
+                                (header_buf[0][contendingPort].prefDir == tempHeader[0].prefDir))
+                            {
+                                freeOutPort = getFreeOutPort(contendingPort);
+                                if (freeOutPort != (int)DIR.NI) // NI is to download the truncated worm
+                                {
+                                    header_buf[0][contendingPort].prefDir = freeOutPort; // update header's prefere outport                    
+                                    flit_buf[1][freeOutPort] = header_buf[0][contendingPort].CloneSource(); // header to output buffer of freeOutPort
+                                    Compare(flit_buf[1][freeOutPort], header_buf[0][contendingPort]);
+                                    flit_buf[1][freeOutPort].isTruncatedHead = true; // set truncatedHead flag
+                                    if (freeOutPort < 4)
+                                    {
+                                        routeComputeNext(ref flit_buf[1][freeOutPort], (DIR)freeOutPort); // update next-hop's prefered direction
+                                    }
+                                    else
+                                    {
+                                        routeCompute(ref flit_buf[1][freeOutPort]);
+                                    }
+                                    port_alloc_buf[freeOutPort] = (DIR)contendingPort;
+                                    //Console.WriteLine("1:: Router {0}/{1}:Truncation Happens for port {2} from port {3} to port {4} PacketID {5} by {6}",
+                                    //       ID, subnet, contendingPort, tempHeader[0].prefDir, freeOutPort, header_buf[0][contendingPort], tempHeader[0]);
+                                }
+                                // free port is not found for deflection
+                                else
+                                {
+                                    if (contendingPort == (int)DIR.LOCAL)
+                                    {
+                                        header_buf[0][contendingPort].isTruncatedHead = true; // set truncated flag
+                                        acceptTruncatedFlit(header_buf[0][contendingPort], 0);
+                                        header_buf[0][contendingPort] = null;
+
+                                        if (flit_buf[0][contendingPort] != null) // Does Local Injection places flits in flit_buf[0][Local]?? (NO)
+                                        {
+                                            acceptTruncatedFlit(flit_buf[0][contendingPort], 0);
+                                            //header_buf[0][contendingPort] = null; // clear header buffer
+                                            flit_buf[0][contendingPort] = null; // clear flit buffer
+                                        }
+                                        if (m_injectSlot != null) // if injecting, Flit must be there
+                                        {
+                                            acceptLocalTruncatedFlit(m_injectSlot);// this method moves the remaining flit to NI                           
+                                            m_injectSlot = null; // clear buffer
+                                        }
+                                        // Console.WriteLine("1:: Local_Download: Router {0}/{1}:Truncation Happens for port {2} from port {3} to port {4} PacketID {5} by {6}",
+                                        //    ID, subnet, contendingPort, tempHeader[0].prefDir, DIR.NI, header_buf[0][contendingPort], tempHeader[0]);
+
+                                    }
+                                    else if (contendingPort != (int)DIR.LOCAL)
+                                    {
+                                        Flit temp = header_buf[0][contendingPort].CloneSource(); // make a copy of header and proceed
+                                        Compare(temp, header_buf[0][contendingPort]);
+                                        temp.isTruncatedHead = true; // set truncated flag
+                                        acceptTruncatedFlit(temp, 0);
+                                        header_buf[0][contendingPort].prefDir = (int)DIR.NI; // Mark the incoming body flits to follow the header
+                                                                                             //port_alloc_buf[(int)DIR.NI] = (DIR)victimInPort; // point port_allocation as NI buffer
+                                        if (ejector[0] != DIR.INV && ejector[1] != DIR.INV)
+                                        { //should never happens
+                                            throw new Exception("ERROR: both ejectors should not be busy at the same time");
+                                        }
+                                        //mark one of the ejector as busy
+                                        if (ejector[1] == DIR.INV)
+                                            ejector[1] = (DIR)contendingPort;
+                                        else if (ejector[0] == DIR.INV)
+                                            ejector[0] = (DIR)contendingPort;
+
+                                        // Console.WriteLine("2:: Local_Download: Router {0}/{1}:Truncation Happens for port {2} from port {3} to port {4} PacketID {5} by {6}",
+                                        //     ID, subnet, contendingPort, tempHeader[0].prefDir, DIR.NI, header_buf[0][contendingPort], tempHeader[0]);
+                                    }
+                                }
+                            }
+                        }
+
+                    }
+                }
+                else if (tempHeader[0] != null) // oldest is not the locally destined
+                {
+                    if (tempHeader[0].prefDir < (int)DIR.LOCAL &&
+                        tempHeader[0].inDir == (int)port_alloc_buf[tempHeader[0].prefDir])
+                    { // already mapped, no thing to do
+                        ;
+                    }
+                    else if ((int)tempHeader[0].prefDir < (int)DIR.LOCAL)
                     {
                         if (!isOutPortEnable((int)tempHeader[0].prefDir))
+                        {
                             throw new Exception("Highest ranked port is not enable, plese check isTruncationHappens()");
-                        expectedPort = (int)port_alloc_buf[tempHeader[0].prefDir]; //get truncated port
-                                                                                   // port_alloc_buf[tempHeader[0].prefDir] = DIR.INV;
-                        ret = (expectedPort != (int)DIR.INV) && (header_buf[0][expectedPort] != null);
+                        }
+                        if (port_alloc_buf[(int)tempHeader[0].prefDir] == DIR.INV)
+                        {
+                            port_alloc_buf[tempHeader[0].prefDir] = (DIR)tempHeader[0].inDir;
+                        }
+                        else
+                        {
+                            if (header_buf[0][tempHeader[0].inDir] == null)
+                            {
+                                // Console.WriteLine("2:tempHeader[0]={0} inDir = {1} PreferDir ={2}", tempHeader[0], tempHeader[0].inDir, tempHeader[0].prefDir);
+                                throw new Exception("2:Uninitialized Header, Please check isTruncationHappens()");
+                            }
+                            if (header_buf[0][tempHeader[0].inDir].prefDir != tempHeader[0].prefDir)
+                            {
+                                throw new Exception("Header and TempHeader not match, Please check isTruncationHappens()");
+                            }
+                            contendingPort = (int)port_alloc_buf[tempHeader[0].prefDir]; //get to be truncated port
+
+                            port_alloc_buf[tempHeader[0].prefDir] = (DIR)tempHeader[0].inDir; //mapp the oldest worm 
+
+                            if ((contendingPort != (int)DIR.INV) &&
+                                (header_buf[0][contendingPort] != null) &&
+                                (header_buf[0][contendingPort].prefDir == tempHeader[0].prefDir))
+                            {
+                                freeOutPort = getFreeOutPort(contendingPort);
+                                if (freeOutPort != (int)DIR.NI) // NI is to download the truncated worm
+                                {
+                                    header_buf[0][contendingPort].prefDir = freeOutPort; // update header's prefered outport                    
+                                    flit_buf[1][freeOutPort] = header_buf[0][contendingPort].CloneSource(); // header to output buffer of freeOutPort
+                                    Compare(flit_buf[1][freeOutPort], header_buf[0][contendingPort]);
+                                    flit_buf[1][freeOutPort].isTruncatedHead = true;
+                                    if (freeOutPort < 4)
+                                    {
+                                        routeComputeNext(ref flit_buf[1][freeOutPort], (DIR)freeOutPort); // update next-hop's prefered direction
+                                    }
+                                    else
+                                    {
+                                        routeCompute(ref flit_buf[1][freeOutPort]);
+                                    }
+                                    port_alloc_buf[freeOutPort] = (DIR)contendingPort;
+                                    //Console.WriteLine("2:: Router {0}/{1}:Truncation Happens for port {2} from port {3} to port {4} PacketID {5} by {6}",
+                                    //        ID, subnet, contendingPort, tempHeader[0].prefDir, freeOutPort, header_buf[0][contendingPort], tempHeader[0]);
+                                }
+                                // free port is not found for deflection
+                                else
+                                {
+                                    if (contendingPort == (int)DIR.LOCAL) // for local port; the data is not populated yet ??
+                                    {
+                                        header_buf[0][contendingPort].isTruncatedHead = true;
+                                        acceptTruncatedFlit(header_buf[0][contendingPort], 0);
+                                        header_buf[0][contendingPort] = null;//Updated
+
+                                        if (flit_buf[0][contendingPort] != null) // Does Local Injection places flits in flit_buf[0][Local]?? (NO)
+                                        {
+                                            acceptTruncatedFlit(flit_buf[0][contendingPort], 0);
+                                            //header_buf[0][contendingPort] = null; // clear header buffer
+                                            flit_buf[0][contendingPort] = null; // clear flit buffer
+                                        }
+                                        if (m_injectSlot != null)
+                                        {
+                                            acceptLocalTruncatedFlit(m_injectSlot);// this method moves the remaining flit to NI                           
+                                            m_injectSlot = null; // clear buffer
+                                        }
+                                    }
+                                    else if (contendingPort != (int)DIR.LOCAL)
+                                    {
+                                        Flit temp = header_buf[0][contendingPort].CloneSource(); // make a copy of header and proceed
+                                        Compare(temp, header_buf[0][contendingPort]);
+                                        temp.isTruncatedHead = true;
+                                        acceptTruncatedFlit(temp, 0);
+                                        header_buf[0][contendingPort].prefDir = (int)DIR.NI; // Mark the incoming body flits to follow the header
+                                                                                             //port_alloc_buf[(int)DIR.NI] = (DIR)victimInPort; // point port_allocation as NI buffer
+                                        if (ejector[0] != DIR.INV && ejector[1] != DIR.INV)
+                                        { //should never happens
+                                            throw new Exception("ERROR: both ejectors should not be busy at the same time");
+                                        }
+                                        //mark one of the ejector as busy
+                                        if (ejector[1] == DIR.INV)
+                                            ejector[1] = (DIR)contendingPort;
+                                        else if (ejector[0] == DIR.INV)
+                                            ejector[0] = (DIR)contendingPort;
+                                    }
+                                }
+                            }
+                        }
                     }
                     else
-                        throw new Exception("Prefered Port looks not matching, Please check");
-                }
-                else if(tempHeader[0] != null && tempHeader[0].dest.ID == ID)
-                {
-                    if (ejector[0] != DIR.INV && ejector[1] != DIR.INV) // check if both ejector are busy
                     {
-                        tempHeader[0].prefDir = (int)DIR.BYPASS; // divert the worm through BYPASS 
-                        header_buf[0][tempHeader[0].inDir].prefDir = (int)DIR.BYPASS;
-                        expectedPort = (int)port_alloc_buf[(int)DIR.BYPASS];
-                        //port_alloc_buf[(int)DIR.BYPASS] = DIR.INV;
-                        ret = (expectedPort != (int)DIR.INV) && (header_buf[0][expectedPort] != null);
+                        throw new Exception("Please verify the Prefered direction, Check truncateWorm()");
                     }
                 }
             }
-            //newIsOldest = ret; 
-            return ret;
         }
 
         /* This method truncates the worm and forward to the one of the available port if any; 
         * otherwise, it directs the truncated worm to to NI buffer with updating the port allocation.
         */
-        protected void truncateWorm()
-        {
-            int victimInPort;
-            if (isTruncationHappens(out victimInPort))
-            {
-                //int victimInPort = (int)port_alloc_buf[(int)tempHeader[0].prefDir];
-               // port_alloc_buf[(int)tempHeader[0].prefDir] = DIR.INV; // clear the port allocation buffer for high priority worm
-                int freeOutPort = getFreeOutPort(); // get a free outPut port
-                if (freeOutPort != (int)DIR.NI) // NI is to download the truncated worm
-                {
-                    //Update prefered direction 
-                    if (header_buf[0][victimInPort] != null)
+                    /*
+                    protected void truncateWorm()
                     {
-                        header_buf[0][victimInPort].prefDir = freeOutPort; // update header's prefere outport                    
-                        flit_buf[1][freeOutPort] = header_buf[0][victimInPort]; // header to output buffer of freeOutPort
-                        routeComputeNext(ref flit_buf[1][freeOutPort], (DIR)freeOutPort); // update next-hop's prefered direction                   
-                        port_alloc_buf[freeOutPort] = (DIR)victimInPort;
-                    }
-                    else
-                        throw new Exception("Header is null, Please check");
+                        int victimInPort;
+                        bool mapped = false;
+                        isTruncationHappens(out victimInPort);
 
-                }
-                // free port is not found for deflection
-                else
-                {
-                    if (victimInPort == (int)DIR.LOCAL && header_buf[0][victimInPort] != null) // for local port; the data is not populated yet ??
-                    {
-                        acceptTruncatedFlit(header_buf[0][victimInPort], 0);
-
-                        if (flit_buf[0][victimInPort] != null) // Does Local Injection places flits in flit_buf[0][Local]??
+                        if (victimInPort != (int)DIR.INV && header_buf[0][victimInPort] != null)
                         {
-                            acceptTruncatedFlit(flit_buf[0][victimInPort], 0);
-                            header_buf[0][victimInPort] = null; // clear header buffer
-                            flit_buf[0][victimInPort] = null; // clear flit buffer
-                        }
-                        if (m_injectSlot != null)
-                        {
-                            acceptLocalTruncatedFlit(m_injectSlot);// this method moves the remaining flit to NI                           
-                            m_injectSlot = null; // clear buffer
-                        }
-                    }
-                    else if (victimInPort != (int)DIR.LOCAL && header_buf[0][victimInPort] != null)
-                    {
-                        acceptTruncatedFlit(header_buf[0][victimInPort], 0);
-                        header_buf[0][victimInPort].prefDir = (int)DIR.NI; // Mark the incoming body flits to follow the header
-                        //port_alloc_buf[(int)DIR.NI] = (DIR)victimInPort; // point port_allocation as NI buffer
-                        if (ejector[0] != DIR.INV && ejector[1] != DIR.INV)
-                        { //should never happens
-                            throw new Exception("ERROR: both ejectors should not be busy at the same time");
-                        }
-                        //mark one of the ejector as busy
-                        if (ejector[1] == DIR.INV)
-                            ejector[1] = (DIR)victimInPort;
-                        else
-                            ejector[0] = (DIR)victimInPort;
-                    }
-                    else if (header_buf[0][victimInPort] == null)
-                        throw new Exception("Header Not initialized, please check");
-                }
-            }
-        }
+                            for (int i = 0; i < CHNL_CNT - 1; i++)
+                            {
+                                if ((int)port_alloc_buf[i] == victimInPort)
+                                {
+                                    if (header_buf[0][victimInPort].prefDir == i)
+                                    {
+                                        mapped = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (!mapped)
+                            {
+                                int freeOutPort = getFreeOutPort(); // get a free outPut port
+                                if (freeOutPort != (int)DIR.NI) // NI is to download the truncated worm
+                                {
+                                    header_buf[0][victimInPort].prefDir = freeOutPort; // update header's prefere outport                    
+                                    flit_buf[1][freeOutPort] = header_buf[0][victimInPort].CloneSource(); // header to output buffer of freeOutPort
+                                    Compare(flit_buf[1][freeOutPort], header_buf[0][victimInPort]);
+                                    if (freeOutPort < 4)
+                                    {
+                                        routeComputeNext(ref flit_buf[1][freeOutPort], (DIR)freeOutPort); // update next-hop's prefered direction
+                                    }
+                                    port_alloc_buf[freeOutPort] = (DIR)victimInPort;
+                                }
+                                // free port is not found for deflection
+                                else
+                                {
+                                    if (victimInPort == (int)DIR.LOCAL) // for local port; the data is not populated yet ??
+                                    {
+                                        acceptTruncatedFlit(header_buf[0][victimInPort], 0);
 
-        protected int getFreeOutPort()
+                                        if (flit_buf[0][victimInPort] != null) // Does Local Injection places flits in flit_buf[0][Local]??
+                                        {
+                                            acceptTruncatedFlit(flit_buf[0][victimInPort], 0);
+                                            header_buf[0][victimInPort] = null; // clear header buffer
+                                            flit_buf[0][victimInPort] = null; // clear flit buffer
+                                        }
+                                        if (m_injectSlot != null)
+                                        {
+                                            acceptLocalTruncatedFlit(m_injectSlot);// this method moves the remaining flit to NI                           
+                                            m_injectSlot = null; // clear buffer
+                                        }
+                                    }
+                                    else if (victimInPort != (int)DIR.LOCAL)
+                                    {
+                                        acceptTruncatedFlit(header_buf[0][victimInPort], 0);
+                                        header_buf[0][victimInPort].prefDir = (int)DIR.NI; // Mark the incoming body flits to follow the header
+                                                                                           //port_alloc_buf[(int)DIR.NI] = (DIR)victimInPort; // point port_allocation as NI buffer
+                                        if (ejector[0] != DIR.INV && ejector[1] != DIR.INV)
+                                        { //should never happens
+                                            throw new Exception("ERROR: both ejectors should not be busy at the same time");
+                                        }
+                                        //mark one of the ejector as busy
+                                        if (ejector[1] == DIR.INV)
+                                            ejector[1] = (DIR)victimInPort;
+                                        else if (ejector[0] == DIR.INV)
+                                            ejector[0] = (DIR)victimInPort;
+                                    }                   
+                                }
+                            }
+                        }
+                    }
+                    */
+
+                    protected int getFreeOutPort(int escapeIfPossible)
         {
             //Try BYPASS first
-            if (bypassLinkOut[4 - (int)DIR.BYPASS] != null && port_alloc_buf[(int)DIR.BYPASS] == DIR.INV)
+            if (escapeIfPossible != (int)DIR.BYPASS)
             {
-                return (int)DIR.BYPASS;
+                if (bypassLinkOut[4 - (int)DIR.BYPASS] != null &&
+                    port_alloc_buf[(int)DIR.BYPASS] == DIR.INV &&
+                    flit_buf[1][(int)DIR.BYPASS] == null)
+                {
+                    return (int)DIR.BYPASS;
+                }
             }
             for (int i = 0; i < 4; i++)
             {
-                if (linkOut[i] != null && port_alloc_buf[i] == DIR.INV)
-                    return i;
+                if (i != escapeIfPossible)
+                {
+                    if (linkOut[i] != null &&
+                        port_alloc_buf[i] == DIR.INV &&
+                        flit_buf[1][i] == null)
+                    {
+                        return i;
+                    }
+                }
             }
+            //bounce to same direction
+            if (escapeIfPossible == (int)DIR.BYPASS)
+            {
+                if (bypassLinkOut[4 - (int)DIR.BYPASS] != null &&
+                    port_alloc_buf[(int)DIR.BYPASS] == DIR.INV &&
+                    flit_buf[1][(int)DIR.BYPASS] == null)
+                {
+                    return (int)DIR.BYPASS;
+                }
+            }
+            if (escapeIfPossible < 4)
+            {
+                if (linkOut[escapeIfPossible] != null &&
+                    port_alloc_buf[escapeIfPossible] == DIR.INV &&
+                    flit_buf[1][escapeIfPossible] == null)
+                {
+                    return escapeIfPossible;
+                }
+            }
+            //none are available
+            return (int)DIR.NI; // if no free outPut port found, download the worm to NI buffer, which must be available.
+        }
 
+        //getFreeOutPortForNextCycle()::no need to check whetehr flit_buf[1][dir] == null or not
+        protected int getFreeOutPortForNextCycle(int escapeIfPossible)
+        {
+            //Try BYPASS first
+            if (escapeIfPossible != (int)DIR.BYPASS)
+            {
+                if (bypassLinkOut[4 - (int)DIR.BYPASS] != null &&
+                    port_alloc_buf[(int)DIR.BYPASS] == DIR.INV)
+                {
+                    return (int)DIR.BYPASS;
+                }
+            }
+            for (int i = 0; i < 4; i++)
+            {
+                if (i != escapeIfPossible)
+                {
+                    if (linkOut[i] != null &&
+                        port_alloc_buf[i] == DIR.INV)
+                    {
+                        return i;
+                    }
+                }
+            }
+            //bounce to same direction
+            if (escapeIfPossible == (int)DIR.BYPASS)
+            {
+                if (bypassLinkOut[4 - (int)DIR.BYPASS] != null &&
+                    port_alloc_buf[(int)DIR.BYPASS] == DIR.INV)
+                {
+                    return (int)DIR.BYPASS;
+                }
+            }
+            if (escapeIfPossible < 4)
+            {
+                if (linkOut[escapeIfPossible] != null &&
+                    port_alloc_buf[escapeIfPossible] == DIR.INV)
+                {
+                    return escapeIfPossible;
+                }
+            }
+            //none are available
             return (int)DIR.NI; // if no free outPut port found, download the worm to NI buffer, which must be available.
         }
         protected bool isOutPortFree()
         {
 
-            int i = getFreeOutPort();
+            int i = getFreeOutPort((int)DIR.NI);
             if (i != (int)DIR.NI)
             {
                 return true;
@@ -833,11 +1351,27 @@ namespace ICSimulator
         //copied from RouterBypass
         protected void acceptFlit(Flit f)
         {
-            statsEjectFlit(f);
-            if (f.packet.nrOfArrivedFlits + 1 == f.packet.nrOfFlits)
-                statsEjectPacket(f.packet);
+            // if (!f.isTruncatedHead) // discard the head-flit of the truncated worm
+            {
+                statsEjectFlit(f);
+                if (f.packet.nrOfArrivedFlits + 1 == f.packet.nrOfFlits)
+                    statsEjectPacket(f.packet);
 
-            m_n.receiveFlit(f);
+                m_n.receiveFlit(f);
+            }
+        }
+
+        protected void printAt(int routerID, ulong time, Flit flit)
+        {
+
+            if (ID == routerID && Simulator.CurrentRound == time)
+            {
+                Console.WriteLine("Router {0}/{1} Flag: printAt packetID {2} Source {3} Destination {4} ejecting @ {5} Ej[0]={6} Ej[1]={7},noOfFlits {8}",
+                    ID, subnet, flit, flit.packet.src.ID, flit.packet.dest.ID, Simulator.CurrentRound, ejector[0], ejector[1], flit.packet.nrOfFlits);
+            }
+
+
+
         }
         //Initiate the worm to be ejected
         protected virtual Flit ejectLocal(int ejectorID)
@@ -855,12 +1389,22 @@ namespace ICSimulator
                     (ret == null || rank(flit_buf[0][dir], ret) < 0))
                 {
 #if PKTDUMP
-				if (ret != null)
-					Console.WriteLine("PKT {0}-{1}/{2} EJECT FAIL router {3}/{4} at time {5}", 
-				                  ret.packet.ID, ret.flitNr+1, ret.packet.nrOfFlits, coord, subnet, Simulator.CurrentRound);
+                    if (ret != null)
+                    {
+                        Console.WriteLine("PKT {0}-{1}/{2} EJECT FAIL router {3}/{4} at time {5}",
+                                      ret.packet.ID, ret.flitNr + 1, ret.packet.nrOfFlits, coord, subnet, Simulator.CurrentRound);
+                    }
 #endif
                     ret = flit_buf[0][dir];
                     bestDir = dir;
+                   /*Tracing flit
+                    ejectMe(ret, 265979, 4);
+                    ejectMe(ret, 278934, 4);
+                    ejectMe(ret, 283930, 4);
+                    ejectMe(ret, 329922, 4);
+                    ejectMe(ret, 364585, 4);
+
+                    //*/
                 }
 
             if (bestDir != -1)
@@ -870,58 +1414,99 @@ namespace ICSimulator
                     header_buf[0][bestDir] = null;
                     flit_buf[0][bestDir] = null;
                 }
-                else if(flit_buf[0][bestDir].isHeadFlit)
+                else if (flit_buf[0][bestDir].isHeadFlit)
                 {
                     //setup header and reserve ejector
-                    header_buf[0][bestDir] = flit_buf[0][bestDir];
+                    // header_buf[0][bestDir] = flit_buf[0][bestDir].CloneSource(); // does it matters for previously recorded header_buf[0][dir]??
+                    Compare(header_buf[0][bestDir], flit_buf[0][bestDir]);
                     flit_buf[0][bestDir] = null;
                     ejector[ejectorID] = (DIR)bestDir;
-                }else
+                    // Console.WriteLine("Ejector[{0}] reserved: header_buf[0][{1}]={2}::{3}:{4}", ejectorID, bestDir, header_buf[0][bestDir], ejector[0], ejector[1]);
+                }
+                else
                     flit_buf[0][bestDir] = null;
             }
 #if PKTDUMP
-			if (ret != null)
-				Console.WriteLine("PKT {0}-{1}/{2} EJECT from port {3} router {4}/{5} at time {6}", 
-					                  ret.packet.ID, ret.flitNr+1, ret.packet.nrOfFlits, bestDir, coord, subnet, Simulator.CurrentRound);
+            if (ret != null)
+                Console.WriteLine("PKT {0}-{1}/{2} EJECT from port {3} router {4}/{5} at time {6}",
+                                      ret.packet.ID, ret.flitNr + 1, ret.packet.nrOfFlits, bestDir, coord, subnet, Simulator.CurrentRound);
 #endif
             return ret;
         }
         //truncating from local port does not reache here 
-        protected Flit ejectFromPort(int dir)
+        protected Flit ejectFromPort(int dir, int EJ)
         {
             Flit ret = null;
 
             if (flit_buf[0][dir] != null)
             {
-                if (flit_buf[0][dir].dest.ID != ID)
+                if (flit_buf[0][dir].dest.ID != ID ||
+                    header_buf[0][dir].packet.ID != flit_buf[0][dir].packet.ID)
+                {
+                    //Console.WriteLine("Router {0}/{1}  PacketID: Header-- {2} Flit-- {3} @ {4}",
+                    //                 ID, subnet, header_buf[0][dir].packet.ID, flit_buf[0][dir], Simulator.CurrentRound);
                     throw new Exception("Something goes wrong, please check ejectFromPort()");
+                }
                 else
                 {
                     ret = flit_buf[0][dir];
+                    if (flit_buf[0][dir].isTailFlit)
+                    {
+                        header_buf[0][dir] = null;
+                        ejector[EJ] = DIR.INV;
+                    }
                     flit_buf[0][dir] = null;
+                   /* Testing for ejected flit
+                    // ejectMe(ret,255979);
+                    ejectMe(ret, 265979, 2);
+                    ejectMe(ret, 278934, 2);
+                    ejectMe(ret, 283930, 2);
+                    ejectMe(ret, 329922, 2);
+                    ejectMe(ret, 364585, 2);
+                    // */
                 }
             }
             else
             {
                 header_buf[0][dir] = null; // clear header buffer
             }
+#if PKTDUMP
+            if (ret != null)
+                Console.WriteLine("PKT {0}-{1}/{2} EJECT from port {3} router {4}/{5} at time {6}",
+                                      ret.packet.ID, ret.flitNr + 1, ret.packet.nrOfFlits, dir, coord, subnet, Simulator.CurrentRound);
+#endif
 
             return ret;
         }
-        protected Flit downloadFromPort(int dir)
+        protected Flit downloadFromPort(int dir, int EJ)
         {
             Flit ret = null;
-
+            //Console.WriteLine("Enter to DownloadFromPort(): Ejector={0} dir={1}", EJ, dir);
             if (flit_buf[0][dir] != null)
             {
-                if (header_buf[0][dir].prefDir != (int)DIR.NI)
+                //Console.WriteLine("DownloadedFromPort(): {0}", flit_buf[0][dir]);
+                if ((header_buf[0][dir].prefDir != (int)DIR.NI) ||
+                    (header_buf[0][dir].packet.ID != flit_buf[0][dir].packet.ID))
+                {
                     throw new Exception("Something goes wrong, please check downloadFromPort()");
+                }
                 else
                 {
                     ret = flit_buf[0][dir];
                     if (flit_buf[0][dir].isTailFlit)
+                    {
+                        // printMe("It's Tail, Clearing header");
                         header_buf[0][dir] = null;
+                        ejector[EJ] = DIR.INV;
+                    }
                     flit_buf[0][dir] = null;
+                    /* Testing for ejected from
+                    ejectMe(ret, 265979, 3);
+                    ejectMe(ret, 278934, 3);
+                    ejectMe(ret, 283930, 3);
+                    ejectMe(ret, 329922, 3);
+                    ejectMe(ret, 364585, 3);
+                    //*/
                 }
             }
             else
@@ -936,6 +1521,7 @@ namespace ICSimulator
         protected void ejection()
         {
             // STEP 1: Ejection
+            int EJ_Count = 0;
             int flitsTryToEject = 0;
             for (int dir = 0; dir < CHNL_CNT; dir++)
                 if (flit_buf[0][dir] != null && flit_buf[0][dir].dest.ID == ID)
@@ -944,61 +1530,197 @@ namespace ICSimulator
                     if (flit_buf[0][dir].ejectTrial == 0)
                         flit_buf[0][dir].firstEjectTrial = Simulator.CurrentRound;
                     flit_buf[0][dir].ejectTrial++;
+                    /* Testing for ejected from
+                    ejectMe(flit_buf[0][dir], 265979, 5);
+                    ejectMe(flit_buf[0][dir], 278934, 5);
+                    ejectMe(flit_buf[0][dir], 283930, 5);
+                    ejectMe(flit_buf[0][dir], 329922, 5);
+                    ejectMe(flit_buf[0][dir], 364585, 5);
+                    printAt(1, 165947, flit_buf[0][dir]);
+                    printAt(1, 174148, flit_buf[0][dir]);
+                    //*/
+
 #if PKTDUMP
-					Console.WriteLine("PKT {0}-{1}/{2} TRY to EJECT from port {3} router {4}/{5} at time {6}", 
-					                  flit_buf[0][dir].packet.ID, flit_buf[0][dir].flitNr+1, flit_buf[0][dir].packet.nrOfFlits, dir,
-					                  coord, subnet, Simulator.CurrentRound);
+                    Console.WriteLine("PKT {0}-{1}/{2} TRY to EJECT from port {3} router {4}/{5} at time {6}",
+                                      flit_buf[0][dir].packet.ID, flit_buf[0][dir].flitNr + 1, flit_buf[0][dir].packet.nrOfFlits, dir,
+                                      coord, subnet, Simulator.CurrentRound);
 #endif
                 }
 
             Simulator.stats.flitsTryToEject[flitsTryToEject].Add();
-
-            Flit f1 = null, f2 = null;
+            Flit f1 = null;
             for (int i = 0; i < Config.meshEjectTrial; i++)
             {
                 if (ejector[i] != DIR.INV)
                 {
-                    if(header_buf[0][(int)ejector[i]]==null) // this might happens for receiving a truncated worm
-                        ejector[i] = DIR.INV; //release ejector1
-                    else if (header_buf[0][(int)ejector[i]].dest.ID == ID)
+                    //printMe("Hi:1 " + ejector[i]);
+                    if (header_buf[0][(int)ejector[i]] == null)// this might happens for receiving a truncated worm
                     {
-                        f1 = ejectFromPort((int)ejector[i]);
+                        ejector[i] = DIR.INV; //release ejector1
+                                              // printMe("Hi:2 " + ejector[i]);
+                    }
+                    else if ((header_buf[0][(int)ejector[i]].dest.ID == ID) &&
+                            (header_buf[0][(int)ejector[i]].prefDir == (int)DIR.INV))
+                    {
+                        //printMe("Hi:3 " + ejector[i]);
+                        f1 = ejectFromPort((int)ejector[i], i);
                         if (f1 != null)
+                        {
+                            // printMe("Hi:4 " + ejector[i]);
+                            EJ_Count++;
                             acceptFlit(f1);
+                        }
                         else
                             ejector[i] = DIR.INV; //release ejector1
                     }
                     else if (header_buf[0][(int)ejector[i]].prefDir == (int)DIR.NI) // truncated worm 
                     {
-                        f1 = downloadFromPort((int)ejector[i]);
+                        // printMe("Hi:5 " + ejector[i]);
+                        f1 = downloadFromPort((int)ejector[i], i);
                         if (f1 != null)
+                        {
+                            // printMe("Hi:6 " + ejector[i]);
+                            EJ_Count++;
                             if (f1.isTailFlit)
                             {
+
                                 acceptTruncatedFlit(f1, 1); // how can I pass the flag = 1
                                 //ejector[i] = DIR.INV; //don't release ejector, it might eject twice                                                     
                             }
                             else
+                            {
                                 acceptTruncatedFlit(f1, 0);
+                            }
+                        }
                         else
                         {
                             ejector[i] = DIR.INV; //release ejector1 
-                           //TODO:: mark injector is free ?? or left as it is, at the end of injector_buffer, it will automatically clear the flag (in Node)
+                                                  //TODO:: mark injector is free ?? or left as it is, at the end of injector_buffer, it will automatically clear the flag (in Node)
                         }
                     }
                 }
             }
 
-            for (int i = 0; i < Config.meshEjectTrial; i++)
+            for (int i = 0; (i < Config.meshEjectTrial) && (EJ_Count < 2); i++)
             {
                 if (ejector[i] == DIR.INV)
                 {
+                    // printMe("Hi:7 " + ejector[i]);
                     // Only support dual ejection (MAX.Config.meshEjectTrial = 2)
                     Flit eject = ejectLocal(i);
-                    if (eject != null) 
-                        acceptFlit(eject);  // Eject flit	
+                    if (eject != null)
+                    {
+                        /* printMe("Hi:8 " + ejector[i]);
+                        //ejectMe(eject,14597,1);
+                        //ejectMe(eject,25597,1);
+                        ejectMe(eject, 265979, 1);
+                        ejectMe(eject, 278934, 1);
+                        ejectMe(eject, 283930, 1);
+                        ejectMe(eject, 329922, 1);
+                        ejectMe(eject, 364585, 1);
+                        //*/
+                        acceptFlit(eject);  // Eject flit
+                        EJ_Count++;
+                    }
                 }
             }
         }
+
+        protected void ejectMe(Flit flit, ulong idNo, int flag)
+        {
+            if (flit.packet.ID == idNo)
+            {
+                Console.WriteLine("Router {0}/{1} Flag: {5} packetID {2} Source {3} Destination {4} ejecting @ {6} Ej[0]={7} Ej[1]={8}",
+                    ID, subnet, flit, flit.packet.src.ID, flit.packet.dest.ID, flag, Simulator.CurrentRound, ejector[0], ejector[1]);
+            }
+        }
+
+        protected void printMe(string text)
+        {
+            Console.WriteLine(text);
+        }
+        protected void cleanUpMapping()
+        {
+            int i;
+#if CLEARUP
+            Console.WriteLine("Before Cleaning up: Router {8}/{9} port_alloc_buf- {0}:{1}:{2}:{3}:{4}:{5}==>{6}:{7}", port_alloc_buf[0], port_alloc_buf[1], port_alloc_buf[2],
+                port_alloc_buf[3], port_alloc_buf[4], port_alloc_buf[5], ejector[0], ejector[1], ID, subnet);
+#endif
+            for (i = 0; i < 5; i++)
+            {
+                if (port_alloc_buf[i] != DIR.INV)
+                {
+                    // Console.WriteLine("1:Router {0}/{1} port_alloc_buf[{2}] = {3}", ID, subnet, i, port_alloc_buf[i]);
+                    if (header_buf[0][(int)port_alloc_buf[i]] != null)
+                    {
+                        if (port_alloc_buf[i] != DIR.LOCAL)//except for injecting port
+                        {
+                            if (flit_buf[1][i] != null &&
+                                header_buf[0][(int)port_alloc_buf[i]].packet.ID == flit_buf[1][i].packet.ID &&
+                                header_buf[0][(int)port_alloc_buf[i]].prefDir == i)
+                            {
+                                // Console.WriteLine("2:Router {0}/{1} port_alloc_buf[{2}] = {3}", ID, subnet, i, port_alloc_buf[i]);
+                                continue;
+                            }
+                            else
+                            {
+                                port_alloc_buf[i] = DIR.INV;
+                                // Console.WriteLine("3:Router {0}/{1} port_alloc_buf[{2}] = {3}", ID, subnet, i, port_alloc_buf[i]);
+                                //Console.WriteLine("Router {0}/{1} Cleaned Packet {2}", ID, subnet,header_buf[0][(int)port_alloc_buf[i]]);
+                            }
+                        }
+                        else
+                        {
+                            //Console.WriteLine("Indir: "+header_buf[0][(int)port_alloc_buf[i]].inDir +" "+ port_alloc_buf[i]);
+                            if (header_buf[0][(int)port_alloc_buf[i]].inDir == (int)port_alloc_buf[i] &&
+                                header_buf[0][(int)port_alloc_buf[i]].prefDir == i)
+                            {
+                                // Console.WriteLine("4:Router {0}/{1} port_alloc_buf[{2}] = {3}", ID, subnet, i, port_alloc_buf[i]);
+                                continue;
+
+                            }
+                            else
+                            {
+                                port_alloc_buf[i] = DIR.INV;
+                                // Console.WriteLine("5:Router {0}/{1} port_alloc_buf[{2}] = {3}", ID, subnet, i, port_alloc_buf[i]);
+                            }
+
+                        }
+                        // Console.WriteLine("6:Router {0}/{1} port_alloc_buf[{2}] = {3}", ID, subnet, i, port_alloc_buf[i]);
+                    }
+                    else
+                    {
+                        port_alloc_buf[i] = DIR.INV;
+                        // Console.WriteLine("6:Router {0}/{1} port_alloc_buf[{2}] = {3}", ID, subnet, i, port_alloc_buf[i]);
+                    }
+                }
+            }
+            for (i = 0; i < 2; i++)
+            {
+                if (ejector[i] != DIR.INV)
+                {
+                    //Console.WriteLine("1:Router {0}/{1} ejector[{2}] = {3}", ID, subnet, i, ejector[i]);
+                    if ((header_buf[0][(int)ejector[i]] != null) &&
+                       ((header_buf[0][(int)ejector[i]].prefDir == (int)DIR.NI) || (header_buf[0][(int)ejector[i]].prefDir == (int)DIR.INV)))
+                    {
+                        //Console.WriteLine("2:Router {0}/{1} ejector[{2}] = {3} preferDir = {4}", ID, subnet, i, ejector[i], header_buf[0][(int)ejector[i]].prefDir);
+
+                        continue;
+                    }
+                    else
+                    {
+                        ejector[i] = DIR.INV;
+                        //  Console.WriteLine("3:Router {0}/{1} ejector[{2}] = {3}", ID, subnet, i, ejector[i]);
+                    }
+                    // Console.WriteLine("4:Router {0}/{1} ejector[{2}] = {3}", ID, subnet, i, ejector[i]);
+                }
+            }
+#if CLEARUP
+            Console.WriteLine("After Cleaning up: Router {8}/{9} port_alloc_buf- {0}:{1}:{2}:{3}:{4}:{5}==>{6}:{7}", port_alloc_buf[0], port_alloc_buf[1], port_alloc_buf[2],
+                port_alloc_buf[3], port_alloc_buf[4], port_alloc_buf[5], ejector[0], ejector[1],ID,subnet);
+#endif
+        }
+
 
         // Header inject
 
@@ -1039,120 +1761,437 @@ namespace ICSimulator
         protected bool isOutPortEnable(int dir)
         {
             bool ret = false;
-            
+            if (dir > 4)
+            {
+                throw new Exception("port_alloc ID should not be greater than 4, check isOutPortEnable");
+            }
             if (dir != (int)DIR.BYPASS)
             {
-                ret = linkOut[dir] != null;
+                ret = (linkOut[dir] != null);
             }
             else
             {
-                ret = bypassLinkOut[4 - (int)DIR.BYPASS] != null;
+                ret = (bypassLinkOut[4 - (int)DIR.BYPASS] != null);
             }
             return ret;
         }
+
+        //This module either download or deflect the worm
+        protected bool checkLocallyDestined(int dir)
+        {
+            bool ret = false;
+            if (header_buf[0][dir].prefDir == (int)DIR.INV) //locally destined has prefDir equal DIR.INV
+            {
+                // Console.WriteLine("LocallyDestined:: Router {0}/{1} Packet {2} ", ID, subnet, header_buf[0][dir].packet.ID);
+                if (header_buf[0][dir].dest.ID == ID) //locally destined worm
+                {
+                    if (ejector[0] == (DIR)dir || ejector[1] == (DIR)dir) // already mapped
+                    {
+                        ;// ret = true;
+                    }
+                    else // deflect to another port, we can't map to ejector here no matter whether the ejector is free or not
+                    {
+                        /*
+                        if (ejector[0] == DIR.INV)
+                        {
+                            ejector[0] = (DIR)dir;
+                        }
+                        else if (ejector[1] == DIR.INV)
+                        {
+                            ejector[1] = (DIR)dir;
+                        }
+                        else //deflect to another port
+                        {
+                            deflectWormToFreePort(dir);
+                        }*/
+                        deflectWormToFreePort(dir);
+                    }
+                    ret = true;
+                }
+                else
+                {
+                    // Console.WriteLine("Router {0}/{1} Packet {2} PrefDir {3} InPort {4}",
+                    //     ID, subnet, header_buf[0][dir].packet.ID, header_buf[0][dir].prefDir, dir);
+                    throw new Exception("Seems to be locally destined, but not, please check port_alloc()");
+                }
+            }
+            return ret;
+        }
+
+        protected bool checkFreePort(int dir)
+        {
+            bool ret = false;
+            //Console.WriteLine("checkFreePort:: Router {0}/{1} Packet {2} ", ID, subnet, header_buf[0][dir].packet.ID);
+            int availablePort = getFreeOutPortForNextCycle(dir);
+            if (availablePort != (int)DIR.NI)
+            {
+                port_alloc_buf[availablePort] = (DIR)dir;
+                header_buf[0][dir].prefDir = availablePort;
+                //flit_buf[0][dir].prefDir = availablePort;
+
+                // Console.WriteLine("Free Port found and mapped. Router {0}/{1} Packet {2}  assigned port {3}",
+                //     ID, subnet, header_buf[0][dir].packet.ID, availablePort);
+                ret = true;
+            }
+            return ret;
+        }
+
+        protected bool downloadNonLocalWorm(int dir)
+        {
+            bool ret = false;
+            if (dir != (int)DIR.LOCAL)
+            {
+                // Console.WriteLine("Downloading Non-Local Packet-{0} preferDir--{1}",
+                //    header_buf[0][dir].packet.ID, header_buf[0][dir].prefDir);
+                Flit temp = header_buf[0][dir].CloneSource(); // make a copy of header and proceed
+                Compare(temp, header_buf[0][dir]);
+                acceptTruncatedFlit(temp, 0);
+                header_buf[0][dir].prefDir = (int)DIR.NI; // Mark the incoming body flits to follow the header
+                                                          //port_alloc_buf[(int)DIR.NI] = (DIR)victimInPort; // point port_allocation as NI buffer
+                if (ejector[0] != DIR.INV && ejector[1] != DIR.INV)
+                { //should never happens
+                    throw new Exception("ERROR: both ejectors should not be busy at the same time");
+                }
+                //mark one of the ejector as busy
+                if (ejector[1] == DIR.INV)
+                    ejector[1] = (DIR)dir;
+                else if (ejector[0] == DIR.INV)
+                    ejector[0] = (DIR)dir;
+                ret = true;
+                // Console.WriteLine("1:Worm mapped to NI for downloading");
+            }
+            return ret;
+        }
+
+        protected bool downloadLocalWorm(int dir)
+        {
+            bool ret = false;
+
+            if (dir == (int)DIR.LOCAL) // for local port; the data is not populated yet ??
+            {
+                Flit temp = header_buf[0][dir].CloneSource(); // make a copy of header and proceed
+                Compare(temp, header_buf[0][dir]);
+                acceptTruncatedFlit(temp, 0);
+                acceptTruncatedFlit(header_buf[0][dir], 0);
+                header_buf[0][dir] = null;//Updated
+
+                if (flit_buf[0][dir] != null) // Does Local Injection places flits in flit_buf[0][Local]?? (NO)
+                {
+                    acceptTruncatedFlit(flit_buf[0][dir], 0);
+                    //header_buf[0][contendingPort] = null; // clear header buffer
+                    flit_buf[0][dir] = null; // clear flit buffer
+                }
+                if (m_injectSlot != null)
+                {
+                    acceptLocalTruncatedFlit(m_injectSlot);// this method moves the remaining flit to NI                           
+                    m_injectSlot = null; // clear buffer
+                }
+                //Console.WriteLine("2:Local Worm mapped to NI for downloading");
+                ret = true;
+            }
+            return ret;
+        }
+
+        protected bool checkDownloadToNI(int dir)
+        {
+            bool ret = false;
+            // Console.WriteLine("checkDownladToNI:: Router {0}/{1} Packet {2} ", ID, subnet, header_buf[0][dir].packet.ID);
+            int availablePort = getFreeOutPortForNextCycle(dir);
+            if (availablePort == (int)DIR.NI)// Download the flit to NI
+            {
+                if (downloadNonLocalWorm(dir))
+                {
+                    //Non-Local packet downloaded
+                    ret = true;
+                }
+
+                // It should never happens
+                else //if (downloadLocalWorm(dir)) // for local port; the data is not populated yet ??
+                {
+                    throw new Exception("ERROR: It should never be Locally injected worm ejectors should not be busy at the same time");
+                    //ret = true; 
+                }
+            }
+            return ret;
+        }
+
+
+        protected bool checkPreferedPort(int dir)
+        {
+            bool ret = false;
+            if (isOutPortEnable(header_buf[0][dir].prefDir))
+            {
+                // Console.WriteLine("PreferedPortEnable:: Router {0}/{1} Packet {2} Prefer Dir {3}",
+                //    ID, subnet, header_buf[0][dir].packet.ID, header_buf[0][dir].prefDir);
+                if (port_alloc_buf[header_buf[0][dir].prefDir] == (DIR)dir) // already mapped
+                {
+                    //Console.WriteLine("1. PreferedPort is Enabled and Mapped correctly");
+                    ret = true;
+                }
+                else if (port_alloc_buf[header_buf[0][dir].prefDir] == DIR.INV) // prefered direction available
+                {
+                    //  Console.WriteLine("2. PreferedPort is Enabled, free, and Mapped into it");
+                    port_alloc_buf[header_buf[0][dir].prefDir] = (DIR)dir;  // no need to update prefered direction in header                         
+                    ret = true;
+                }
+            }
+            return ret;
+        }
+
+        protected bool deflectWormToFreePort(int dir)
+        {
+            bool ret = false;
+            //defelct the worm to available port
+            int freeOutPort = getFreeOutPortForNextCycle(dir); // get a free outPut port :
+            if (freeOutPort != (int)DIR.NI) // NI is to download the truncated worm
+            {
+                header_buf[0][dir].prefDir = freeOutPort; // update header's prefere outport                    
+                //flit_buf[0][dir].prefDir = freeOutPort; // header to output buffer of freeOutPort                                                   
+                port_alloc_buf[freeOutPort] = (DIR)dir;
+                if (!flit_buf[0][dir].isHeadFlit) // is head Flit
+                {
+                    throw new Exception("Flit must be a Header flit, but it's not, , Please check deflectWormToFreePort()");
+                }
+                ret = true;
+            }
+            else
+            {
+                throw new Exception("Ports not available, Please check deflectWormToFreePort()");
+            }
+            return ret;
+        }
+
+        /*
+         * To be noted here, all header[0][dir] and flit[0][dir] are same under the port_alloc(); expected changes must be already adjusted.
+         * If any changes required, it must be dine through truncatWorm
+        */
         protected void port_alloc()
         {
+            int NICount = 0;
+            newHeader = true;
+            // Console.WriteLine("Port_alloc_1:: Router{7}/{8} @{9}:Port allocation port_alloc [0]-[4] and Ejector[0]-[1]:: {0}:{1}:{2}:{3}:{4}:{5}:{6}\n {10}",
+            //       port_alloc_buf[0], port_alloc_buf[1], port_alloc_buf[2], port_alloc_buf[3], port_alloc_buf[4], ejector[0], ejector[1],
+            //      ID, subnet, Simulator.CurrentRound, printHeader());
             if (newHeader) // a new header is arrived, so port allocation must be executed
             {
-                newHeader = false; // clear flag
-                if (newIsOldest) // Maps highest tenpHeader[0] first
+                newHeader = false; // clear flag  
+
+                // map all worms comming from input ports to respective output  ports
+                for (int dir = 0; dir < CHNL_CNT; dir++)
                 {
-                    //check for highestPriority worm
-                    if (tempHeader[0] != null)
+                    if (header_buf[0][dir] == null)
                     {
-                        if (!isOutPortEnable(tempHeader[0].prefDir))
-                            throw new Exception("Prefered port not enabled");
-                        if (port_alloc_buf[tempHeader[0].prefDir] != (DIR)tempHeader[0].inDir)
-                        {
-                            /*
-                    if (port_alloc_buf[tempHeader[0].prefDir] != DIR.INV)
-                    {
-                        throw new Exception("Port must be empty here but it seems something wrong");
+                        continue; // no need to assign outPort
                     }
-                    */
-                            port_alloc_buf[tempHeader[0].prefDir] = (DIR)tempHeader[0].inDir;
+                    //check if mapped to NI
+                    else if (header_buf[0][dir].prefDir == (int)DIR.NI)
+                    {
+                        // Console.WriteLine("PrefDir:: Router {0}/{1} Packet {2} ", ID, subnet, header_buf[0][dir].packet.ID);
+                        NICount = NICount + 1;
+                        continue; // this represent NI buffer and already adjusted
+                    }
+                    //is mapped to LOCAL outPort?
+                    else if (header_buf[0][dir].prefDir == (int)DIR.LOCAL) //this should not happen
+                    {
+                        throw new Exception("Prefered port is Local port, Please verify");
+                    }
+
+                    else if (checkLocallyDestined(dir)) //locally destined ?
+                    {
+                        //does for locally destined
+                        ;
+                    }
+                    //The worm intended to pass through this Router are processed after here  
+                    else if (checkPreferedPort(dir)) //Check for prefered port
+                    {
+                        ;
+                    }
+                    //prefered port is already taken, check for a free port only
+                    else if (checkFreePort(dir))
+                    {
+                        //check FreePort
+                        ;
+                    }
+                    else if (NICount < 1) //download to NI
+                    {
+                        if (checkDownloadToNI(dir))// Download the flit to NI
+                        {
+                            NICount = NICount + 1;
+                        }
+                        else
+                        {
+                            throw new Exception("Port is not available, please check at the end of the port_alloc()");
                         }
                     }
-                    newIsOldest = false;
+                    else
+                    {
+                        throw new Exception("More than one NI-buffer is used in a single Router, Please check port_alloc()");
+                    }
                 }
+
+            }
+            // Console.WriteLine("Port_alloc_2:: Router{7}/{8} @{9}:Port allocation port_alloc [0]-[4] and Ejector[0]-[1]:: {0}:{1}:{2}:{3}:{4}:{5}:{6}\n{10}",
+            //        port_alloc_buf[0], port_alloc_buf[1], port_alloc_buf[2], port_alloc_buf[3], port_alloc_buf[4], ejector[0], ejector[1],
+            //        ID, subnet, Simulator.CurrentRound, printHeader());
+        }
+
+
+        /*
+        protected void port_alloc()
+        {
+            int NICount = 0;
+            newHeader = true;
+            Console.WriteLine("Port_alloc_1:: Router{7}/{8} @{9}:Port allocation port_alloc [0]-[4] and Ejector[0]-[1]:: {0}:{1}:{2}:{3}:{4}:{5}:{6}",
+                   port_alloc_buf[0], port_alloc_buf[1], port_alloc_buf[2], port_alloc_buf[3], port_alloc_buf[4], ejector[0], ejector[1], ID, subnet, Simulator.CurrentRound);
+            if (newHeader) // a new header is arrived, so port allocation must be executed
+            {
+                newHeader = false; // clear flag  
+
                 // Assign the remaining ports
                 for (int dir = 0; dir < CHNL_CNT; dir++)
                 {
                     if (header_buf[0][dir] == null) continue; // no need to assign outPort
-                    if (header_buf[0][dir].prefDir == (int)DIR.NI) continue; // this represent NI buffer and already adjusted
-                    if (header_buf[0][dir].prefDir == (int)DIR.INV) //locally destined
+                    //check if the port is enabled 
+                    else if (header_buf[0][dir].prefDir == (int)DIR.NI)
                     {
+                        Console.WriteLine("Hi:1:: Router {0}/{1} Packet {2} ", ID, subnet, header_buf[0][dir].packet.ID);
+                        NICount = NICount + 1;
+                        continue; // this represent NI buffer and already adjusted
+                    }
+                    else if (header_buf[0][dir].prefDir == (int)DIR.LOCAL)
+                    {
+                        throw new Exception("Prefered port is Local port, Please verify");
+                    }
+
+                    else if (header_buf[0][dir].prefDir == (int)DIR.INV) //locally destined
+                    {
+                        Console.WriteLine("Hi:2:: Router {0}/{1} Packet {2} ", ID, subnet, header_buf[0][dir].packet.ID);
                         if (header_buf[0][dir].dest.ID == ID) //locally destined worm
                         {
-                            if (ejector[0] != (DIR)dir && ejector[1] != (DIR)dir) // both ejectors are busy
+                            if (ejector[0] == (DIR)dir || ejector[1] == (DIR)dir)
                             {
-                                //defelct the worm to available port
-                                int freeOutPort = getFreeOutPort(); // get a free outPut port
-                                if (freeOutPort != (int)DIR.NI) // NI is to download the truncated worm
-                                {
-                                    header_buf[0][dir].prefDir = freeOutPort; // update header's prefere outport                    
-                                    flit_buf[0][dir].prefDir = freeOutPort; // header to output buffer of freeOutPort                                                   
-                                    port_alloc_buf[freeOutPort] = (DIR)dir;
-                                }
-                                else
-                                    throw new Exception("Ports not available, Please check port_alloc()");
+                                continue;
                             }
                             else
                             {
                                 if (ejector[0] == DIR.INV)
+                                {
                                     ejector[0] = (DIR)dir;
+                                }
                                 else if (ejector[1] == DIR.INV)
+                                {
                                     ejector[1] = (DIR)dir;
+                                }
                                 else
-                                    throw new Exception("Both ejectors are busy, please check port_alloc()");
+                                {
+                                    //defelct the worm to available port
+                                    int freeOutPort = getFreeOutPortForNextCycle(dir); // get a free outPut port :
+                                    if (freeOutPort != (int)DIR.NI) // NI is to download the truncated worm
+                                    {
+                                        header_buf[0][dir].prefDir = freeOutPort; // update header's prefere outport                    
+                                        flit_buf[0][dir].prefDir = freeOutPort; // header to output buffer of freeOutPort                                                   
+                                        port_alloc_buf[freeOutPort] = (DIR)dir;
+                                    }
+                                    else
+                                        throw new Exception("Ports not available, Please check port_alloc()");
+                                }
                             }
                             continue; // locally destined flit:TODO (investigate more on it)
                         }
                         else
+                        {
+                            Console.WriteLine("Router {0}/{1} Packet {2} PrefDir {3} InPort {4}",
+                                ID, subnet, header_buf[0][dir].packet.ID, header_buf[0][dir].prefDir, dir);
                             throw new Exception("Seems to be locally destined, but not, please check port_alloc()");
+                        }
                     }
-
-                    if (header_buf[0][dir].prefDir == (int)DIR.LOCAL)
-                        throw new Exception("Prefered port is Local port, Please verify");
-
-                    if (isOutPortEnable(header_buf[0][dir].prefDir))
+                    else if (isOutPortEnable(header_buf[0][dir].prefDir))
                     {
-                        if (port_alloc_buf[header_buf[0][dir].prefDir] == (DIR)dir) // already mapped 
+                        Console.WriteLine("Hi:3:: Router {0}/{1} Packet {2} Prefer Dir {3}", ID, subnet, header_buf[0][dir].packet.ID, header_buf[0][dir].prefDir);
+                        if (port_alloc_buf[header_buf[0][dir].prefDir] == (DIR)dir) // already mapped
+                        {
+                            Console.WriteLine("Hi:3.1");
                             continue;
+                        }
                         else if (port_alloc_buf[header_buf[0][dir].prefDir] == DIR.INV) // prefered direction available
                         {
+                            Console.WriteLine("Hi:3.2");
                             port_alloc_buf[header_buf[0][dir].prefDir] = (DIR)dir;  // no need to update prefered direction in header                         
                             continue;
                         }
-                    }
-                    //prefered port is already taken, check for a free port only
-                    if (isOutPortEnable((int)DIR.BYPASS) && port_alloc_buf[(int)DIR.BYPASS] == DIR.INV)  // BYPASS is available
-                    {
-                        port_alloc_buf[(int)DIR.BYPASS] = (DIR)dir;
-                        header_buf[0][dir].prefDir = (int)DIR.BYPASS;
-                        continue;
-                    }
-                    else //find an availabale port
-                    {
-                        bool found = false;
-                        for (int outdir = 0; outdir < 4; outdir++) // BYPASS is already checked
+                        //prefered port is already taken, check for a free port only
+                        else
                         {
-                            if (isOutPortEnable(outdir))
-                                if (port_alloc_buf[outdir] == DIR.INV) // free port ?
+                            Console.WriteLine("Hi:4:: Router {0}/{1} Packet {2} ", ID, subnet, header_buf[0][dir].packet.ID);
+                            //bool found = false;
+                            int availablePort = getFreeOutPortForNextCycle(dir);
+                            if (availablePort != (int)DIR.NI)
+                            {
+                                port_alloc_buf[availablePort] = (DIR)dir;
+                                header_buf[0][dir].prefDir = availablePort;
+                                flit_buf[0][dir].prefDir = availablePort;
+                                //found = true;
+                                Console.WriteLine("Router {0}/{1} Packet {2}  assigned port {3}", ID, subnet, header_buf[0][dir].packet.ID, availablePort);
+                                continue;
+                            }
+                            else if (availablePort == (int)DIR.NI)// Download the flit to NI
+                            {
+                                NICount++;
+                                if (dir != (int)DIR.LOCAL)
                                 {
-                                    port_alloc_buf[outdir] = (DIR)dir;
-                                    header_buf[0][dir].prefDir = outdir; // update header                                   
-                                    found = true;
-                                    break;
+                                    Console.WriteLine("Downloading Packet-{0} preferDir--{1}", header_buf[0][dir].packet.ID, header_buf[0][dir].prefDir);
+                                    acceptTruncatedFlit(header_buf[0][dir], 0);
+                                    header_buf[0][dir].prefDir = (int)DIR.NI; // Mark the incoming body flits to follow the header
+                                                                              //port_alloc_buf[(int)DIR.NI] = (DIR)victimInPort; // point port_allocation as NI buffer
+                                    if (ejector[0] != DIR.INV && ejector[1] != DIR.INV)
+                                    { //should never happens
+                                        throw new Exception("ERROR: both ejectors should not be busy at the same time");
+                                    }
+                                    //mark one of the ejector as busy
+                                    if (ejector[1] == DIR.INV)
+                                        ejector[1] = (DIR)dir;
+                                    else if (ejector[0] == DIR.INV)
+                                        ejector[0] = (DIR)dir;
+
+                                    Console.WriteLine("1:Worm mapped to NI for downloading");
                                 }
-                        }
-                        if (!found)
-                        {
-                            throw new Exception("Port allocation fail, please check port_alloc()");
+                                // It should never happens
+                                else if (dir == (int)DIR.LOCAL) // for local port; the data is not populated yet ??
+                                {
+                                    acceptTruncatedFlit(header_buf[0][dir], 0);
+                                    header_buf[0][dir] = null;//Updated
+
+                                    if (flit_buf[0][dir] != null) // Does Local Injection places flits in flit_buf[0][Local]?? (NO)
+                                    {
+                                        acceptTruncatedFlit(flit_buf[0][dir], 0);
+                                        //header_buf[0][contendingPort] = null; // clear header buffer
+                                        flit_buf[0][dir] = null; // clear flit buffer
+                                    }
+                                    if (m_injectSlot != null)
+                                    {
+                                        acceptLocalTruncatedFlit(m_injectSlot);// this method moves the remaining flit to NI                           
+                                        m_injectSlot = null; // clear buffer
+                                    }
+                                    Console.WriteLine("2:Worm mapped to NI for downloading");
+                                }
+                                continue;
+                            }
                         }
                     }
+                    else
+                    {
+                        throw new Exception("Prefered port is not enable, please check at the end of the port_alloc()");
+                    }
+
                 }
+                if (NICount > 1)
+                    throw new Exception("More than one NI-buffer is used in a single Router, Please check port_alloc()");
             }
+            Console.WriteLine("Port_alloc_2:: Router{7}/{8} @{9}:Port allocation port_alloc [0]-[4] and Ejector[0]-[1]:: {0}:{1}:{2}:{3}:{4}:{5}:{6}",
+                   port_alloc_buf[0], port_alloc_buf[1], port_alloc_buf[2], port_alloc_buf[3], port_alloc_buf[4], ejector[0], ejector[1], ID, subnet, Simulator.CurrentRound);
         }
+        */
+
     }
+
 }

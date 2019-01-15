@@ -52,10 +52,10 @@ namespace ICSimulator
             y = id % Config.network_nrY;
         }
     }
-    
+
     public struct RC_Coord
     {
-    	public int x;
+        public int x;
         public int y;      // x, y: coord of the ring
         public int z;      // z : coord within a ring
         public int ID;     // identifier of the node. 
@@ -96,7 +96,7 @@ namespace ICSimulator
 
         public static void getXYZfromID(int id, out int x, out int y, out int z)
         {
-        	z = id % 4;
+            z = id % 4;
             x = id / (Config.network_nrY * 2);
             y = id % (Config.network_nrY * 2) / 4;
         }
@@ -112,14 +112,14 @@ namespace ICSimulator
         private Coord _src;
         public Coord dest { get { return _dest; } }
         private Coord _dest;
-		public List <Coord> destList;
-		public bool mc, gather; // multicast, gather-able packet
-		public int hsFlowID;
-		public int [] nrOfArrivedFlitsMC;
-		public ulong [] creationTimeMC;
-		public int nrMCPacket;
-		public int nrArrivedMCPacket;
-        
+        public List<Coord> destList;
+        public bool mc, gather; // multicast, gather-able packet
+        public int hsFlowID;
+        public int[] nrOfArrivedFlitsMC;
+        public ulong[] creationTimeMC;
+        public int nrMCPacket;
+        public int nrArrivedMCPacket;
+
 
         public ulong ID { get { return _ID; } }
         private ulong _ID;
@@ -132,7 +132,7 @@ namespace ICSimulator
 
 
         public ulong seq;
-		public int pktParity;   // 0:clockwise  1:counter clockwise  -1:dont care
+        public int pktParity;   // 0:clockwise  1:counter clockwise  -1:dont care
 
         public bool flow_open; // grab slot; queue, bounce for retx if none avail
         public bool flow_close; // release slot
@@ -148,7 +148,7 @@ namespace ICSimulator
 
         public ulong creationTime;
         public ulong injectionTime;
-		//public ulong reqCreationTime;
+        //public ulong reqCreationTime;
 
         public Flit[] flits;
         public int nrOfFlits; // { get { return flits.Length; } }
@@ -168,55 +168,55 @@ namespace ICSimulator
         public Packet scarab_retransmit;
         public bool scarab_is_nack, scarab_is_teardown;
 
-		// construct a synthetic network packet
-		// hotspot packet
-		public Packet(Request request, ulong block, int nrOfFlits, Coord source, Coord dest, bool _gather)
-		{
-			_request = request;
-			if (_request != null)
-				_request.beenToNetwork = true;
-			_block = block; // may not come from request (see above)
-			_src = source;
-			_dest = dest;
-			nrArrivedMCPacket = 0;
-			nrOfArrivedFlitsMC = new int [Config.N]; // for safety, although mc_degree may not reach N
-			creationTimeMC = new ulong[Config.N]; // index the destination node ID
-			if (request != null)
-				request.setCarrier (this);
-			requesterID = -1;
-			mc = false;
-			gather = _gather;
-			hsFlowID = Simulator.network.hsFlowID;
-			initialize (Simulator.CurrentRound, nrOfFlits);// Flitization of each packet;
-		}
+        // construct a synthetic network packet
+        // hotspot packet
+        public Packet(Request request, ulong block, int nrOfFlits, Coord source, Coord dest, bool _gather)
+        {
+            _request = request;
+            if (_request != null)
+                _request.beenToNetwork = true;
+            _block = block; // may not come from request (see above)
+            _src = source;
+            _dest = dest;
+            nrArrivedMCPacket = 0;
+            nrOfArrivedFlitsMC = new int[Config.N]; // for safety, although mc_degree may not reach N
+            creationTimeMC = new ulong[Config.N]; // index the destination node ID
+            if (request != null)
+                request.setCarrier(this);
+            requesterID = -1;
+            mc = false;
+            gather = _gather;
+            hsFlowID = Simulator.network.hsFlowID;
+            initialize(Simulator.CurrentRound, nrOfFlits);// Flitization of each packet;
+        }
 
-		// construct a multicast packet
-		// TODO: it may be merged in network. 
-		public Packet(Request request, ulong block, int nrOfFlits, Coord source, List <Coord> _destList)
-		{
-			_request = request;
-			if (_request != null)
-				_request.beenToNetwork = true;
-			_block = block; // may not come from request (see above)
-			_src = source;
-			destList = new List <Coord>(_destList);
-			nrMCPacket = _destList.Count;
-			nrArrivedMCPacket = 0;
-			nrOfArrivedFlitsMC = new int [Config.N]; // for safety, although mc_degree may not reach N
-			creationTimeMC = new ulong[Config.N]; // index the destination node ID
-			if (request != null)
-				request.setCarrier (this);
-			requesterID = -1;
-			hsFlowID = -1;
-			mc = true;
-			gather = false;
-			initialize (Simulator.CurrentRound, nrOfFlits);// Flitization of each packet;
-		}
+        // construct a multicast packet
+        // TODO: it may be merged in network. 
+        public Packet(Request request, ulong block, int nrOfFlits, Coord source, List<Coord> _destList)
+        {
+            _request = request;
+            if (_request != null)
+                _request.beenToNetwork = true;
+            _block = block; // may not come from request (see above)
+            _src = source;
+            destList = new List<Coord>(_destList);
+            nrMCPacket = _destList.Count;
+            nrArrivedMCPacket = 0;
+            nrOfArrivedFlitsMC = new int[Config.N]; // for safety, although mc_degree may not reach N
+            creationTimeMC = new ulong[Config.N]; // index the destination node ID
+            if (request != null)
+                request.setCarrier(this);
+            requesterID = -1;
+            hsFlowID = -1;
+            mc = true;
+            gather = false;
+            initialize(Simulator.CurrentRound, nrOfFlits);// Flitization of each packet;
+        }
 
-		// regular packet
-		public Packet(Request request, ulong block, int nrOfFlits, Coord source, Coord dest)
-     		   {
-          		  _request = request;
+        // regular packet
+        public Packet(Request request, ulong block, int nrOfFlits, Coord source, Coord dest)
+        {
+            _request = request;
             if (_request != null)
                 _request.beenToNetwork = true;
             _block = block; // may not come from request (see above)
@@ -225,55 +225,55 @@ namespace ICSimulator
             if (request != null)
                 request.setCarrier(this);
             requesterID = -1;
-			mc = false;
-			gather = false;
+            mc = false;
+            gather = false;
             initialize(Simulator.CurrentRound, nrOfFlits);
         }
 
-		//by Xiyue:
+        //by Xiyue:
 
-		// TODO: this is the packet generated by the processor
-		public Packet(Request request, ulong block, int nrOfFlits, Coord source, Coord dest, CmpCache_Txn txn, bool critical)
-		{
-			_request = request;
-			if (_request != null)
-				_request.beenToNetwork = true;
-			_block = block; // may not come from request (see above)
-			_src = source;
-			_dest = dest;
-			_intfCycle = 0;
-			if (request != null)
-				request.setCarrier(this);
-			requesterID = -1;
-			initialize(Simulator.CurrentRound, nrOfFlits);
-			this.txn = txn;
-			this.critical = critical;
-			this.rank = Controller_QoSThrottle.app_rank[txn.node];
-			this.app_type = Controller_QoSThrottle.app_type[txn.node];
-			this.most_mem_inten = Controller_QoSThrottle.most_mem_inten[txn.node];
-			this.slowdown = Simulator.stats.estimated_slowdown [txn.node].LastPeriodValue; // TODO: by Xiyue: this is equivalent to have N ranking levels.
-		}
+        // TODO: this is the packet generated by the processor
+        public Packet(Request request, ulong block, int nrOfFlits, Coord source, Coord dest, CmpCache_Txn txn, bool critical)
+        {
+            _request = request;
+            if (_request != null)
+                _request.beenToNetwork = true;
+            _block = block; // may not come from request (see above)
+            _src = source;
+            _dest = dest;
+            _intfCycle = 0;
+            if (request != null)
+                request.setCarrier(this);
+            requesterID = -1;
+            initialize(Simulator.CurrentRound, nrOfFlits);
+            this.txn = txn;
+            this.critical = critical;
+            this.rank = Controller_QoSThrottle.app_rank[txn.node];
+            this.app_type = Controller_QoSThrottle.app_type[txn.node];
+            this.most_mem_inten = Controller_QoSThrottle.most_mem_inten[txn.node];
+            this.slowdown = Simulator.stats.estimated_slowdown[txn.node].LastPeriodValue; // TODO: by Xiyue: this is equivalent to have N ranking levels.
+        }
 
-		public bool critical;
-		public double slowdown; // slowdown of the associated application
-		private int _intfCycle;
-		public ulong first_flit_arrival;
-		public ulong rank;
-		public APP_TYPE app_type;
-		public bool most_mem_inten;
-		public CmpCache_Txn txn;
-		public void add_intf () { _intfCycle++; }
-		public int intfCycle
-		{
-			get { return _intfCycle; }
-			set {_intfCycle = value; }
-		}
+        public bool critical;
+        public double slowdown; // slowdown of the associated application
+        private int _intfCycle;
+        public ulong first_flit_arrival;
+        public ulong rank;
+        public APP_TYPE app_type;
+        public bool most_mem_inten;
+        public CmpCache_Txn txn;
+        public void add_intf() { _intfCycle++; }
+        public int intfCycle
+        {
+            get { return _intfCycle; }
+            set { _intfCycle = value; }
+        }
 
-		public virtual string ToString()
-		{
-			return String.Format("PktGen: pktID {0}, src {1} dest {2} of size {3}", _ID, src.ID, dest.ID, nrOfFlits);
-		}
-		//end Xiyue
+        public virtual string ToString()
+        {
+            return String.Format("PktGen: pktID {0}, src {1} dest {2} of size {3}", _ID, src.ID, dest.ID, nrOfFlits);
+        }
+        //end Xiyue
 
 
 
@@ -302,14 +302,14 @@ namespace ICSimulator
                 flits[i].isHeadFlit = false;
 
             this.creationTime = creationTime;
-			//reqCreationTime = creationTime;
+            //reqCreationTime = creationTime;
             injectionTime = ulong.MaxValue;
             nrOfArrivedFlits = 0;
 
             for (int i = 0; i < nrOfFlits; i++)
             {
-				if (flits[i].packet.mc)
-					flits[i].destList = new List <Coord> (destList);
+                if (flits[i].packet.mc)
+                    flits[i].destList = new List<Coord>(destList);
                 flits[i].hasFlitArrived = false;
                 flits[i].nrOfDeflections = 0;
             }
@@ -370,7 +370,10 @@ namespace ICSimulator
     {
         public Packet packet;
 
-		public List <Coord> destList;
+        public List<Coord> destList;
+
+        public bool isTruncatedHead = false; // to check the additional head
+        public bool takeX = true; // take X-direction on routing
 
         public int flitNr;
         public bool hasFlitArrived;
@@ -379,61 +382,61 @@ namespace ICSimulator
         public ulong nrOfDeflections;
         public int virtualChannel; // to which virtual channel the packet should go in the next router. 
         public bool sortnet_winner;
-		public int ackCount;
+        public int ackCount;
         public int subNetwork; // To be used for truncated worm
 
         public int currentX;
         public int currentY;
 
         public bool Deflected;
-		public bool Bypassed;
+        public bool Bypassed;
         public bool routingOrder;  //if (false): x direction prioritized over y
 
         public ulong injectionTime; // absolute injection timestamp
-		public ulong creationTime;
+        public ulong creationTime;
         public ulong headT; // reaches-head-of-queue timestamp
 
         public int nackWire; // nack wire nr. for last hop
         public int inDir;
         public int prefDir;
-		public int parity;   // 0:clockwise  1:counter clockwise  -1:dont care
+        public int parity;   // 0:clockwise  1:counter clockwise  -1:dont care
 
         public enum State { Normal, Placeholder, Rescuer, Carrier }
         public State state;
         public Coord rescuerCoord;
 
-		// MinBD: For resubmisstion buffer
-		// Indicating that it had come out of the rebuf 
-		public bool  wasInRebuf;
-		public ulong nrInRebuf;
-		public int rebufInTime;
-		public int rebufOutTime;
-		public bool  isSilver;
-		public bool  wasSilver;
-		public int   nrWasSilver;
-		public int   priority;
+        // MinBD: For resubmisstion buffer
+        // Indicating that it had come out of the rebuf 
+        public bool wasInRebuf;
+        public ulong nrInRebuf;
+        public int rebufInTime;
+        public int rebufOutTime;
+        public bool isSilver;
+        public bool wasSilver;
+        public int nrWasSilver;
+        public int priority;
 
-		// For counting the interference cycle of each flit
-		public int intfCycle = 0;
+        // For counting the interference cycle of each flit
+        public int intfCycle = 0;
 
-		//for stats: how many useless cycles the flit is comsuming
-		public ulong timeIntoTheBuffer;
-		public ulong timeSpentInBuffer = 0;
-		public ulong timeWaitToInject = 0;
-		public ulong timeInTheSourceRing = 0;
-		public ulong timeInTheTransitionRing = 0;
-		public ulong timeInTheDestRing = 0;
-		public ulong timeInGR = 0;
-		public ulong enterBuffer = 0;
+        //for stats: how many useless cycles the flit is comsuming
+        public ulong timeIntoTheBuffer;
+        public ulong timeSpentInBuffer = 0;
+        public ulong timeWaitToInject = 0;
+        public ulong timeInTheSourceRing = 0;
+        public ulong timeInTheTransitionRing = 0;
+        public ulong timeInTheDestRing = 0;
+        public ulong timeInGR = 0;
+        public ulong enterBuffer = 0;
 
-		public ulong ejectTrial = 0;
-		public ulong firstEjectTrial = 0;
-		public bool [] preferredDirVector;
-		public bool replicateNeed = false;
-		public bool replicateEnable = false;
+        public ulong ejectTrial = 0;
+        public ulong firstEjectTrial = 0;
+        public bool[] preferredDirVector;
+        public bool replicateNeed = false;
+        public bool replicateEnable = false;
 
         public BufRingMultiNetwork_Coord bufrings_coord;
-		
+
         public Coord dest
         {
             get
@@ -458,46 +461,46 @@ namespace ICSimulator
         {
             this.packet = packet;
             this.flitNr = flitNr;
-			this.prefDir = -1;
+            this.prefDir = -1;
             hasFlitArrived = false;
             this.Deflected = false;
-			this.Bypassed = false;
-			this.ackCount = 1;
+            this.Bypassed = false;
+            this.ackCount = 1;
 
-			this.creationTime = Simulator.CurrentRound;
+            this.creationTime = Simulator.CurrentRound;
             //deflections = new bool[100];
             //deflectionsIndex = 0;
             if (packet != null)
                 distance = Simulator.distance(packet.src, packet.dest);
             this.routingOrder = false;
-			if (packet == null) return;
-			int srcX = packet.src.ID / Config.network_nrY / 2;
-			int destX = packet.dest.ID / Config.network_nrY / 2;
+            if (packet == null) return;
+            int srcX = packet.src.ID / Config.network_nrY / 2;
+            int destX = packet.dest.ID / Config.network_nrY / 2;
 
             if (Config.AllBiDirLink || Config.HR_NoBias || Config.topology != Topology.Mesh)
-				parity = -1;
-			if (Config.topology == Topology.MeshOfRings && Config.RC_mesh == true)
-			{
-				if (srcX == destX) 
-					parity = -1;
-				else if (destX > srcX)
-					parity = 0;
-				else  // destX < srcX
-					parity = 1;
-			}
+                parity = -1;
+            if (Config.topology == Topology.MeshOfRings && Config.RC_mesh == true)
+            {
+                if (srcX == destX)
+                    parity = -1;
+                else if (destX > srcX)
+                    parity = 0;
+                else  // destX < srcX
+                    parity = 1;
+            }
 
-			if (Config.SingleDirRing)
-				parity = 0;
+            if (Config.SingleDirRing)
+                parity = 0;
 
-			preferredDirVector = new bool[5] {false, false, false, false, false};
+            preferredDirVector = new bool[5] { false, false, false, false, false };
 
-			
+
             /*if ((srcCluster == 0 || srcCluster == 3) && 
-            	(destCluster == 1 || destCluster == 2))
-            	Simulator.stats.flitToUpper.Add();
+                (destCluster == 1 || destCluster == 2))
+                Simulator.stats.flitToUpper.Add();
             else if ((srcCluster == 1 || srcCluster == 2) &&
-            	(destCluster == 0 || destCluster == 3))
-            	Simulator.stats.flitToLower.Add();*/
+                (destCluster == 0 || destCluster == 3))
+                Simulator.stats.flitToLower.Add();*/
         }
         /*
         public void deflectTest()
@@ -519,25 +522,100 @@ namespace ICSimulator
         }*/
 
 
-		public void ClearRoutingInfo ()
-		{
-			Array.Clear (preferredDirVector, 0, 5);
-			replicateNeed = false;
-			replicateEnable = false;
-		}
+        public void ClearRoutingInfo()
+        {
+            Array.Clear(preferredDirVector, 0, 5);
+            replicateNeed = false;
+            replicateEnable = false;
+        }
         public delegate void Visitor(Flit f);
 
         public override string ToString()
         {
-			if (packet != null) {
-				if (packet.mc)
-					return String.Format ("MC Packet {0}.{1}", packet.ID, flitNr,  state);
-				else
-					return String.Format ("UC Packet {0}.{1}", packet.ID, flitNr,  state);
+            if (packet != null)
+            {
+                if (packet.mc)
+                    return String.Format("MC Packet {0}.{1}", packet.ID, flitNr, state);
+                else
+                    return String.Format("UC Packet {0}.{1}", packet.ID, flitNr, state);
 
-			}
+            }
             else
-				return String.Format("Flit {0} of pktID <NONE> (state {1})", flitNr, state);
+                return String.Format("Flit {0} of pktID <NONE> (state {1})", flitNr, state);
+        }
+        //Added by Puru for cloning a Flit
+        public Flit CloneSource()
+        {
+            Flit source = new Flit(null, 0);
+            source.packet = this.packet;
+
+            source.isTruncatedHead = this.isTruncatedHead;
+            source.takeX = this.takeX;
+
+            source.destList = this.destList;
+            source.flitNr = this.flitNr;
+            source.hasFlitArrived = this.hasFlitArrived;
+            source.isHeadFlit = this.isHeadFlit;
+            source.isTailFlit = this.isTailFlit;
+            source.nrOfDeflections = this.nrOfDeflections;
+            source.virtualChannel = this.virtualChannel; // to which virtual channel the packet should go in the next router. 
+            source.sortnet_winner = this.sortnet_winner;
+            source.ackCount = this.ackCount;
+            source.subNetwork = this.subNetwork; // To be used for truncated worm
+
+            source.currentX = this.currentX;
+            source.currentY = this.currentY;
+
+            source.Deflected = this.Deflected;
+            source.Bypassed = this.Bypassed;
+            source.routingOrder = this.routingOrder;  //if (false): x direction prioritized over y
+
+            source.injectionTime = this.injectionTime; // absolute injection timestamp
+            source.creationTime = this.creationTime;
+            source.headT = this.headT; // reaches-head-of-queue timestamp
+
+            source.nackWire = this.nackWire; // nack wire nr. for last hop
+            source.inDir = this.inDir;
+            source.prefDir = this.prefDir;
+            source.parity = this.parity;   // 0:clockwise  1:counter clockwise  -1:dont care
+
+
+            source.state = this.state;
+            source.rescuerCoord = this.rescuerCoord;
+
+            // MinBD: For resubmisstion buffer
+            // Indicating that it had come out of the rebuf 
+            source.wasInRebuf = this.wasInRebuf;
+            source.nrInRebuf = this.nrInRebuf;
+            source.rebufInTime = this.rebufInTime;
+            source.rebufOutTime = this.rebufOutTime;
+            source.isSilver = this.isSilver;
+            source.wasSilver = this.wasSilver;
+            source.nrWasSilver = this.nrWasSilver;
+            source.priority = this.priority;
+
+            // For counting the interference cycle of each flit
+            source.intfCycle = this.intfCycle;
+
+            //for stats: how many useless cycles the flit is comsuming
+            source.timeIntoTheBuffer = this.timeIntoTheBuffer;
+            source.timeSpentInBuffer = this.timeSpentInBuffer;
+            source.timeWaitToInject = this.timeWaitToInject;
+            source.timeInTheSourceRing = this.timeInTheSourceRing;
+            source.timeInTheTransitionRing = this.timeInTheTransitionRing;
+            source.timeInTheDestRing = this.timeInTheDestRing;
+            source.timeInGR = this.timeInGR;
+            source.enterBuffer = this.enterBuffer;
+
+            source.ejectTrial = this.ejectTrial;
+            source.firstEjectTrial = this.firstEjectTrial;
+            source.preferredDirVector = this.preferredDirVector;
+            source.replicateNeed = this.replicateNeed;
+            source.replicateEnable = this.replicateEnable;
+
+            source.bufrings_coord = this.bufrings_coord;
+            return source;
         }
     }
+
 }
