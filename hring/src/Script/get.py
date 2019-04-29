@@ -13,6 +13,25 @@ def get_stat (file_name):
   result_file.close()
   return result
 
+def get_pkt_lat_tot (stat): 
+  searchObj = re.search(r'(?:packet tot latency: (.*?) \| MAX (.*?) )',stat)
+  pkt_lat_tot = [searchObj.group(1), searchObj.group(2)]
+  return pkt_lat_tot
+
+def get_pkt_lat_net (stat): 
+  searchObj = re.search(r'(?:packet net latency: (.*?) \| MAX (.*?) )',stat)
+  pkt_lat_tot = [searchObj.group(1), searchObj.group(2)]
+  return pkt_lat_tot
+
+def get_throughput (stat):
+  searchObj = re.search(r'(?:throughput: (.*?) flits per cycle)',stat)
+  throughput = searchObj.group(1)
+  return throughput
+
+def get_deflect (stat):
+  searchObj = re.search(r'(?:deflection rate (.*?)\%)',stat)
+  deflect = searchObj.group(1)
+  return deflect
 
 def get_l1miss (stat):
   searchObj = re.search(r'(?:"L1_misses_persrc":\[(.*?)])',stat)
@@ -136,10 +155,10 @@ def cmp_geo_avg (data_set):
   new_data_set = [log(x) for x in data_set]
   return exp(sum (new_data_set)/len(new_data_set))
 
-def cmp_geo_avg (error_raw):
-  # error rate has to be an array or list
-  new_error_raw = [log(x) for x in error_raw]
-  return exp(sum (new_error_raw)/len(new_error_raw))
+#def cmp_geo_avg (error_raw):
+#  # error rate has to be an array or list
+#  new_error_raw = [log(x) for x in error_raw]
+#  return exp(sum (new_error_raw)/len(new_error_raw))
 
 
 

@@ -89,7 +89,7 @@ namespace ICSimulator
         public int addrPacketSize = 1;
         public int dataPacketSize = 4;//8;
         public int maxPacketSize  = 4;//8;
-        public RouterAlgorithm algorithm = RouterAlgorithm.DR_FLIT_SWITCHED_CALF;//RouterAlgorithm.DR_FLIT_SWITCHED_CTLR;
+		public RouterAlgorithm algorithm = RouterAlgorithm.DR_FLIT_SWITCHED_GP;//RouterAlgorithm.DR_FLIT_SWITCHED_CTLR;
         public string options = "";
         public double throttleparam = 1.0;
         public int extraLatency = 0;

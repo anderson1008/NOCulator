@@ -164,7 +164,9 @@ namespace ICSimulator {
                 requests[next] = r;
                 issueT[next] = Simulator.CurrentRound;
                 headT[next] = Simulator.CurrentRound;
-                if (isReady && r != null) r.service();  // service non-memory instruction directly here.
+				if (isReady && r != null) {
+					r.service();  // service non-memory instruction directly here.
+				}
                 //Console.WriteLine("pr{0}: new req in slot {1}: addr {2}, write {3} ready {4}", m_cpu.ID, next, address, isWrite, isReady);
                 next++;
                 if (!isReady) outstandingReqs++;
@@ -198,7 +200,7 @@ namespace ICSimulator {
 						max_intf = max_intf_temp;
 					
 					} 				
-					requests [oldest].retire ();
+					requests [oldest].retire (); // nothing magic, just log the stats
 				} 
 
 	
@@ -303,14 +305,10 @@ namespace ICSimulator {
                 if ((addresses[i] & m_match_mask) == (address & m_match_mask) && !ready[i]) {
 
 					// this completion does not satisfy outstanding req i if and only if
-                    // 1. the outstanding req is a write, AND
-                    // 2. the completion is a read completion.
-                    if (writes[i] && !write) continue;
+                    if (writes[i] && !write) continue;  // Waiting for a write completion, but read completion received
+					else if (!writes[i] && write) continue; // Waiting for a read completion, but write completion received
 
 					//Console.WriteLine ("SetReady node = {0}, addr = {1}, time = {2}", m_cpu.ID, addresses [i], Simulator.CurrentRound);
-
-					// Need to remove interference entry
-
                     requests[i].service();
 
                     ready[i] = true;

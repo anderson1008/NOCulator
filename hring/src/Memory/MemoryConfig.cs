@@ -11,7 +11,7 @@ namespace ICSimulator
     {
         //memory
         //public BitValuePair memoryBV = new BitValuePair(0);
-        public int mem_bit = 0;    //log2(number of MCs)
+        public int mem_bit = 2;    //log2(number of MCs)
         public int mem_max { get { return (int)1 << mem_bit; } } //number of memory
 
         //public BitValuePair rowBV = new BitValuePair(6);
@@ -38,7 +38,7 @@ namespace ICSimulator
         public bool is_shared_MC = false;        //whether all memory share the same controller
 
         //memory scheduling algorithm
-        public MemSchedAlgo mem_sched_algo = MemSchedAlgo.FULL_BATCH;    //memory scheduling algorithm
+		public MemSchedAlgo mem_sched_algo = MemSchedAlgo.FRFCFS;    //memory scheduling algorithm
 
         //memory address mapping
         public AddressMap address_mapping = AddressMap.BMR;

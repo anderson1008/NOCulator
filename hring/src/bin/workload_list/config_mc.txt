@@ -1,0 +1,45 @@
+// for evaluation of 4x4 network
+
+network_nrX = 4
+network_nrY = 4
+mc_degree = 63
+//finish = app
+//insns = 1000000
+//finish = barrier
+//barrier = 3
+//trace_wraparound = true
+
+finish = packet 10000
+
+//finish = cycle 1100000
+//warmup_cyc = 100000
+topology = Mesh_Multi
+//router.algorithm = DR_FLIT_SWITCHED_OLDEST_FIRST 
+router.algorithm = BLESS_BYPASS
+//afc_force = true 
+//afc_force_buffered = true 
+//afc_buf_per_vnet = 4
+//afc_vnets = 8
+router.dataPacketSize = 4 
+router.maxPacketSize = 4 
+router.addrPacketSize = 1
+
+// private cache size = 2^(coherent_cache_size-coherent_cache_assoc-cache_block) entries
+coherent_cache_size = 16
+coherent_cache_assoc = 2
+cache_block = 5
+mshrs = 16
+
+
+sh_cache_size = 21
+sh_cache_assoc = 4
+sh_cache_perfect = true
+
+idealnet = false
+router.linkLatency = 3
+edge_loop = false 
+
+shcache_buf = 16
+
+
+

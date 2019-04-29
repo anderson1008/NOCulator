@@ -1,0 +1,36 @@
+// for evaluation of 4x4 network
+
+network_nrX = 8
+network_nrY = 8
+//finish = app
+//insns = 1000000
+//trace_wraparound = true
+
+finish = cycle 100000
+warmup_cyc = 5000
+
+topology = Mesh
+router.algorithm = DR_FLIT_SWITCHED_OLDEST_FIRST 
+router.dataPacketSize = 8 
+router.maxPacketSize = 8 
+router.addrPacketSize = 1
+
+// private cache size = 2^(coherent_cache_size-coherent_cache_assoc-cache_block) entries
+coherent_cache_size = 16
+coherent_cache_assoc = 2
+cache_block = 5
+mshrs = 16
+
+
+sh_cache_size = 21
+sh_cache_assoc = 4
+sh_cache_perfect = false
+
+idealnet = false
+router.linkLatency = 2
+edge_loop = false 
+
+shcache_buf = 16
+
+
+

@@ -405,11 +405,11 @@ namespace ICSimulator
 				if (Config.topology == Topology.Mesh || Config.topology == Topology.SingleRing)
 				{
 					if (Config.network_nrX == 4 && Config.network_nrY == 4)
-		                t_addr = (t_addr & ~mask) | (ulong)((~m_group & 0x0f)<< 5);
+						t_addr = (t_addr & ~mask) | (((ulong)~m_group & (ulong)0x0f)<< 5);
 					else if (Config.network_nrX == 8 && Config.network_nrY == 8)
-		                t_addr = (t_addr & ~mask) | (ulong)((~m_group & 0x3f)<< 5);
+						t_addr = (t_addr & ~mask) | (((ulong)~m_group & (ulong)0x3f)<< 5);
 					else if (Config.network_nrX == 16 && Config.network_nrY == 16)
-		                t_addr = (t_addr & ~mask) | (ulong)((~m_group & 0xff)<< 5);
+						t_addr = (t_addr & ~mask) | (((ulong)~m_group & (ulong)0xff)<< 5);
 				}		
 				else
 				{
@@ -464,17 +464,17 @@ namespace ICSimulator
 	            {
 					if (Config.network_nrX == 4 && Config.network_nrY == 4)
 					{
-						int dest = ((m_group << 2) & 0x0c) | ((m_group >> 2) & 0x03);
+						ulong dest = ((ulong)(m_group << 2) & (ulong)0x0c) | ((ulong)(m_group >> 2) & (ulong)0x03);
 	                	t_addr = (t_addr & ~mask) | (ulong)(dest << 5);
 					}
 					else if (Config.network_nrX == 8 && Config.network_nrY == 8)
 					{
-						int dest = ((m_group << 3) & 0x38) | ((m_group >> 3) & 0x07);
+						ulong dest = ((ulong)(m_group << 3) & (ulong)0x38) | ((ulong)(m_group >> 3) & (ulong)0x07);
 	                	t_addr = (t_addr & ~mask) | (ulong)(dest << 5);
 					}
 					else if (Config.network_nrX == 16 && Config.network_nrY == 16)
 					{
-						int dest = ((m_group << 4) & 0xf0) | ((m_group >> 4) & 0x0f);
+						ulong dest = ((ulong)(m_group << 4) & (ulong)0xf0) | ((ulong)(m_group >> 4) & (ulong)0x0f);
 	                	t_addr = (t_addr & ~mask) | (ulong)(dest << 5);
 					}
 				}
@@ -539,8 +539,8 @@ namespace ICSimulator
 
                 // Send to 1 destination only
                 ulong _mask = 0x1e0;
-                int dest = 10;
-                t_addr = (t_addr & ~_mask) | (ulong)(dest << 5); 
+                ulong dest = 10;
+                t_addr = (t_addr & ~_mask) | (dest << 5); 
             }
 
             if (Config.randomHotspot)
@@ -673,7 +673,7 @@ namespace ICSimulator
                         }
                     }
                 }
-                t_addr = (t_addr & ~_mask) | (ulong)(mapping << 5); 
+				t_addr = (ulong)(t_addr & ~_mask) | (ulong)(mapping << 5); 
             }
 
 

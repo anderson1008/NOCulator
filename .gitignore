@@ -3,6 +3,7 @@
 !/hring/src/bin/config_qos.txt
 /mono/*
 /hring/src/results/*
+*.log
 /result/*
 *.out
 /minbd/*
@@ -10,3 +11,6 @@
 Makefile*
 *.py~
 /Mono/*
+/hring/src/.DS_Store
+.DS_Store
+/hring/src/Script/carpool/

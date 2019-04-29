@@ -34,12 +34,13 @@ namespace ICSimulator
         }
 
         int mshrs_free;
+		public int freeMSHR {get { return mshrs_free;}}
         MSHR[] m_mshrs;
 
         Trace m_trace;
         bool m_trace_valid; // current record valid?
 
-        int m_ID, m_group; //, m_thdID;
+        int m_ID, m_group; //m_thdID;
 
         int group_count;
 
@@ -51,7 +52,7 @@ namespace ICSimulator
 
 
         public ulong ICount { get { return m_active_ret; } }
-        bool m_done;
+        bool m_done;  // variable will be set if the specified number of instructions are received
         bool m_idle;
 
         //stats
@@ -60,7 +61,6 @@ namespace ICSimulator
         public ulong outstandingReqsMemory = 0;
         public ulong outstandingReqsMemoryCycle;
 		public ulong throttleCycle = 0;
-
         ulong alone_t;
 
 		// By Xiyue
@@ -224,14 +224,10 @@ namespace ICSimulator
 					noFreeMSHRs = false;
 			}
             
-			// use up credit
-			bool stallThrottle = false;
-			if (Config.throttle_enable)
-				stallThrottle = !windowFull && ((Config.mshrs - mshrs_free) > Controller_QoSThrottle.mshr_quota [m_ID]) && nextIsMem;
 
 			// any stall: either (i) window is full, or (ii) window is not full
 			// but next insn (LD / ST) can't be issued
-			stall = windowFull || (nextIsMem && noFreeMSHRs) || stallThrottle;
+			stall = windowFull || (nextIsMem && noFreeMSHRs);
 
 			// MSHR stall: window not full, next insn is memory, but we have no free MSHRs
 			bool stallMem = !windowFull && (nextIsMem && noFreeMSHRs);
@@ -240,12 +236,6 @@ namespace ICSimulator
 				Simulator.stats.cpu_stall [m_ID].Add ();
 			if (stallMem)
 				Simulator.stats.cpu_stall_mem [m_ID].Add ();
-			if (stallThrottle) {
-				Simulator.stats.cpu_stall_throttle [m_ID].Add ();
-				throttleCycle ++;
-				//Console.WriteLine("Core {0} ThrottleCycle {1} at TIME = {2}", m_ID, throttleCycle, Simulator.CurrentRound);
-			}
-
         }
 
         bool advanceTrace()
@@ -290,20 +280,24 @@ namespace ICSimulator
             return m_trace_valid;
         }
 
-        bool canIssueMSHR (ulong addr)
+		bool mshrStall (ulong addr, out int mshr)
 		{
 			ulong block = addr >> Config.cache_block;
-
+			mshr = -1;
 			for (int i = 0; i < m_mshrs.Length; i++)
-				if (m_mshrs [i].block == block)
-					return true;
+				if (m_mshrs [i].block == block && m_mshrs[i].valid == true) {
+					mshr = i;
+					return false;
+				}
 
 			// Without throttling, an mshr entry can be issued as long as there is an available entry.
 			// In the case of throttling, we need to check credit.
-			if (!Config.throttle_enable) {
-				return mshrs_free > 0;
+			if (Config.throttle_enable == true && Config.controller == ControllerType.THROTTLE_QOS && Config.throttle_at_mshr) {
+				if (mshrs_free <= 0 || (Config.mshrs - mshrs_free) >= Controller_QoSThrottle.mshr_quota [m_ID]) return true;
+				else return false;
 			} else {
-				return mshrs_free > 0 && ((Config.mshrs - mshrs_free) <= Controller_QoSThrottle.mshr_quota [m_ID]);
+				return (mshrs_free <= 0);
+
 			}
         }
 
@@ -315,6 +309,9 @@ namespace ICSimulator
 			#if DEBUG
 			//Console.WriteLine ("DONE at node = {1}, req_addr = {2}, time = {0}", Simulator.CurrentRound, m_ID, addr);
 			#endif
+
+			if (mshr == -1)
+				return;
 
 			if (!write && m_mshrs[mshr].pending_write)
 			{
@@ -333,16 +330,23 @@ namespace ICSimulator
 			}
 		}
 
-        void issueReq(Request req)
-        {
-            for (int i = 0; i < m_mshrs.Length; i++)
-                if (m_mshrs[i].block == req.blockAddress)
-                {
-                    if (req.write && !m_mshrs[i].write)   //by Xiyue: Prevent Write After Read hazard???
-                        m_mshrs[i].pending_write = true;
-                    return;
-                }
 
+		bool checkWAR (Request req)
+		{
+			for (int i = 0; i < m_mshrs.Length; i++)
+				if (m_mshrs[i].block == req.blockAddress && m_mshrs[i].valid == true)
+				{
+					if (req.write && !m_mshrs [i].write)  //by Xiyue: Prevent Write After Read hazard???
+					  return true;
+				}
+			return false;
+
+		}
+
+
+		int allocMSHR(Request req)
+        {
+			
             int mshr = -1;
             for (int i = 0; i < m_mshrs.Length; i++)
                 if (!m_mshrs[i].valid)
@@ -350,6 +354,7 @@ namespace ICSimulator
                     mshr = i;
                     break;
                 }
+			
             Debug.Assert(mshr != -1);
 
             mshrs_free--;
@@ -358,13 +363,14 @@ namespace ICSimulator
             m_mshrs[mshr].block = req.blockAddress;
             m_mshrs[mshr].write = req.write;
 
-            _issueReq(mshr, req.address, req.write);
+			return mshr;
 
         }
 
 		// By Xiyue
         void _issueReq(int mshr, ulong addr, bool write)
 		{
+			
 			qos_stat_delegate QOS_delegate = delegate (CmpCache_Txn txn) { computePenalty(txn, write); };
 
 			Simulator.network.cache.access(m_ID, addr, mshr, write, m_stats_active, 
@@ -373,6 +379,7 @@ namespace ICSimulator
 
 
 		public delegate void qos_stat_delegate (CmpCache_Txn txn);
+
 		void computePenalty(CmpCache_Txn txn, bool write){
 			if (m_stats_active) 
 				m_ins.setIntfCycle (write, txn);
@@ -399,9 +406,11 @@ namespace ICSimulator
 
 			doStats (retired); // by Xiyue: periodical slowdown is also logged here.
 
-			if (m_ins.isFull ())
+			if (m_ins.isFull ()) {
+				stall = true;
+				Simulator.stats.cpu_stall [m_ID].Add ();
 				return true;
-
+			}
 			bool done = false;
 			int nIns = Config.proc.instructionsPerCycle;
 			int nMem = 1;
@@ -426,30 +435,75 @@ namespace ICSimulator
 				switch (m_trace.type) {
 				case Trace.Type.Rd:
 				case Trace.Type.Wr:
-
+					
 					// if no mshr available when the next is a memory instruction, break out of loop here
-					if (nMem == 0 || !canIssueMSHR (m_trace.address)) {
+					if (nMem == 0) {
 						done = true;
 						break;
 					}
-					nMem--;
-					nIns--;
-
+						
 					ulong addr = m_trace.address;
 					bool isWrite = m_trace.type == Trace.Type.Wr;
 					bool inWindow = m_ins.contains (addr, isWrite);
 					
 					Request req = inWindow ? null : new Request (m_ID, addr, isWrite, throttleCycle);
-					
-					m_ins.fetch (req, addr, isWrite, inWindow);
 
 					if (!inWindow) {
-						throttleCycle = 0;
-						issueReq (req);
+						
+						bool need_mshr = Simulator.network.cache.needMSHR(m_ID, addr, isWrite); // need mshr: L1 RD/WR Miss, L1 WR hit but not in exclusive state 
+						int mshr = -1;
+						if (need_mshr) {
+							bool mshr_stall = mshrStall (m_trace.address, out mshr); // mshr is assigned if an entry has been allocated previously
+							// use up credit because the credit is reduced
+							bool stallThrottle = false;
+							if (Config.throttle_enable  && Config.controller == ControllerType.THROTTLE_QOS)
+								stallThrottle = (Config.mshrs - mshrs_free) >= Controller_QoSThrottle.mshr_quota [m_ID]  && Controller_QoSThrottle.mshr_quota [m_ID] <= Config.mshrs;
+							
+							if (mshr_stall == true) { 
+								done = true;	
+
+
+								// any stall: either (i) window is full, or (ii) window is not full
+								// but next insn (LD / ST) can't be issued
+								stall = true;
+								Simulator.stats.cpu_stall [m_ID].Add ();
+
+								// only stall caused by lack of mshr
+								Simulator.stats.cpu_stall_mem [m_ID].Add ();
+
+								// stall caused by throttled mshr
+								if (stallThrottle) { // credit < config.mshrs
+									Simulator.stats.cpu_stall_throttle [m_ID].Add ();
+									throttleCycle ++;
+									//Console.WriteLine("Core {0} ThrottleCycle {1} at TIME = {2}", m_ID, throttleCycle, Simulator.CurrentRound);
+								}
+
+								break;
+							}
+							// allocate mshr for L2 access
+							if (checkWAR (req)) { // In case of WAR, fetch the same instruction next cycle. Core is stalled.
+								m_trace_valid = false;
+								nMem--;
+								nIns--;
+								throttleCycle = 0;
+								break;
+							}
+
+							// note: L1 hit will have mshr = -1. when req_Done is called, do not return the credit
+							mshr = allocMSHR (req);
+
+						}
+
+						// regardless of mshr allocation result, l1 access should proceed as long as rob/instrWindow is not full
+						m_ins.fetch (req, addr, isWrite, inWindow);
+						_issueReq (mshr, req.address, req.write);  // L1, L2 blocks and network traffic are created here.
 
 					}
 
+					throttleCycle = 0;
 					m_trace_valid = false;
+					nMem--;
+					nIns--;
 					break;
 
 				case Trace.Type.NonMem:
@@ -489,6 +543,12 @@ namespace ICSimulator
 					break;
 
 				case Trace.Type.Lock:
+					// TODO: Model synchronization bahavior!
+					// Lock is constructed here. However, this is a very naive implementation.
+					// A simply queue (implemented as a dictionary) is used 
+					// No timing model, synchronization is not associated with cache coherence protocol
+					// Another word, the synchronization primitive activity is not modeled
+
 					//Console.WriteLine("Lock" + ' ' + m_ID.ToString() + ' ' + syncID.ToString() + ' ' + m_trace.address.ToString());
 					if (m_sync.Lock(m_ID, syncID, m_trace.address))
 						m_trace_valid = false;

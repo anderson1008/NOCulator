@@ -26,10 +26,10 @@ from matplotlib.ticker import FuncFormatter
 
 
 # target dir
-NUM_WORKLOAD = 5 
+NUM_WORKLOAD = 3 
 num_value = 0
-target_dir = "/home/xiyue/4x4/SweepAll/results/homo/4x4/design/"
-workload_dir = "/home/xiyue/workload_list/homo_4x4_ipc"
+target_dir = "/Users/Anderson/Desktop/8x8/SweepThrotUpNum/results/homo/8x8/design/"
+workload_dir = "/Users/Anderson/GoogleDrive/NOCulator/hring/src/bin/workload_list/homo_8x8_ipc"
 ws_plt = []
 hs_plt = []
 uf_plt = []
@@ -78,6 +78,11 @@ plt.plot (para_value_plt, hs_plt, 'gv')
 plt.subplot(3,1,3)
 plt.plot (para_value_plt, uf_plt, 'bs')
 plt.show ()
+
+### Just to print out the ws, hs, and uf array
+print _ws_per_workload
+print _hs_per_workload
+print _uf_per_workload
 
 
 

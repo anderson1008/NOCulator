@@ -19,10 +19,20 @@ namespace ICSimulator
 
     public class NodeMapping_AllCPU_SharedCache : NodeMapping
     {
-        public override bool hasCPU(int id) { return true; }
+		public override bool hasCPU(int id) 
+		{ 
+			if (Config.synthGen == true)
+				return false;
+			else 
+				return true;
+		}
+
         public override bool hasSh(int id) { return true; }
         public override bool hasMem(int id)
         {
+			if (Config.synthGen == true)
+				return false; 
+
             foreach (Coord c in Config.memory.MCLocations)
                 if (c.ID == id)
                     return true;

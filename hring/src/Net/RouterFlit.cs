@@ -1,6 +1,7 @@
 //#define DEBUG
 //#define RETX_DEBUG
 //#define memD
+//#define PACKETDUMP
 
 using System;
 using System.Collections.Generic;
@@ -11,6 +12,8 @@ namespace ICSimulator
 {
     public abstract class Router_Flit : Router
     {
+		//Implement the basic funcationality of a bufferless router (BLESS)
+
         // injectSlot is from Node; injectSlot2 is higher-priority from
         // network-level re-injection (e.g., placeholder schemes)
         protected Flit m_injectSlot, m_injectSlot2;
@@ -77,7 +80,7 @@ namespace ICSimulator
             m_n.receiveFlit(f);
         }
 
-        Flit ejectLocal()
+        protected virtual Flit ejectLocal()
         {
             // eject locally-destined flit (highest-ranked, if multiple)
             Flit ret = null;			
@@ -94,14 +97,76 @@ namespace ICSimulator
                 }
             
 			if (bestDir != -1) linkIn[bestDir].Out = null;
-#if DEBUG
-            if (ret != null)
-                Console.WriteLine("ejecting flit {0}.{1} at node {2} cyc {3}", ret.packet.ID, ret.flitNr, coord, Simulator.CurrentRound);
-#endif
+
             ret = handleGolden(ret);
 
             return ret;
         }
+
+		protected void _swap (ref Flit t0, ref Flit t1, bool downward)
+		{
+			if (t0 != null || t1 != null)
+				Simulator.stats.permute.Add();
+			if ((rank(t1, t0)<0 && !downward) | (downward && rank(t0,t1)<0)) //higher : flit on the top
+			{
+				Flit t = t0;
+				t0 = t1;
+				t1 = t;
+			}				
+		}
+
+		protected void _partialSort(ref Flit[] input)
+		{
+			// only sort the first 4 flits;
+			_swap (ref input[0],ref input[1], false);
+			_swap (ref input[2],ref input[3], false);
+			_swap (ref input[0],ref input[2], false);
+			_swap (ref input[1],ref input[3], false);
+		}
+
+		protected void _fullSort(ref Flit[] input)
+		{
+			// only sort the first 4 flits;
+			_swap (ref input[0],ref input[1], false);
+			_swap (ref input[2],ref input[3], true);
+			_swap (ref input[0],ref input[2], false);
+			_swap (ref input[1],ref input[3], false);
+			_swap (ref input[0],ref input[1], false);
+			_swap (ref input[2],ref input[3], false);
+		}
+
+		protected void _bubbleSort(ref Flit[] input)
+		{
+			// inline bubble sort is faster for this size than Array.Sort()
+			// sort input[] by descending priority. rank(a,b) < 0 if f0 has higher priority.
+			for (int i = 0; i < 4+Config.num_bypass; i++)
+				for (int j = i + 1; j < 4+Config.num_bypass; j++)
+					if (input[j] != null &&
+					    (input[i] == null ||
+					 rank(input[j], input[i]) < 0))
+				{
+					Flit t = input[i];
+					input[i] = input[j];
+					input[j] = t;
+				}
+		}
+
+		protected void _installFlit(out Flit[] input, out int count)
+		{
+			input = new Flit[4+Config.num_bypass]; 
+			for (int i = 0; i < 4+Config.num_bypass; i++) input[i] = null;
+			// grab inputs into a local array so we can sort
+			count = 0;
+
+		
+			for (int dir = 0; dir < 4; dir++)
+				if (linkIn[dir] != null && linkIn[dir].Out != null)
+			{
+				linkIn[dir].Out.inDir = dir;
+				input[count++] = linkIn[dir].Out;  // c: # of incoming flits
+				linkIn[dir].Out = null;
+			}
+		}
 
         Flit[] input = new Flit[4]; // keep this as a member var so we don't
         // have to allocate on every step (why can't
@@ -109,6 +174,8 @@ namespace ICSimulator
 
         protected override void _doStep()
         {
+
+			// STEP 1: Ejection
 			if (Config.EjectBufferSize != -1)
 			{								
 				for (int dir =0; dir < 4; dir ++)
@@ -120,8 +187,6 @@ namespace ICSimulator
 				int bestdir = -1;			
 				for (int dir = 0; dir < 4; dir ++)
 					if (ejectBuffer[dir].Count > 0 && (bestdir == -1 || ejectBuffer[dir].Peek().injectionTime < ejectBuffer[bestdir].Peek().injectionTime))
-//					if (ejectBuffer[dir].Count > 0 && (bestdir == -1 || ejectBuffer[dir].Count > ejectBuffer[bestdir].Count))
-//					if (ejectBuffer[dir].Count > 0 && (bestdir == -1 || Simulator.rand.Next(2) == 1))
 						bestdir = dir;				
 				if (bestdir != -1)
 					acceptFlit(ejectBuffer[bestdir].Dequeue());
@@ -142,30 +207,43 @@ namespace ICSimulator
 				Flit f1 = null,f2 = null;
 				for (int i = 0; i < Config.meshEjectTrial; i++)
 				{
+					// Only support dual ejection (MAX.Config.meshEjectTrial = 2)
         	    	Flit eject = ejectLocal();
 					if (i == 0) f1 = eject; 
 					else if (i == 1) f2 = eject;
-					if (eject != null)             
-						acceptFlit(eject);				
+					if (eject != null) {
+						
+						acceptFlit (eject); 	// Eject flit	
+#if DEBUG
+						Console.WriteLine ("#6 Time {0}: Eject @ node {1} {2}", Simulator.CurrentRound,coord.ID, eject.ToString());
+#endif
+					}
 				}
 				if (f1 != null && f2 != null && f1.packet == f2.packet)
 					Simulator.stats.ejectsFromSamePacket.Add(1);
 				else if (f1 != null && f2 != null)
 					Simulator.stats.ejectsFromSamePacket.Add(0);
 			}
+
+			//STEP 2 : Prioritize and Injection
             for (int i = 0; i < 4; i++) input[i] = null;
             // grab inputs into a local array so we can sort
             int c = 0;
             for (int dir = 0; dir < 4; dir++)
                 if (linkIn[dir] != null && linkIn[dir].Out != null)
                 {
-                    input[c++] = linkIn[dir].Out;
-                    linkIn[dir].Out.inDir = dir;
+#if DEBUG
+					Console.WriteLine ("#4 Time {0}: BW @ node {1} {3} Inport {2}", Simulator.CurrentRound,coord.ID, Simulator.network.portMap(dir),linkIn[dir].Out.ToString() );
+#endif
+                    input[c++] = linkIn[dir].Out;  // c: # of incoming flits
+                    linkIn[dir].Out.inDir = dir;  // By Xiyue: what's the point? Seems redundant
                     linkIn[dir].Out = null;
+
                 }
 
             // sometimes network-meddling such as flit-injection can put unexpected
             // things in outlinks...
+			// outCount: # of the outstanding flits at the inport of output link
             int outCount = 0;
             for (int dir = 0; dir < 4; dir++)
                 if (linkOut[dir] != null && linkOut[dir].In != null)
@@ -209,26 +287,22 @@ namespace ICSimulator
                     }
                     else
                         throw new Exception("what???inject null flits??");
-                    input[c++] = inj;
+
+					if (inj != null) {
+						input [c++] = inj;
 #if DEBUG
-                    Console.WriteLine("injecting flit {0}.{1} at node {2} cyc {3}",
-                            m_injectSlot.packet.ID, m_injectSlot.flitNr, coord, Simulator.CurrentRound);
+					Console.WriteLine ("#3 Time {0}: Inject @ node {1} {2}", Simulator.CurrentRound,coord.ID, inj.ToString());
 #endif
-#if memD
-                    int r=inj.packet.requesterID;
-                    if(r==coord.ID)
-                        Console.WriteLine("inject flit at node {0}<>request:{1}",coord.ID,r);
-                    else
-                        Console.WriteLine("Diff***inject flit at node {0}<>request:{1}",coord.ID,r);
-#endif
-                    statsInjectFlit(inj);
+						statsInjectFlit (inj);
+					}
                 }
             }
 
            
             // inline bubble sort is faster for this size than Array.Sort()
-            // sort input[] by descending priority. rank(a,b) < 0 iff a has higher priority.
-            for (int i = 0; i < 4; i++)
+            // sort input[] by descending priority. rank(a,b) < 0 if f0 has higher priority.
+            /*
+			for (int i = 0; i < 4; i++)
                 for (int j = i + 1; j < 4; j++)
                     if (input[j] != null &&
                         (input[i] == null ||
@@ -238,10 +312,15 @@ namespace ICSimulator
                         input[i] = input[j];
                         input[j] = t;
                     }
+			*/
+			_fullSort(ref input);
 
+			//_bubbleSort (ref input);
             // assign outputs
-            for (int i = 0; i < 4 && input[i] != null; i++)
+			for (int i = 0; i < 4; i++)
             {
+				if (input [i] == null)
+					continue;
                 PreferredDirection pd = determineDirection(input[i], coord);
                 int outDir = -1;
 				bool deflect = false;
@@ -320,6 +399,7 @@ namespace ICSimulator
 				{
                     if (pd.xDir != Simulator.DIR_NONE && linkOut[pd.xDir].In == null)
                     {
+						
                         linkOut[pd.xDir].In = input[i];
                         outDir = pd.xDir;
                     }
@@ -331,6 +411,7 @@ namespace ICSimulator
                     else 
                         deflect = true;
                 }
+
                 // deflect!
                 if (deflect)
                 {
@@ -351,7 +432,10 @@ namespace ICSimulator
                     if (outDir == -1) throw new Exception(
                             String.Format("Ran out of outlinks in arbitration at node {0} on input {1} cycle {2} flit {3} c {4} neighbors {5} outcount {6}", coord, i, Simulator.CurrentRound, input[i], c, neighbors, outCount));
                 }
-            }
+#if DEBUG
+				Console.WriteLine ("#5 Time {0}: ST @ node {1} {2} Output {3}", Simulator.CurrentRound,coord.ID, input[i].ToString(), Simulator.network.portMap(outDir));
+#endif
+            } // end assign output
         }
 
         public override bool canInjectFlit(Flit f)
@@ -520,9 +604,6 @@ namespace ICSimulator
 	// end Xiyue
 
 
-
-
-
     public class Router_Flit_OldestFirst : Router_Flit
     {
         public Router_Flit_OldestFirst(Coord myCoord)
@@ -550,24 +631,7 @@ namespace ICSimulator
             if (f1 == null) return 1;
             if (f2 == null) return -1;
 
-            bool f1_resc = (f1.state == Flit.State.Rescuer) || (f1.state == Flit.State.Carrier);
-            bool f2_resc = (f2.state == Flit.State.Rescuer) || (f2.state == Flit.State.Carrier);
-            bool f1_place = (f1.state == Flit.State.Placeholder);
-            bool f2_place = (f2.state == Flit.State.Placeholder);
-
-            int c0 = 0;
-            if (f1_resc && f2_resc)
-                c0 = 0;
-            else if (f1_resc)
-                c0 = -1;
-            else if (f2_resc)
-                c0 = 1;
-            else if (f1_place && f2_place)
-                c0 = 0;
-            else if (f1_place)
-                c0 = 1;
-            else if (f2_place)
-                c0 = -1;
+         
 
             int c1 = 0, c2 = 0;
             if (f1.packet != null && f2.packet != null)
@@ -577,14 +641,9 @@ namespace ICSimulator
             }
 
             int c3 = f1.flitNr.CompareTo(f2.flitNr);
-			/*
-			int f1_critical = (f1.packet.critical) ? 1 : -1;
-			int f2_critical = (f2.packet.critical) ? 1 : -1;
-			int c6 = -f1_critical.CompareTo (f2_critical);
-			*/
-
+		
             int zerosSeen = 0;
-            foreach (int i in new int[] { c0, c1, c2, c3 })
+            foreach (int i in new int[] { c1, c2, c3 })
             {
                 if (i == 0)
                     zerosSeen++;
@@ -592,12 +651,10 @@ namespace ICSimulator
                     break;
             }
             Simulator.stats.net_decisionLevel.Add(zerosSeen);
-            return
-				//(c6 != 0) ? c6 :
-                (c0 != 0) ? c0 :
-                (c1 != 0) ? c1 :
-                (c2 != 0) ? c2 :
-                c3;
+			return c1;
+               // (c1 != 0) ? c1 :
+               // (c2 != 0) ? c2 :
+               // c3;
         }
 
         public override int rank(Flit f1, Flit f2)
@@ -663,7 +720,6 @@ namespace ICSimulator
             int c1 = 0, c2 = 0;
             if (f1.packet != null && f2.packet != null)
             {
-                //TODO: need to change here to take into account of the priority
                 c1 = -age(f1).CompareTo(age(f2));
                 c2 = f1.packet.ID.CompareTo(f2.packet.ID);
             }
@@ -734,7 +790,7 @@ namespace ICSimulator
                 return 1;
             if (f2 == null)
                 return -1;
-
+			/*
             if (f1.state == Flit.State.Carrier && f2.state == Flit.State.Carrier)
                 return f1.dest.ID.CompareTo(f2.dest.ID);
             else if (f1.state == Flit.State.Carrier)
@@ -748,9 +804,9 @@ namespace ICSimulator
                 return -1;
             else if (f2.state == Flit.State.Carrier)
                 return 1;
-
-            if (f1.state == Flit.State.Normal && f2.state == Flit.State.Normal)
-            {
+			*/
+            //if (f1.state == Flit.State.Normal && f2.state == Flit.State.Normal)
+            //{
 
                 bool golden1 = Simulator.network.golden.isGolden(f1),
                      golden2 = Simulator.network.golden.isGolden(f2);
@@ -771,14 +827,14 @@ namespace ICSimulator
                     return 1;
                 else
                     return (Simulator.rand.Next(2) == 1) ? 1 : -1;
-            }
-            else if (f1.state == Flit.State.Normal)
-                return -1;
-            else if (f2.state == Flit.State.Normal)
-                return 1;
-            else
+            //}
+            //else if (f1.state == Flit.State.Normal)
+            //    return -1;
+            //else if (f2.state == Flit.State.Normal)
+            //    return 1;
+            //else
                 // both are placeholders
-                return (Simulator.rand.Next(2) == 1) ? 1 : -1;
+            //    return (Simulator.rand.Next(2) == 1) ? 1 : -1;
         }
 
         public override int rank(Flit f1, Flit f2)
@@ -866,6 +922,8 @@ namespace ICSimulator
 
     public class Router_Flit_Ctlr : Router_Flit
     {
+
+		// Classic BLESS
         public Router_Flit_Ctlr(Coord myCoord)
             : base(myCoord)
         {

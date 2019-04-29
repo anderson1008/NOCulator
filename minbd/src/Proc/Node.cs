@@ -204,8 +204,8 @@ namespace ICSimulator
                     p, coord, Simulator.CurrentRound, RequestQueueLen);
 #endif
 
-            if (Config.synthGen && !(p is SynthPacket))
-                throw new Exception("non-synthetic packet generated in synthetic run!");
+            //if (Config.synthGen && !(p is SynthPacket))
+            //    throw new Exception("non-synthetic packet generated in synthetic run!");
 
             if (p.dest.ID == m_coord.ID) // local traffic: do not go to net (will confuse router)
             {

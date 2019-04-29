@@ -22,6 +22,7 @@ namespace ICSimulator
         public const int DIR_RIGHT = 1;
         public const int DIR_DOWN = 2;
         public const int DIR_LEFT = 3;
+		public const int DIR_LOCAL = 4;
         public const int DIR_BLOCKED = -1;
         public const int DIR_NONE = -99;
 
@@ -49,17 +50,24 @@ namespace ICSimulator
         }
 
         public static void Init(string[] args)
-        {
+         {
             Config config = new Config();
 
+			// Read in the configuration
             config.read(args);
 
             rand = new Rand(Config.rand_seed);
+
             CurrentRound = 0;
 
             controller = Controller.construct();
-	   		if (Config.ScalableRingClustered)
-				network = new RC_Network(Config.network_nrX, Config.network_nrY);
+
+			ScoreBoard.createScoreBoard ();
+
+			if (Config.ScalableRingClustered)
+				network = new RC_Network (Config.network_nrX, Config.network_nrY);
+			else if (Config.topology == Topology.Mesh_Multi)
+				network = new MultiMesh (Config.network_nrX, Config.network_nrY);
 			else if (Config.topology == Topology.HR_16drop)
 				network = new HR_16drop_Network(Config.network_nrX, Config.network_nrY);				
 			else if (Config.topology == Topology.HR_4drop)
@@ -80,14 +88,15 @@ namespace ICSimulator
 				network = new SingleRing_Network(Config.network_nrX, Config.network_nrY);
 			else if (Config.topology == Topology.MeshOfRings)
 				network = new MeshOfRings_Network(Config.network_nrX, Config.network_nrY);
-                        else if (Config.topology == Topology.BufRingNetwork)
-                            network = new BufRingNetwork(Config.network_nrX, Config.network_nrY);
-                        else if (Config.topology == Topology.BufRingNetworkMulti)
-                            network = new BufRingMultiNetwork(Config.network_nrX, Config.network_nrY);
+            else if (Config.topology == Topology.BufRingNetwork)
+                network = new BufRingNetwork(Config.network_nrX, Config.network_nrY);
+            else if (Config.topology == Topology.BufRingNetworkMulti)
+                network = new BufRingMultiNetwork(Config.network_nrX, Config.network_nrY);
 	    	else
 				network = new Network(Config.network_nrX, Config.network_nrY);
 
 	      	network.setup();
+
             Warming = true;
         }
 
@@ -102,8 +111,9 @@ namespace ICSimulator
             Simulator.stats.Finish();
             using (TextWriter tw = new StreamWriter(Config.output))
             {
-                Simulator.stats.DumpJSON(tw);
-                //Simulator.stats.Report(tw);
+				Simulator.stats.Report(tw);
+				tw.WriteLine("Overall dump begins.");
+				Simulator.stats.DumpJSON(tw);
             }
             if (Config.matlab != "")
             using (TextWriter tw = new StreamWriter(Config.matlab))
@@ -157,11 +167,20 @@ namespace ICSimulator
             CurrentRound++;
 
             network.doStep();
-			if (Config.simpleLivelock)
-				Router.livelockFreedom();
+            if (Config.simpleLivelock)
+	    		Router.livelockFreedom();
             controller.doStep();
 
-            return !network.isFinished() && (Config.ignore_livelock || !network.isLivelocked());
+			if (!network.isFinished () && (Config.ignore_livelock || !network.isLivelocked ())) {
+				
+				return true;
+			} else {
+				// dump the flits which cause livelock
+				if (!Config.ignore_livelock && network.isLivelocked ()) {
+					ScoreBoard.ScoreBoardDump ();
+				}
+				return false;
+			}
         }
 
         public static void RunSimulation()

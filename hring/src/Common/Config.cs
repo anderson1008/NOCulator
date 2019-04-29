@@ -79,9 +79,18 @@ namespace ICSimulator
         EQUAL_PER,
         DELTA
     }
+
+	public enum SynthTrafficPattern
+	{
+		UR, // Uniform Random
+		BC, // Bit
+		TR, // Tornado
+		HS, // Hot Spot
+	}
 	
     public enum Topology
     {
+			Mesh_Multi,
             HR_4drop,
             HR_8drop,
             HR_16drop,
@@ -100,12 +109,50 @@ namespace ICSimulator
 
     public class Config : ConfigGroup
     {
+		// ------------------ DO NOT MOVE ------------------------
+		// must be declared first
         public static ProcessorConfig proc = new ProcessorConfig();
         public static MemoryConfig memory = new MemoryConfig();
         public static RouterConfig router = new RouterConfig();
+		public static int N
+		{ get { return network_nrX * network_nrY; } }
+		// ---- synth traces
+		public static double synth_reads_fraction = 0.8;
+		//public static double synth_rate = 0.005;
+		public static bool bSynthBitComplement = false; // deprecated
+		public static bool bSynthTranspose = false; // deprecated
+		public static bool bSynthHotspot = false; // deprecated
+		public static bool randomHotspot = false; // deprecated
+		// ------------------DO NOT MOVE End------------------------//
 
-		// ----
-		// By Xiyue
+		// --- Carpool: NoC with Gather-Scatter Support
+		// --- Synthetic Traffic Simulation --- //
+		public static bool synthGen = true; // will not generate CPU instance if it is true
+		public static double synth_rate = 0.25; // injection rate in packet/cycle/node
+		public static double mc_rate = 0.05;
+		public static double hs_rate = 0.05;
+		public static int synthQueueLimit = 1000;
+		public static int starveThreshold = 1; //not used
+		public static ulong starveResetEpoch = 2^14; // the starvation rate = starveThreshold / starveResetEpoch
+		//public static double starveRateThreshold = 0.01;
+
+		public static double starveRateThreshold = starveThreshold/(double)starveResetEpoch;
+		public static bool uniform_size_enable = false;
+		public static int uniform_size = 1;
+		public static bool multicast = false;
+		public static int mc_degree = N-1; // number of packets send out; N: broadcast; 1: unicast;
+		public static SynthTrafficPattern synthPattern = SynthTrafficPattern.UR;  // to enable hotspot flit, change to HS
+		public static bool mergeEnable = true;
+		public static bool adaptiveMC = true;
+		//public static bool forkEnable = false; // Keep constant injection latency, just disable/enable the forking
+		public static bool scatterEnable = true; // If disabled, using naive injection.
+		public static bool scoreBoardDisable = false; // enable for to speed up simulation
+		public static int hotSpotReqPerNode = 1; // the number of hotspot flit can be generated before previous ones are received.
+		public static int swAllocMode = 1; // 0: sequential; 1: parallel
+		public static int sortMode = 1; // 0:full sort; 1: partial sort
+		//public static double hotspot_prob = Config.hotspot_multiplier * Config.unhotspot_prob;
+
+		// --- FAST
 		public static bool preempt = false;
 		public static bool slowdown_aware = false;
 		public static double preempt_threshold = 8;
@@ -113,9 +160,11 @@ namespace ICSimulator
 		public static double enable_qos_non_mem_threshold = 3; // i.e. enable_qos_non_mem_threhold * slowdown_delta
 		public static double enable_qos_mem_threshold = 3;
 		public static double mpki_threshold = 30;
-
+		public static bool favor_performance = false;
+		public static bool throttle_at_NI = true;
+		public static bool throttle_at_mshr = false;
 		public static bool throttle_enable = true;
-		public static double curr_L1miss_threshold = 0.06; // an app can be throttled only if L1 miss > curr_L1miss_threshlod; Greater value will preserve performance (i.e., less applciation will be throughput sensitive), but give less improvement on fairness
+		public static double curr_L1miss_threshold = 0.05; // an app can be throttled only if L1 miss > curr_L1miss_threshlod; Greater value will preserve performance (i.e., less applciation will be throughput sensitive), but give less improvement on fairness
 		public static double slowdown_epoch = 10000; // may sweep
 		public static double throt_min = 0.1;  // share with Sigcomm paper
 		public static int th_bad_dec_counter = 3; // may sweep
@@ -125,9 +174,12 @@ namespace ICSimulator
 		public static double throt_prob_lv3 = 0.8;
 		public static int th_bad_rst_counter = 10; //may sweep
 		public static int thrt_up_slow_app = 4; // Parameter: Greater value improves fairness at the cost of lower performance improvement margin.
-		public static int thrt_down_stc_app = 4; // Parameter: greater value improve fairness at the cost of performance degradation
+		public static int thrt_down_stc_app = 8; // Parameter: greater value improve fairness at the cost of performance degradation
 		public static double throt_down_stage1 = 0.5;
-
+		public static double fast_throttle_threshold = 1.0; // may sweep, A
+		public static double succ_meet_fair = 5; //number of epoch meeting fairness goals before throttling up for performance improvement
+		public static double uf_adjust = 0.02; // should not be sensitive
+		public static double fair_keep_trying = 10; // should equal to the steps taken to increase throttling rate from 0 to max.
 		// Slowdown-aware Throttling
 		
 		public static string throttle_node = "1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1";
@@ -152,7 +204,31 @@ namespace ICSimulator
 	
 		public static double ewmv_factor = 0.1; // weight of old value
 		public static double thrt_sweep = 0.1;
-		// end Xiyue
+
+
+		// For Deflection Containment
+		// Many parameters related to the underlying topology
+		public static int sub_net = 2;
+		public static int num_bypass = 0; // not include local; 
+		public static bool bypass_enable = true;
+		public static bool bridge_subnet = true;
+		public static bool partial_sort = true;
+		public static bool randomize_defl = false; // false: static deflection; true: randomized deflection
+		public static bool subnet_sel_rand = false;
+		public static double payload_link_portion = 1; // the percentage of link which carry payload compared with baseline. Take into account the header overhead
+
+		// -- MinBD --
+		public static bool resubmitBuffer          = true;
+		public static int  rebufInjectCount        = 1;	 // The number of flits from side buffer being reinjected into network More than 1 doesn't seem to help
+		public static int  timeInRebufThreshold    = 2;
+		public static string silverMode            = "silverMode";
+		public static int  sizeOfRSBuffer           = 16;    // 16 not 8 for chipper, 2 for BLESS
+		public static string RSBuffer_sort            = "fifo";  
+		public static bool   RSBuffer_randomVariant   = false;
+		public static bool isInfiniteRSBuffer       = false; // Overrides size
+		public static int meshEjectTrial = 1;
+
+
 
         // ----
         // Buffered Rings (Ravindran et al, HPCA 1997)
@@ -326,13 +402,7 @@ namespace ICSimulator
 
         public static bool bochs_fe = false;
 
-        // ---- synth traces
-        public static double synth_reads_fraction = 0.8;
-        public static double synth_rate = 0.1;
-		public static bool bSynthBitComplement = false;
-		public static bool bSynthTranspose = false;
-		public static bool bSynthHotspot = false;
-		public static bool randomHotspot = false;
+      
 
         // ----
 
@@ -400,7 +470,7 @@ namespace ICSimulator
         public static bool rxbuf_cache_only = true;
         public static bool ctrl_data_split = false;
 
-        public static bool ignore_livelock = true;
+        public static bool ignore_livelock = false;
         public static ulong livelock_thresh = 1000000;
         // ----
 
@@ -471,9 +541,9 @@ namespace ICSimulator
         public static string fairdata = "";
         public static int simulationDuration = 1000;
         public static bool stopOnEnd = false;
-        public static int network_nrX = 2;
-        public static int network_nrY = 2;
-        public static bool randomize_defl = true;
+        public static int network_nrX = 3;
+        public static int network_nrY = 3;
+        
         public static int network_loopback = -1;
         public static int network_quantum = -1;
         public static int entropy_quantum = 1000; // in cycles
@@ -501,11 +571,11 @@ namespace ICSimulator
 
         // ------ CIF: experiment parameters, new version -----------------
         public static string sources = "all uniformRandom";
-        public static string finish = "cycle 10000000";
+		//public static string finish = "cycle 100000";
+		public static string finish = "packet 1000000";
         public static string solo = "";
 
-        public static int N
-        { get { return network_nrX * network_nrY; } }
+
 
         //TODO: CATEGORIZE
         public static string[] traceFilenames;
@@ -542,17 +612,16 @@ namespace ICSimulator
 		public static int L2GBufferDepth = 1;
 		public static bool SingleDirRing = false;
 		public static Topology topology = Topology.Mesh;
+		//public static Topology topology = Topology.Mesh_Multi;
 		public static int observerThreshold = 4;
 		public static bool NoPreference = false;
 		public static bool forcePreference = false;
-		public static bool simpleLivelock = false;
-		public static int starveThreshold = 1000;
+		public static bool simpleLivelock = true;
 		public static int starveDelay = 10;
 
 		// Place holder number
 		public static int PlaceHolderNum = 0;
 
-		public static int meshEjectTrial = 1;
 		public static int RingEjectTrial = -1;
 		public static int RingInjectTrial = 1;
 		public static int EjectBufferSize = -1;
